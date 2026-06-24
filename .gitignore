@@ -39,3 +39,7 @@ yarn-error.log*
 
 #prisma
 packages/database/generated
+
+#plans
+implementation_plan.md 
+system_design.md
