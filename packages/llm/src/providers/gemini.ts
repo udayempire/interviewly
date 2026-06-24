@@ -1,0 +1,45 @@
+import { GoogleGenAI } from "@google/genai";
+import type { LLMProvider, ChatMessage } from "../types.js";
+
+export class GeminiProvider implements LLMProvider {
+  private ai = new GoogleGenAI({});
+
+  async chat(messages: ChatMessage[]): Promise<string> {
+    const systemMsg = messages.find((m) => m.role === "system");
+    // joining all userInput as gemini works with single line and not in array
+    const userInput = messages
+      .filter((m) => m.role !== "system")
+      .map((m) => m.content)
+      .join("\n");
+
+    const interaction = await this.ai.interactions.create({
+      model: "gemini-3.5-flash",
+      system_instruction: systemMsg?.content,
+      input: userInput,
+    });
+
+    return interaction.output_text ?? "";
+  }
+   // The * makes it a generator function — it can yield values one at a time instead of returning everything at once
+
+  async *stream(messages: ChatMessage[]): AsyncIterable<string> {
+    const systemMsg = messages.find((m) => m.role === "system");
+    const userInput = messages
+      .filter((m) => m.role !== "system")
+      .map((m) => m.content)
+      .join("\n");
+
+    const stream = await this.ai.interactions.create({
+      model: "gemini-3.5-flash",
+      system_instruction: systemMsg?.content,
+      input: userInput,
+      stream: true,
+    });
+
+    for await (const event of stream) {
+      if (event.event_type === "step.delta" && event.delta?.type === "text") {
+        yield event.delta.text;
+      }
+    }
+  }
+}
