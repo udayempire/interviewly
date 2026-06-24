@@ -1,0 +1,120 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MessageRole {
+    AI
+    USER
+}
+
+enum InterviewType {
+    BEHAVIOURAL
+    TECHNICAL
+    CODING
+}
+
+enum AIMode {
+    TEXT
+    VOICE
+}
+
+enum InterviewStatus {
+    IN_PROGRESS
+    COMPLETED
+    ABANDONED
+}
+
+model User {
+    id              String           @id @default(cuid())
+    email           String?          @unique
+    name            String?
+    passwordHash    String? // null for OAuth users
+    createdAt       DateTime         @default(now())
+    userProfile     UserProfile?
+    interview       Interview[]
+    interviewReport InterviewReport[]
+}
+
+model UserProfile {
+    id         String      @id @default(cuid())
+    userId     String      @unique
+    user       User        @relation(fields: [userId], references: [id])
+    githubUrl  String      @unique
+    githubData Json?
+    resumeText String      @db.Text
+    projects   String?     @db.Text
+    createdAt  DateTime    @default(now())
+    updatedAt  DateTime    @updatedAt
+    interviews Interview[]
+}
+
+enum TemplateSource {
+    PLATFORM
+    USER
+}
+
+model Template {
+    id             String         @id @default(cuid())
+    name           String
+    description    String?
+    createdById    String
+    isPublic       Boolean
+    templateSource TemplateSource
+    config         Json? // stores distribution, difficulty, etc.
+    createdAt      DateTime       @default(now())
+    interviews     Interview[]
+}
+
+model Interview {
+    id          String             @id @default(cuid())
+    userId      String
+    user        User               @relation(fields: [userId], references: [id])
+    profileId   String
+    profile     UserProfile        @relation(fields: [profileId], references: [id])
+    templateId  String
+    template    Template           @relation(fields: [templateId], references: [id])
+    mode        AIMode
+    status      InterviewStatus
+    startedAt   DateTime           @default(now())
+    completedAt DateTime?
+    report      InterviewReport?
+    messages    InterviewMessage[]
+}
+
+model InterviewMessage {
+    id          String        @id @default(cuid())
+    interviewId String
+    interview   Interview     @relation(references: [id], fields: [interviewId])
+    role        MessageRole
+    content     String        @db.Text
+    audioUrl    String?
+    questionNum Int?
+    type        InterviewType?
+    createdAt   DateTime      @default(now())
+    updatedAt   DateTime      @updatedAt
+}
+
+model InterviewReport {
+    id               String    @id @default(cuid())
+    userId           String
+    user             User      @relation(fields: [userId], references: [id])
+    interviewId      String    @unique
+    interview        Interview @relation(fields: [interviewId], references: [id])
+    strengths        String[]
+    improvements     String[]
+    detailedFeedback String    @db.Text
+    aiSummary        String    @db.Text
+    overallScore     Int? // 0‑100, computed after interview
+    breakdown        Json? // e.g. { communication: 80, technical: 70 }
+    createdAt        DateTime  @default(now())
+}
