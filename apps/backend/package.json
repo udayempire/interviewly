@@ -4,19 +4,26 @@
   "type": "module",
   "private": true,
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/bun": "latest"
   },
   "scripts": {
-    "dev": "bun --watch index.ts",
+    "dev": "bun --watch src/index.ts",
     "start": "bun index.ts"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
+    "@repo/llm": "*",
+    "@repo/db": "*",
+    "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
-    "express": "^5.2.1",
+    "@types/jsonwebtoken": "^9.0.10",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.2",
-    "@repo/llm": "*"
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3"
   }
 }
