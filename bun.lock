@@ -13,6 +13,7 @@
     "apps/backend": {
       "name": "backend",
       "dependencies": {
+        "@repo/llm": "*",
         "@types/express": "^5.0.6",
         "express": "^5.2.1",
       },

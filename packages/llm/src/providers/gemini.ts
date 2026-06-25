@@ -6,7 +6,7 @@ export class GeminiProvider implements LLMProvider {
 
   async chat(messages: ChatMessage[]): Promise<string> {
     const systemMsg = messages.find((m) => m.role === "system");
-    // joining all userInput as gemini works with single line and not in array
+    // joining all userInput as gemini works within single line and not in array
     const userInput = messages
       .filter((m) => m.role !== "system")
       .map((m) => m.content)
@@ -43,3 +43,19 @@ export class GeminiProvider implements LLMProvider {
     }
   }
 }
+
+// yield is like return - but instead of ending the function, it pauses and sends one value out, then continues.
+//Each time Gemini sends a word/chunk, we yield it immediately to whoever is calling stream()
+// The caller receives words as they arrive, not after everything is done
+
+/*{
+Gemini sends many types of events in a stream — not all of them are text. For example:
+
+"step.start" — signals a new step began
+"step.delta" — an actual chunk of content arrived (this is what we want)
+"step.done" — step finished
+"interaction.done" — whole response is done
+So this if is just filtering: "only process events that are actual text chunks"
+
+The event.delta?.type === "text" check is because even step.delta events can carry non-text content (like tool calls). We only want text.
+}*/
