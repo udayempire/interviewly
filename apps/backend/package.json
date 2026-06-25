@@ -17,6 +17,7 @@
   "dependencies": {
     "@repo/llm": "*",
     "@repo/db": "*",
+    "@repo/types":"*",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",

@@ -2,11 +2,16 @@ import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { prisma } from "@repo/db"
+import { signupSchema, signinSchema } from "@repo/types";
 
 const authRouter = express.Router();
 
 authRouter.post("/signup", async (req, res) => {
-    const { email, password, name } = req.body;
+    const result = signupSchema.safeParse(req.body);
+    if (!result.success) {
+        return res.status(400).json({ error: result.error });
+    }
+    const { email, password, name } = result.data;
     const existing = await prisma.user.findUnique({
         where: { email }
     });
@@ -14,7 +19,7 @@ authRouter.post("/signup", async (req, res) => {
         return res.status(409).json({ error: "Email already in use" });
     }
     const passwordHash = await bcrypt.hash(password, 10);
-    
+
     const user = await prisma.user.create({
         data: {
             name,
@@ -31,7 +36,11 @@ authRouter.post("/signup", async (req, res) => {
 
 // POST /api/v1/auth/signin
 authRouter.post("/signin", async (req, res) => {
-    const { email, password } = req.body;
+    const result = signinSchema.safeParse(req.body);
+    if (!result.success) {
+        return res.status(400).json({ error: result.error });
+    }
+    const { email, password } = result.data;
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.passwordHash) {
         return res.status(401).json({ error: "Invalid credentials" });
