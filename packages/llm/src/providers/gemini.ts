@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import type { LLMProvider, ChatMessage } from "../types.js";
 
 export class GeminiProvider implements LLMProvider {
-  private ai = new GoogleGenAI({});
+  private ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY!});
 
   async chat(messages: ChatMessage[]): Promise<string> {
     const systemMsg = messages.find((m) => m.role === "system");

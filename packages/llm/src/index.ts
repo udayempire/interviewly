@@ -17,5 +17,5 @@ export function createLLMProvider() : LLMProvider{
     };
     return new Provider();
 }
-// Re-export types so consumers don't need separate imports like @repo/llm/types and can use @repo/llm
+//Re-export types so consumers don't need separate imports like @repo/llm/types and can use @repo/llm
 export type { LLMProvider, ChatMessage } from "./types.js";
