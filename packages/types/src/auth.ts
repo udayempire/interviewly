@@ -14,4 +14,11 @@ export const signinSchema = z.object({
 export type signupInput = z.infer<typeof signupSchema>;
 export type signinInput = z.infer<typeof signinSchema>;
 
+// z.infer<typeof signupSchema> generates the TypeScript type from the Zod schema.
+// Example:
+// type signupInput = {
+//   name: string;
+//   email: string;
+//   password: string;
+// };
 

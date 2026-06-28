@@ -51,8 +51,7 @@ model UserProfile {
     user       User        @relation(fields: [userId], references: [id])
     githubUrl  String      @unique
     githubData Json?
-    resumeText String      @db.Text
-    projects   String?     @db.Text
+    resumeText String?     @db.Text
     createdAt  DateTime    @default(now())
     updatedAt  DateTime    @updatedAt
     interviews Interview[]

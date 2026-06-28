@@ -10,9 +10,9 @@ const providers = new Map<string, new()=> LLMProvider>([
     ["groq",GroqProvider]
 ])
 
-export function createLLMProvider() : LLMProvider{
-    const provider = process.env.LLM_PROVIDER ?? "gemini";
-    const Provider = providers.get(provider);
+export function createLLMProvider(provider:string) : LLMProvider{
+    const providerName = provider ?? process.env.DEFAULT_LLM_PROVIDER;
+    const Provider = providers.get(providerName);
     if(!Provider){
         throw new Error("Unknown provider");
     };
