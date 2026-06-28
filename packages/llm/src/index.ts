@@ -1,12 +1,13 @@
 import type { LLMProvider } from "./types";
 import { GeminiProvider } from "./providers/gemini";
+import { GroqProvider } from "./providers/groq";
 
 
 // new () => LLMProvider means "a class that can create an LLMProvider object."
 // provider is storing a class and not object
 const providers = new Map<string, new()=> LLMProvider>([
     ["gemini",GeminiProvider],
-    // ["openai",OpenAiProvider]
+    ["groq",GroqProvider]
 ])
 
 export function createLLMProvider() : LLMProvider{
