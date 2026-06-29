@@ -13,7 +13,8 @@ const upload = multer({
     storage: multer.memoryStorage()
 });
 
-profileRouter.post("/", authMiddleware, upload.single("resume"), async (req: Request, res: Response) => {
+// POST /api/v1/user/profile
+profileRouter.post("/profile", authMiddleware, upload.single("resume"), async (req: Request, res: Response) => {
     try {
         const result = createProfileSchema.safeParse(req.body);
         if (!result.success) {

@@ -7,7 +7,8 @@
     "@types/bcryptjs": "^3.0.0",
     "@types/bun": "latest",
     "@types/multer": "^2.1.0",
-    "@types/pdf-parse": "^1.1.5"
+    "@types/pdf-parse": "^1.1.5",
+    "@types/ws": "^8.18.1"
   },
   "scripts": {
     "dev": "bun --watch src/index.ts",
@@ -29,6 +30,7 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
-    "pdf-parse": "^2.4.5"
+    "pdf-parse": "^2.4.5",
+    "ws": "^8.21.0"
   }
 }

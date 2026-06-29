@@ -3,15 +3,15 @@ config();
 import { createLLMProvider } from '@repo/llm';
 import express from 'express';
 import router from "./routes";
-import bcrypt from "bcryptjs";
-
 const app = express();
 const port = 4000;
+import http from "http";
+import { WebSocketServer } from "ws";
+import { setupInterviewWS } from "./ws/interview.handler";
 app.use(express.json());
 
-const hey= await bcrypt.hash("jas", 10);
-console.log(hey)
-
+const server = http.createServer(app);
+const wss = new WebSocketServer({server,path:"/ws/interview"})
 
 app.get('/test-llm', async (req, res) => {
     const llm = createLLMProvider("groq");
@@ -22,8 +22,9 @@ app.get('/test-llm', async (req, res) => {
     res.json({ response })
 });
 
-app.use('/api/v1', router )
+app.use('/api/v1', router );
 
-app.listen(port, () => {
+setupInterviewWS(wss);
+server.listen(port, () => {
     console.log(`Example app listening on port ${port}`);
 });

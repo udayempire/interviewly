@@ -5,6 +5,6 @@ import profileRouter from './profile.route';
 const router = express.Router();
 
 router.use('/auth',authRouter);
-router.use('/profile',profileRouter);
+router.use('/user',profileRouter);
 
 export default router;

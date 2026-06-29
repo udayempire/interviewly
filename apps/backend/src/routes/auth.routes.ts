@@ -6,6 +6,7 @@ import { signupSchema, signinSchema } from "@repo/types";
 
 const authRouter = express.Router();
 
+// POST /api/v1/auth/signup
 authRouter.post("/signup", async (req, res) => {
     const result = signupSchema.safeParse(req.body);
     if (!result.success) {
