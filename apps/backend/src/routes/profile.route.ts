@@ -5,6 +5,7 @@ import { authMiddleware } from "../middleware/auth";
 import multer from "multer";
 import { prisma } from "@repo/db";
 import { extractResumeData } from "../services/resumeExtraction.service";
+import { extractGithubUsername, getGithubData } from "../services/githubExtraction.service";
 
 const profileRouter = express.Router();
 
@@ -21,7 +22,11 @@ profileRouter.post("/", authMiddleware, upload.single("resume"), async (req: Req
         const file = req.file as any;
         const { githubUrl } = result.data;
         const userId = req.userId as string;
+        // extract resume data
         const parsedResumeJson = await extractResumeData(file?.buffer)
+        // extract github data
+        const githubUsername = extractGithubUsername(githubUrl);
+        const githubData = await getGithubData(githubUsername);
 
         const profile = await prisma.userProfile.upsert({
             where: {
@@ -30,10 +35,12 @@ profileRouter.post("/", authMiddleware, upload.single("resume"), async (req: Req
             create: {
                 userId,
                 githubUrl,
+                githubData,
                 resumeText: parsedResumeJson,
             },
             update: {
                 githubUrl,
+                githubData,
                 resumeText: parsedResumeJson,
             }
         });

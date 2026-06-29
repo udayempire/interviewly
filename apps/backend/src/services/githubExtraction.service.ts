@@ -1,8 +1,4 @@
-export function extractGithubUsername(githubUrl: string): string {
-    const url = new URL(githubUrl).pathname;
-    const username = url.replace("/", "");
-    return username;
-};
+import type { GithubGraphQLResponse } from "../types/githubGraphql.types";
 
 const graphqlQuery = `
 query ($username: String!) {
@@ -20,13 +16,11 @@ query ($username: String!) {
             login
           }
         }
-
         contributions(first: 100) {
           totalCount
         }
       }
     }
-
     pinnedItems(first: 6, types: REPOSITORY) {
       nodes {
         ... on Repository {
@@ -63,4 +57,34 @@ query ($username: String!) {
   }
 }
 `
+
+export function extractGithubUsername(githubUrl: string): string {
+    const url = new URL(githubUrl).pathname;
+    const username = url.replace("/", "");
+    return username;
+};
+
+export async function getGithubData(username: string) {
+    const response = await fetch("https://api.github.com/graphql",
+        {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+                "Content-Type": "application/json",
+            },
+            // fetch expects body to be a string, Blob, FormData, etc. It doesn't automatically convert JavaScript objects to JSON.
+            body: JSON.stringify({
+                query:graphqlQuery,
+                variables:{
+                    username
+                },
+            }),
+        }
+    );
+    if(!response.ok){
+        throw new Error("Github request failed");
+    }
+    const data = (await response.json()) as GithubGraphQLResponse;
+    return data.data.user;
+}
 
