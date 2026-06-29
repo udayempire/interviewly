@@ -3,7 +3,6 @@ import { type Request, type Response } from "express";
 import { createProfileSchema } from "@repo/types"
 import { authMiddleware } from "../middleware/auth";
 import multer from "multer";
-
 import { prisma } from "@repo/db";
 import { extractResumeData } from "../services/resumeExtraction.service";
 
