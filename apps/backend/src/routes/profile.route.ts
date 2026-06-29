@@ -51,7 +51,7 @@ profileRouter.post("/", authMiddleware, upload.single("resume"), async (req: Req
                 return res.status(400).json({ error: "Could not extract image from this scanned PDF." });
             }
 
-            console.log("Sending page image to Llama Vision model...");
+            console.log("Sending page image to meta-llama model...");
             structuredResume = await llm.chat([
                 {
                     role: "user",
@@ -70,6 +70,16 @@ profileRouter.post("/", authMiddleware, upload.single("resume"), async (req: Req
                 }
             ]);
         }
+        // Clean markdown backticks (e.g. ```json) and parse into a JSON object
+        let parsedResumeJson: any = null;
+        try {
+            const cleanedResume = structuredResume.replace(/```json|```/gi, "").trim();
+            parsedResumeJson = JSON.parse(cleanedResume);
+        } catch (parseError) {
+            console.error("Failed to parse structured resume JSON:", parseError);
+            return res.status(500).json({ error: "Failed to parse structured resume data." });
+        }
+
         const profile = await prisma.userProfile.upsert({
             where: {
                 userId,  
@@ -77,11 +87,11 @@ profileRouter.post("/", authMiddleware, upload.single("resume"), async (req: Req
             create: {
                 userId,
                 githubUrl,
-                resumeText: structuredResume,
+                resumeText: parsedResumeJson,
             },
             update: {
                 githubUrl,
-                resumeText: structuredResume,
+                resumeText: parsedResumeJson,
             }
         });
 
