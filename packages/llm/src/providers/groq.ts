@@ -1,22 +1,30 @@
 import Groq from "groq-sdk";
-import { ChatMessage, LLMProvider } from "../types";
+import type { ChatMessage, LLMProvider } from "../types";
 
 export class GroqProvider implements LLMProvider {
     private ai = new Groq({ apiKey: process.env.GROQ_API_KEY! });
     async chat(messages: ChatMessage[]): Promise<string> {
-        // const systemMsg = messages.find((m) => m.role === "system"); not needed as gemini
-        // Groq uses the same { role, content } format — pass messages on line 11 directly
+        const hasImage = messages.some(msg => 
+            Array.isArray(msg.content) && msg.content.some(part => part.type === "image_url")
+        );
+        const model = hasImage ? "meta-llama/llama-4-scout-17b-16e-instruct" : "llama-3.3-70b-versatile";
+
         const response = await this.ai.chat.completions.create({
-            model: "llama-3.3-70b-versatile",
-            messages: messages,
+            model: model,
+            messages: messages as any,
         });
         return response.choices[0]?.message?.content ?? "";
     };
     // The * makes it a generator function — it can yield values one at a time instead of returning everything at once
     async *stream(messages: ChatMessage[]): AsyncIterable<string> {
+        const hasImage = messages.some(msg => 
+            Array.isArray(msg.content) && msg.content.some(part => part.type === "image_url")
+        );
+        const model = hasImage ? "meta-llama/llama-4-scout-17b-16e-instruct " : "llama-3.3-70b-versatile";
+
         const stream = await this.ai.chat.completions.create({
-            model: "llama-3.3-70b-versatile",
-            messages: messages,
+            model: model,
+            messages: messages as any,
             stream: true,
         });
         for await (const chunk of stream) {

@@ -15,5 +15,5 @@ export interface LLMProvider {
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | any[];
 }

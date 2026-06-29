@@ -14,7 +14,7 @@ console.log(hey)
 
 
 app.get('/test-llm', async (req, res) => {
-    const llm = createLLMProvider();
+    const llm = createLLMProvider("groq");
     const response = await llm.chat([
         { role: "system", content: "You are a helpful assistant." },
         { role: "user", content: "Say hello in one sentence." },

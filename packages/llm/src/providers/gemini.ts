@@ -9,12 +9,12 @@ export class GeminiProvider implements LLMProvider {
     // joining all userInput as gemini works within single line and not in array
     const userInput = messages
       .filter((m) => m.role !== "system")
-      .map((m) => m.content)
+      .map((m) => typeof m.content === "string" ? m.content : JSON.stringify(m.content))
       .join("\n");
 
     const interaction = await this.ai.interactions.create({
       model: "gemini-3.5-flash",
-      system_instruction: systemMsg?.content,
+      system_instruction: typeof systemMsg?.content === "string" ? systemMsg.content : undefined,
       input: userInput,
     });
 
@@ -26,12 +26,12 @@ export class GeminiProvider implements LLMProvider {
     const systemMsg = messages.find((m) => m.role === "system");
     const userInput = messages
       .filter((m) => m.role !== "system")
-      .map((m) => m.content)
+      .map((m) => typeof m.content === "string" ? m.content : JSON.stringify(m.content))
       .join("\n");
 
     const stream = await this.ai.interactions.create({
       model: "gemini-3.5-flash",
-      system_instruction: systemMsg?.content,
+      system_instruction: typeof systemMsg?.content === "string" ? systemMsg.content : undefined,
       input: userInput,
       stream: true,
     });
