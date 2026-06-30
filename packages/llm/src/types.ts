@@ -11,9 +11,27 @@
 export interface LLMProvider {
     chat(messages: ChatMessage[]): Promise<string>
     stream(messages: ChatMessage[]): AsyncIterable<string>
-}
+};
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string | any[];
-}
+};
+
+export interface STTProvider {
+  transcribe(
+    audio:Buffer,
+    options?:{
+      model?: string
+    }
+  ): Promise<string>
+};
+
+export interface TTSProvider {
+  synthesize(
+    text:string,
+    options?:{
+      model?:string
+    }
+  ):Promise<Buffer>
+};

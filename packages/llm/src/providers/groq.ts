@@ -1,10 +1,10 @@
 import Groq from "groq-sdk";
-import type { ChatMessage, LLMProvider } from "../types";
+import type { ChatMessage, LLMProvider, STTProvider } from "../types";
 
 export class GroqProvider implements LLMProvider {
     private ai = new Groq({ apiKey: process.env.GROQ_API_KEY! });
     async chat(messages: ChatMessage[]): Promise<string> {
-        const hasImage = messages.some(msg => 
+        const hasImage = messages.some(msg =>
             Array.isArray(msg.content) && msg.content.some(part => part.type === "image_url")
         );
         const model = hasImage ? "meta-llama/llama-4-scout-17b-16e-instruct" : "llama-3.3-70b-versatile";
@@ -17,7 +17,7 @@ export class GroqProvider implements LLMProvider {
     };
     // The * makes it a generator function — it can yield values one at a time instead of returning everything at once
     async *stream(messages: ChatMessage[]): AsyncIterable<string> {
-        const hasImage = messages.some(msg => 
+        const hasImage = messages.some(msg =>
             Array.isArray(msg.content) && msg.content.some(part => part.type === "image_url")
         );
         const model = hasImage ? "meta-llama/llama-4-scout-17b-16e-instruct " : "llama-3.3-70b-versatile";
@@ -30,6 +30,21 @@ export class GroqProvider implements LLMProvider {
         for await (const chunk of stream) {
             yield chunk.choices[0]?.delta.content ?? "";
         };
+    };
+};
+
+export class GroqSTTProvider implements STTProvider {
+    private ai = new Groq({ apiKey: process.env.GROQ_API_KEY! });
+    async transcribe(audio: Buffer, options?: { model?: string; }): Promise<string> {
+        const model = options?.model ?? "whisper-large-v3-turbo";
+        const file = new File([new Uint8Array(audio)], "audio.webm", {
+            type: "audio/webm"
+        })
+        const audioTranscript = await this.ai.audio.transcriptions.create({
+            file,
+            model
+        });
+        return audioTranscript.text
     };
 };
 

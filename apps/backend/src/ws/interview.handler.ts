@@ -1,5 +1,4 @@
 import { WebSocketServer } from "ws";
-import wss from "ws";
 
 export function setupInterviewWS(wss: WebSocketServer) {
     wss.on("connection", (ws) => {
