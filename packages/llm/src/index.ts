@@ -28,7 +28,7 @@ export function createLLMProvider(provider: string): LLMProvider {
 }
 
 export function createSTTProvider(provider:string): STTProvider {
-    const providerName = provider ?? process.env.DEFAULT_LLM_PROVIDER;
+    const providerName = provider ?? process.env.DEFAULT_STT_PROVIDER;
     const sttProvider = sttProviders.get(providerName);
     if (!sttProvider) {
         throw new Error("Unknown provider");
@@ -37,7 +37,7 @@ export function createSTTProvider(provider:string): STTProvider {
 }
 
 export function createTTSProvider(provider:string): TTSProvider {
-    const providerName = provider ?? process.env.DEFAULT_LLM_PROVIDER;
+    const providerName = provider ?? process.env.DEFAULT_TTS_PROVIDER;
     const ttsProvider = ttsProviders.get(providerName);
     if (!ttsProvider) {
         throw new Error("Unknown provider");

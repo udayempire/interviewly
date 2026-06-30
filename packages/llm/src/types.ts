@@ -9,8 +9,8 @@
 // takes an array of ChatMessages and returns chunks of the
 // response one by one as they are generated.
 export interface LLMProvider {
-    chat(messages: ChatMessage[]): Promise<string>
-    stream(messages: ChatMessage[]): AsyncIterable<string>
+  chat(messages: ChatMessage[]): Promise<string>
+  stream(messages: ChatMessage[]): AsyncIterable<string>
 };
 
 export interface ChatMessage {
@@ -20,8 +20,8 @@ export interface ChatMessage {
 
 export interface STTProvider {
   transcribe(
-    audio:Buffer,
-    options?:{
+    audio: Buffer,
+    options?: {
       model?: string
     }
   ): Promise<string>
@@ -29,9 +29,10 @@ export interface STTProvider {
 
 export interface TTSProvider {
   synthesize(
-    text:string,
-    options?:{
-      model?:string
+    text: string,
+    options?: {
+      model?: string
+      voice?: string
     }
-  ):Promise<Buffer>
+  ): Promise<Buffer>
 };

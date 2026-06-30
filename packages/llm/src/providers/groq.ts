@@ -36,7 +36,7 @@ export class GroqProvider implements LLMProvider {
 export class GroqSTTProvider implements STTProvider {
     private ai = new Groq({ apiKey: process.env.GROQ_API_KEY! });
     async transcribe(audio: Buffer, options?: { model?: string; }): Promise<string> {
-        const model = options?.model ?? "whisper-large-v3-turbo";
+        const model = options?.model ?? "whisper-large-v3";
         const file = new File([new Uint8Array(audio)], "audio.webm", {
             type: "audio/webm"
         });
@@ -50,12 +50,13 @@ export class GroqSTTProvider implements STTProvider {
 
 export class GroqTTSProvider implements TTSProvider {
     private ai = new Groq({ apiKey: process.env.GROQ_API_KEY! });
-    async synthesize(text: string, options?: { model?: string; }): Promise<Buffer> {
+    async synthesize(text: string, options?: { model?: string; voice?:string }): Promise<Buffer> {
         const model = options?.model ?? "canopylabs/orpheus-v1-english"; 
+        const voice  = options?.voice ?? "autumn"
         const speechResponse = await this.ai.audio.speech.create({
             model,
+            voice,
             input:text,
-            voice:"autumn",
             response_format: "wav",
         });
         const buffer = Buffer.from(await speechResponse.arrayBuffer());
