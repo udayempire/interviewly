@@ -13,7 +13,7 @@ datasource db {
 }
 
 enum MessageRole {
-    AI
+    ASSISTANT
     USER
 }
 
@@ -80,8 +80,8 @@ model Interview {
     user        User               @relation(fields: [userId], references: [id])
     profileId   String
     profile     UserProfile        @relation(fields: [profileId], references: [id])
-    templateId  String
-    template    Template           @relation(fields: [templateId], references: [id])
+    templateId  String?
+    template    Template?           @relation(fields: [templateId], references: [id])
     mode        AIMode
     status      InterviewStatus
     startedAt   DateTime           @default(now())

@@ -50,6 +50,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
             const userProfile = await prisma.userProfile.findUnique({
                 where: { userId },
                 select: {
+                    id: true,
                     resumeText: true,
                     githubData: true
                 },
@@ -59,6 +60,15 @@ export function setupInterviewWS(wss: WebSocketServer) {
                 return;
             };
             console.log(`Authenticated: userId ${userId}`);
+            const interview = await prisma.interview.create({
+                data: {
+                    userId,
+                    profileId: userProfile.id,
+                    mode: "VOICE", //can change in future
+                    status: "IN_PROGRESS",
+                    messages: { create: [] }
+                }
+            })
             // Session state - scoped per connection
             const messageHistory: ChatMessage[] = [
                 {
@@ -69,21 +79,48 @@ export function setupInterviewWS(wss: WebSocketServer) {
                     )
                 }
             ];
+
             ws.on("message", async (data) => {
-                const audioBuffer = Buffer.from(data as ArrayBuffer);
-                // transcribe the audio
-                const transcript = await stt.transcribe(audioBuffer);
-                if (!transcript.trim()) return;
-                messageHistory.push({ role: "user", content: transcript });
+                try {
+                    const audioBuffer = Buffer.from(data as ArrayBuffer);
+                    // transcribe the audio
+                    const transcript = await stt.transcribe(audioBuffer);
+                    if (!transcript.trim()) return;
+                    messageHistory.push({ role: "user", content: transcript });
+                    await prisma.interviewMessage.create({
+                        data: {
+                            interviewId: interview.id,
+                            role: "USER",
+                            content: transcript
+                        }
+                    });
 
-                const responseText = await llm.chat(messageHistory);
+                    const responseText = await llm.chat(messageHistory);
 
-                messageHistory.push({ role: "assistant", content: responseText });
-                const replyAudio = await tts.synthesize(responseText)
-                ws.send(replyAudio);
+                    messageHistory.push({ role: "assistant", content: responseText });
+                    await prisma.interviewMessage.create({
+                        data: {
+                            interviewId: interview.id,
+                            role: "ASSISTANT",   // match your MessageRole enum exactly
+                            content: responseText
+                        }
+                    });
+                    const replyAudio = await tts.synthesize(responseText)
+                    ws.send(replyAudio);
+                } catch (error) {
+                    console.error(`Pipeline error (userId ${userId}):`, error);
+                    ws.send(JSON.stringify({ error: "Internal error – try again" }));
+                }
             });
-            ws.on("close", () => {
+            ws.on("close", async () => {
                 console.log(`Client disconnected: userId ${userId}`);
+                await prisma.interview.update({
+                    where:{ id: interview.id },
+                    data: {
+                        status: "COMPLETED",
+                        completedAt: new Date()
+                    }
+                });
             });
             ws.on("error", (err) => {
                 console.error(`WebSocket error for userId ${userId}:`, err);
