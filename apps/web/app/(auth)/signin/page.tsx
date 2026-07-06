@@ -49,74 +49,87 @@ export default function Signin() {
     };
     return (
         <div className="grid grid-cols-2 h-screen">
-            <div className="flex flex-col w-full items-center justify-center bg-orange-50 p-8">
-                <div className="px-3 text-center mb-6">
-                    <h1 className="text-2xl font-bold">Welcome back, Human</h1>
-                    <h2 className="font-medium text-gray-600">Sign In to continue using our Interviewlyy</h2>
-                </div>
+            <div className="relative flex w-full flex-col items-center justify-center overflow-hidden bg-gray-100 p-8">
+                <div
+                    className="pointer-events-none absolute inset-0 opacity-50"
+                    style={{
+                        backgroundImage: "url('/noise.svg')",
+                        backgroundRepeat: "repeat",
+                    }}
+                />
+                <div className="flex flex-col w-full items-center justify-center gap-6 bg-white p-8 max-w-xl rounded-sm shadow-2xl">
+                    <div className="relative z-10 flex w-full flex-col items-center">
+                        <div className="px-3 text-center">
+                            <h1 className="text-2xl font-bold">Welcome back, Human</h1>
+                            <h2 className="font-medium text-gray-600">Sign In to continue using our Interviewlyy</h2>
+                        </div>
+                    </div>
 
-                <form onSubmit={handleSubmit} className="w-full max-w-md">
-                    {/* Added flex flex-col gap-6 to stack fields neatly with spacing */}
-                    <FieldSet className="flex flex-col gap-6">
-                        <Field className="flex flex-col gap-2 w-full">
-                            <FieldLabel>Enter your Email</FieldLabel>
-                            <div className="relative">
-                                <Mail className="w-5 h-5 absolute left-3 top-2 text-gray-400" />
-                                <Input type="email"
-                                    value={email}
-                                    onChange={(e) => {
-                                        setEmail(e.target.value)
-                                    }}
-                                    placeholder="Email" className="pl-10 w-full" />
-                            </div>
-                        </Field>
+                    <form onSubmit={handleSubmit} className="w-full max-w-md mt-6">
+                        {/* Added flex flex-col gap-6 to stack fields neatly with spacing */}
+                        <FieldSet className="flex flex-col gap-6">
+                            <Field className="flex flex-col gap-2 w-full">
+                                <FieldLabel>Enter your Email</FieldLabel>
+                                <div className="relative">
+                                    <Mail className="w-5 h-5 absolute left-3 top-2 text-gray-400" />
+                                    <Input type="email"
+                                        value={email}
+                                        onChange={(e) => {
+                                            setEmail(e.target.value)
+                                        }}
+                                        placeholder="Email" className="pl-10 w-full" />
+                                </div>
+                            </Field>
 
-                        <Field className="flex flex-col gap-2 w-full">
-                            <FieldLabel>Enter your password</FieldLabel>
-                            <div className="relative">
-                                <span className="absolute left-3 top-2 text-gray-400 pointer-events-none">
-                                    {showPassword ?
-                                        <Eye className="h-5 w-5 cursor-pointer pointer-events-auto text-gray-500 hover:text-gray-700" onClick={() => {
-                                            setShowPassword(false)
-                                        }} /> :
-                                        <EyeClosed className="h-5 w-5 cursor-pointer pointer-events-auto text-gray-500 hover:text-gray-700" onClick={() => {
-                                            setShowPassword(true)
-                                        }} />
-                                    }
+                            <Field className="flex flex-col gap-2 w-full">
+                                <FieldLabel>Enter your password</FieldLabel>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-2 text-gray-400 pointer-events-none">
+                                        {showPassword ?
+                                            <Eye className="h-5 w-5 cursor-pointer pointer-events-auto text-gray-500 hover:text-gray-700" onClick={() => {
+                                                setShowPassword(false)
+                                            }} /> :
+                                            <EyeClosed className="h-5 w-5 cursor-pointer pointer-events-auto text-gray-500 hover:text-gray-700" onClick={() => {
+                                                setShowPassword(true)
+                                            }} />
+                                        }
+                                    </span>
+                                    <Input
+                                        type={showPassword ? "text" : "password"}
+                                        placeholder="Password"
+                                        className="w-full pl-10"
+                                        value={password}
+                                        onChange={(e) => {
+                                            setPassword(e.target.value);
+                                        }}
+                                    />
+                                </div>
+                            </Field>
+                            {error && (
+                                <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm text-center">
+                                    {error.message}
+                                </div>
+                            )}
+                            <Field className="w-full mt-4">
+                                <Button
+                                    className="bg-blue-600 font-semibold w-full"
+                                    type="submit"
+                                    disabled={isPending}
+                                >
+                                    {isPending ? "Please wait" : "Log In"}
+                                </Button>
+                            </Field>
+
+                            <Link className="text-center text-sm text-blue-600 hover:underline mt-2" href={"/signup"}>
+                                <span className="text-blue-500 hover:underline-offset-2 hover:text-blue-700 hover:underline">
+                                    New to this Platform? Sign up to register.
                                 </span>
-                                <Input
-                                    type={showPassword ? "text" : "password"}
-                                    placeholder="Password"
-                                    className="w-full pl-10"
-                                    value={password}
-                                    onChange={(e) => {
-                                        setPassword(e.target.value);
-                                    }}
-                                />
-                            </div>
-                        </Field>
-                        {error && (
-                            <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm text-center">
-                                {error.message}
-                            </div>
-                        )}
-                        <Field className="w-full mt-4">
-                            <Button
-                                className="bg-blue-600 font-semibold w-full"
-                                type="submit"
-                                disabled={isPending}
-                            >
-                                {isPending ? "Please wait" : "Log In"}
-                            </Button>
-                        </Field>
-
-                        <Link className="text-center text-sm text-blue-600 hover:underline mt-2" href={"/signup"}>
-                            New to this Platform? Sign up to register.
-                        </Link>
-                    </FieldSet>
-                </form>
+                            </Link>
+                        </FieldSet>
+                    </form>
+                </div>
             </div>
-            <div className="flex items-center justify-center bg-gray-100">
+            <div className="flex items-center justify-center bg-gray-50">
                 hello
             </div>
         </div>
