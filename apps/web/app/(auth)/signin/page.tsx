@@ -19,7 +19,7 @@ export default function Signin() {
 
     const { mutate: signin, isPending, error } = useMutation({
         mutationFn: async (formData: { email: string, password: string }) => {
-            const response = await fetch("http://localhost:4000/api/v1/auth/signin", {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/auth/signin`, {
                 method: "POST",
                 headers: {
                     "Content-type": "application/json",
@@ -76,10 +76,10 @@ export default function Signin() {
                             <div className="relative">
                                 <span className="absolute left-3 top-2 text-gray-400 pointer-events-none">
                                     {showPassword ?
-                                        <Eye className="h-5 w-5" onClick={() => {
+                                        <Eye className="h-5 w-5 cursor-pointer pointer-events-auto text-gray-500 hover:text-gray-700" onClick={() => {
                                             setShowPassword(false)
                                         }} /> :
-                                        <EyeClosed className="h-5 w-5" onClick={() => {
+                                        <EyeClosed className="h-5 w-5 cursor-pointer pointer-events-auto text-gray-500 hover:text-gray-700" onClick={() => {
                                             setShowPassword(true)
                                         }} />
                                     }
@@ -106,7 +106,7 @@ export default function Signin() {
                                 type="submit"
                                 disabled={isPending}
                             >
-                                {isPending ? "Continue" : "Please wait"}
+                                {isPending ? "Please wait" : "Log In"}
                             </Button>
                         </Field>
 

@@ -8,7 +8,10 @@ const port = 4000;
 import http from "http";
 import { WebSocketServer } from "ws";
 import { setupInterviewWS } from "./ws/interview.handler";
+import cors from "cors";
+
 app.use(express.json());
+app.use(cors());
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({server,path:"/ws/interview"})

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldLabel, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useMutation } from "@tanstack/react-query";
-import { Eye, EyeOff, Mail, User } from "lucide-react";
+import { Eye, EyeClosed, Mail, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -20,7 +20,7 @@ export default function Signup() {
     // TanStack Query Mutation
     const { mutate: signup, isPending, error } = useMutation({
         mutationFn: async (formData: { name: string; email: string; password: string }) => {
-            const response = await fetch("http://localhost:4000/api/v1/auth/signup", {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/auth/signup`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -112,12 +112,12 @@ export default function Signup() {
                             <div className="relative flex items-center w-full">
                                 <span className="absolute left-3 text-gray-400 pointer-events-none">
                                     {showPassword ? (
-                                        <EyeOff
+                                        <Eye
                                             className="h-5 w-5 cursor-pointer pointer-events-auto text-gray-500 hover:text-gray-700"
                                             onClick={() => setShowPassword(false)}
                                         />
                                     ) : (
-                                        <Eye
+                                        <EyeClosed
                                             className="h-5 w-5 cursor-pointer pointer-events-auto text-gray-500 hover:text-gray-700"
                                             onClick={() => setShowPassword(true)}
                                         />
@@ -149,7 +149,7 @@ export default function Signup() {
                                 type="submit"
                                 disabled={isPending}
                             >
-                                {isPending ? "Creating Account..." : "Submit"}
+                                {isPending ? "Creating Account..." : "Create Account"}
                             </Button>
                         </Field>
 

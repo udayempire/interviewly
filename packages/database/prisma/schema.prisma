@@ -4,12 +4,12 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+    provider = "prisma-client"
+    output   = "../generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
+    provider = "postgresql"
 }
 
 enum MessageRole {
@@ -35,11 +35,11 @@ enum InterviewStatus {
 }
 
 model User {
-    id              String           @id @default(cuid())
-    email           String?          @unique
+    id              String            @id @default(cuid())
+    email           String?           @unique
     name            String?
     passwordHash    String? // null for OAuth users
-    createdAt       DateTime         @default(now())
+    createdAt       DateTime          @default(now())
     userProfile     UserProfile?
     interview       Interview[]
     interviewReport InterviewReport[]
@@ -51,7 +51,7 @@ model UserProfile {
     user       User        @relation(fields: [userId], references: [id])
     githubUrl  String      @unique
     githubData Json?
-    resumeText Json?     
+    resumeText Json?
     createdAt  DateTime    @default(now())
     updatedAt  DateTime    @updatedAt
     interviews Interview[]
@@ -81,7 +81,7 @@ model Interview {
     profileId   String
     profile     UserProfile        @relation(fields: [profileId], references: [id])
     templateId  String?
-    template    Template?           @relation(fields: [templateId], references: [id])
+    template    Template?          @relation(fields: [templateId], references: [id])
     mode        AIMode
     status      InterviewStatus
     startedAt   DateTime           @default(now())
@@ -91,16 +91,16 @@ model Interview {
 }
 
 model InterviewMessage {
-    id          String        @id @default(cuid())
+    id          String         @id @default(cuid())
     interviewId String
-    interview   Interview     @relation(references: [id], fields: [interviewId])
+    interview   Interview      @relation(references: [id], fields: [interviewId])
     role        MessageRole
-    content     String        @db.Text
+    content     String         @db.Text
     audioUrl    String?
     questionNum Int?
     type        InterviewType?
-    createdAt   DateTime      @default(now())
-    updatedAt   DateTime      @updatedAt
+    createdAt   DateTime       @default(now())
+    updatedAt   DateTime       @updatedAt
 }
 
 model InterviewReport {
