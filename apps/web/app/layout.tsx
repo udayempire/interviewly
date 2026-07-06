@@ -3,8 +3,9 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { ReactQueryProvider } from "./ReactQueryProvider";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -28,7 +29,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn("font-sans", inter.variable)}>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
+        <ReactQueryProvider>
+          {children}
+        </ReactQueryProvider>
       </body>
     </html>
   );
