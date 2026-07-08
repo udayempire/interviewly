@@ -2,13 +2,15 @@
 
 import { MessageSquare } from "lucide-react"
 import { Textarea } from "../ui/textarea"
-import { useState } from "react"
 
 const MAX_CHARS = 300
 
-export const InterviewAbout = () => {
-    const [value, setValue] = useState("")
+interface InterviewAboutProps {
+    value: string
+    onChange: (val: string) => void
+}
 
+export const InterviewAbout = ({ value, onChange }: InterviewAboutProps) => {
     return (
         <div className="border border-zinc-200 p-5 rounded-lg bg-white flex flex-col gap-5">
             {/* Header */}
@@ -31,7 +33,7 @@ export const InterviewAbout = () => {
                 <Textarea
                     maxLength={MAX_CHARS}
                     value={value}
-                    onChange={(e) => setValue(e.target.value)}
+                    onChange={(e) => onChange(e.target.value)}
                     placeholder="e.g. Frontend Developer interview focusing on React, JavaScript, and System Design..."
                     className="resize-none min-h-[200px] text-[13px] text-zinc-700 placeholder:text-zinc-400 border-zinc-200 rounded-lg bg-zinc-50 focus-visible:ring-1 focus-visible:ring-blue-400 focus-visible:border-blue-400 placeholder:text-sm"
                     rows={5}
