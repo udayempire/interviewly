@@ -1,4 +1,4 @@
-import { ChevronRight, CircleChevronRight } from "lucide-react"
+import { CircleChevronRight } from "lucide-react"
 import { Button } from "../ui/button"
 import { Card, CardDescription, CardTitle } from "../ui/card"
 

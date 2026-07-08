@@ -1,8 +1,10 @@
 import { InterviewActionCards } from "@/components/home/interviewActionCards";
+import { InterviewReportCard } from "@/components/home/interviewReportCard";
+import Link from "next/link";
 
 export default function Home() {
     return (
-        <div className="grid grid-cols-[70%_30%] min-h-screen">
+        <div className="grid grid-cols-[75%_25%] min-h-screen">
             <div className=" p-6">
                 <div className="space-y-2">
                     <h1 className="text-2xl font-bold">Welcome back, Uday ! 👋</h1>
@@ -20,9 +22,22 @@ export default function Home() {
                         buttonDescription={"Create Interview"}
                     />
                 </div>
+                <div className="mt-8">
+                    <div className="flex justify-between">
+                        <h1 className="font-bold text-[18px]"> Your Recent Interviews</h1>
+                        <Link href="/all-interviews" className="text-blue-600 font-semibold">View All</Link>
+                    </div>
+                    <div className="space-y-1.5 mt-6">
+                        <InterviewReportCard title={"Frontend Developer Interview"} status="Completed" timeAgo={"2 Days ago"} />
+                        <InterviewReportCard title={"Frontend Developer Interview"} status="Processing" timeAgo={"2 Days ago"} />
+                        <InterviewReportCard title={"Frontend Developer Interview"} status="Completed" timeAgo={"2 Days ago"} />
+                        <InterviewReportCard title={"Frontend Developer Interview"} status="Completed" timeAgo={"2 Days ago"} />
+                    </div>
+                </div>
+
             </div>
 
-            <div className="bg-orange-100 p-6">
+            <div className="border border-l p-6">
                 Right (30%)
             </div>
         </div>
