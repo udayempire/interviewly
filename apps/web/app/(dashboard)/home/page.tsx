@@ -1,11 +1,12 @@
 import { InterviewActionCards } from "@/components/home/interviewActionCards";
 import { InterviewReportCard } from "@/components/home/interviewReportCard";
+import { QuickStats } from "@/components/home/quickStats";
 import Link from "next/link";
 
 export default function Home() {
     return (
-        <div className="grid grid-cols-[75%_25%] min-h-screen">
-            <div className=" p-6">
+        <div className="grid grid-cols-[70%_30%] min-h-screen">
+            <div className="p-6">
                 <div className="space-y-2">
                     <h1 className="text-2xl font-bold">Welcome back, Uday ! 👋</h1>
                     <h2 className="text-lg font-ex text-gray-700">What would you like to do today?</h2>
@@ -37,8 +38,8 @@ export default function Home() {
 
             </div>
 
-            <div className="border border-l p-6">
-                Right (30%)
+            <div className="px-2">
+                <QuickStats />
             </div>
         </div>
     );
