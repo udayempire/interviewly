@@ -9,7 +9,7 @@ export default function Home() {
             <div className="p-6">
                 <div className="space-y-2">
                     <h1 className="text-2xl font-bold">Welcome back, Uday ! 👋</h1>
-                    <h2 className="text-lg font-ex text-gray-700">What would you like to do today?</h2>
+                    <h2 className="text-md  text-gray-700">What would you like to do today?</h2>
                 </div>
                 <div className="grid grid-cols-2 gap-4 p-2 mt-6">
                     <InterviewActionCards

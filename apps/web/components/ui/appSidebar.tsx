@@ -54,7 +54,6 @@ export function AppSidebar() {
     return (
         <Sidebar collapsible="icon">
 
-            {/* ── Header: app logo ── */}
             <SidebarHeader className="px-3 py-4">
                 <SidebarMenu>
                     <SidebarMenuItem>
@@ -65,7 +64,7 @@ export function AppSidebar() {
                         >
                             <Link href="/home" className="flex items-center gap-3">
                                 {/* App icon */}
-                                <div className="h-8 w-8 shrink-0 rounded-[8px] bg-gradient-to-br from-blue-600 to-indigo-500 flex items-center justify-center shadow-sm">
+                                <div className="h-8 w-8 shrink-0 rounded-[8px] bg-linear-to-br from-blue-600 to-indigo-500 flex items-center justify-center shadow-sm">
                                     <span className="text-[12px] font-bold text-white leading-none">I</span>
                                 </div>
                                 <div className="flex flex-col leading-tight">
@@ -81,7 +80,6 @@ export function AppSidebar() {
 
             <hr className="mx-3 border-none h-px bg-sidebar-border" />
 
-            {/* ── Content: main nav + account nav ── */}
             <SidebarContent className="px-2 py-2">
 
                 {/* Main group */}
@@ -126,7 +124,7 @@ export function AppSidebar() {
                                         className="rounded-lg"
                                     >
                                         <Link href={href} className="flex items-center gap-2.5">
-                                            <Icon className="h-[17px] w-[17px] shrink-0" />
+                                            <Icon className="h-4.25 w-4.25 shrink-0" />
                                             <span className="text-[13px] font-medium">{label}</span>
                                         </Link>
                                     </SidebarMenuButton>
@@ -139,8 +137,6 @@ export function AppSidebar() {
             </SidebarContent>
 
             <hr className="mx-3 border-none h-px bg-sidebar-border" />
-
-            {/* ── Footer: logout + user avatar ── */}
             <SidebarFooter className="px-2 py-3">
                 <SidebarMenu>
 
