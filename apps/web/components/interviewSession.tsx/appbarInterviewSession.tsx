@@ -2,11 +2,19 @@
 
 import { Clock, Mic, MicOff } from "lucide-react"
 import { Button } from "../ui/button";
-import { useMicrophone } from "@/hooks/use-microphone";
+import type { MicStatus } from "@/hooks/use-microphone";
 
-export const AppbarInterviewSession = () => {
-    const { isMuted, toggleMic, status } = useMicrophone();
+interface AppbarInterviewSessionProps {
+    isMuted: boolean;
+    toggleMic: () => Promise<void>;
+    micStatus: MicStatus;
+}
 
+export const AppbarInterviewSession = ({
+    isMuted,
+    toggleMic,
+    micStatus,
+}: AppbarInterviewSessionProps) => {
     return (
         <div className="flex justify-between p-2 px-6 border-b items-center">
             <div className="flex">
@@ -31,7 +39,7 @@ export const AppbarInterviewSession = () => {
                             : "bg-green-100"
                     }`}
                     title={
-                        status === "denied"
+                        micStatus === "denied"
                             ? "Microphone access denied — check browser settings"
                             : isMuted
                               ? "Unmute microphone"
