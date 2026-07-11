@@ -70,10 +70,10 @@ function SuggestionCard({ title, subtitle, icon: Icon, iconBg, iconColor, onClic
             onClick={onClick}
             className="flex justify-start items-center gap-3.5 p-4 rounded-xl border border-zinc-100 bg-white hover:border-blue-200 hover:bg-blue-50/30 transition-all duration-150 cursor-pointer "
         >
-            <div className={`shrink-0 h-10 w-10 rounded-lg ${iconBg} flex items-center justify-center`}>
+            <div className={`shrink-0 h-7 w-7 rounded-lg ${iconBg} flex items-center justify-center`}>
                 <Icon className={`h-5 w-5 ${iconColor}`} strokeWidth={1.75} />
             </div>
-            <div className="min-w-0">
+            <div className="">
                 <p className="text-[13.5px] font-semibold text-zinc-800 leading-tight truncate">{title}</p>
                 <p className="text-[12px] text-zinc-400 mt-0.5 leading-tight">{subtitle}</p>
             </div>

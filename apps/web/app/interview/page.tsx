@@ -12,7 +12,7 @@ export default function Interview() {
     const [topic, setTopic] = useState("")
 
     return (
-        <div className="p-6 max-w-6xl mx-auto">
+        <div className="p-6 max-w-7xl mx-auto">
             {/* Page heading */}
             <div className="flex flex-col items-center gap-2 mb-14">
                 <h1 className="text-3xl font-semibold">Create your AI Interview</h1>
@@ -32,14 +32,14 @@ export default function Interview() {
             {/* Create Interview CTA */}
             <div className="flex flex-col items-center gap-3 mt-8">
                 <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[14px] px-8 py-3 rounded-md transition-colors cursor-pointer">
-                    Create Interview
+                    <p>Create Interview</p>
                 </button>
 
                 {/* Privacy note */}
-                <div className="flex items-center gap-1.5 text-[12.5px] text-zinc-400">
+                {/* <div className="flex items-center gap-1.5 text-[12.5px] text-zinc-400">
                     <ShieldCheck className="h-3.5 w-3.5 text-zinc-400" strokeWidth={1.75} />
                     <span>Your data is private and secure</span>
-                </div>
+                </div> */}
             </div>
 
             {/* Suggestions — clicking fills the topic textarea above */}
