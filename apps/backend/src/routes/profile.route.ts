@@ -31,7 +31,7 @@ profileRouter.post("/profile", authMiddleware, upload.single("resume"), async (r
 
         const profile = await prisma.userProfile.upsert({
             where: {
-                userId,  
+                userId,
             },
             create: {
                 userId,
