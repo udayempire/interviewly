@@ -1,24 +1,33 @@
 "use client"
 
-import { CloudUpload, FileText } from "lucide-react"
-import { useRef, useState } from "react"
-import { Button } from "../ui/button"
+import { CloudUpload, FileText } from "lucide-react";
+import { useRef, useState } from "react";
+import { Button } from "../ui/button";
 
-export const ResumeEntry = () => {
+interface ResumeEntryProps {
+    onFileChange?: (file: File | null) => void
+};
+
+export const ResumeEntry = ({ onFileChange }: ResumeEntryProps) => {
     const inputRef = useRef<HTMLInputElement>(null)
     const [fileName, setFileName] = useState<string | null>(null)
     const [dragging, setDragging] = useState(false)
 
     const handleFile = (file: File | undefined) => {
-        if (!file) return
+        if (!file) {
+            setFileName(null)
+            onFileChange?.(null)
+            return;
+        };
         setFileName(file.name)
-    }
+        onFileChange?.(file)
+    };
 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault()
         setDragging(false)
         handleFile(e.dataTransfer.files[0])
-    }
+    };
 
     return (
         <div className="border border-zinc-200 p-5 rounded-lg bg-white flex flex-col gap-5">

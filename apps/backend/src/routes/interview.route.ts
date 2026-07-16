@@ -4,15 +4,19 @@ import { createInterviewSchema } from "@repo/types";
 import { extractGithubUsername, getGithubData } from "../services/githubExtraction.service";
 import { extractResumeData } from "../services/resumeExtraction.service";
 import { AIMode, prisma } from "@repo/db";
+import { authMiddleware } from "../middleware/auth";
+import multer from "multer";
 
 const interviewRouter = express.Router();
 
 const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 export function generateCode(length = 6): string {
     return Array.from({ length }, () => chars[randomInt(chars.length)]).join("");
-}
+};
 
-interviewRouter.post("/create", async (req, res) => {
+const upload = multer({ storage: multer.memoryStorage() });
+
+interviewRouter.post("/create", authMiddleware, upload.single("resume"), async (req, res) => {
     const result = createInterviewSchema.safeParse(req.body);
     if (!result.success) {
         return res.status(400).json({ error: result.error });

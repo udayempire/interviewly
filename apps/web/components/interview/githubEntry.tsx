@@ -2,10 +2,13 @@
 
 import Image from "next/image"
 import { Lock } from "lucide-react"
-import { useState } from "react"
 
-export const GithubEntry = () => {
-    const [value, setValue] = useState("")
+interface GithubUrlProps {
+    value: string
+    onChange: (val: string) => void
+}
+
+export const GithubEntry = ({ value, onChange }: GithubUrlProps) => {
 
     return (
         <div className="border border-zinc-200 p-5 rounded-lg bg-white flex flex-col gap-5">
@@ -31,7 +34,7 @@ export const GithubEntry = () => {
                 <input
                     type="text"
                     value={value}
-                    onChange={(e) => setValue(e.target.value)}
+                    onChange={(e) => onChange(e.target.value)}
                     placeholder="https://github.com/username"
                     className="flex-1 bg-transparent text-[13px] text-zinc-700 placeholder:text-zinc-400 outline-none border-none"
                 />
