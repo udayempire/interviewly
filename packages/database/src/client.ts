@@ -1,15 +1,16 @@
-
-// Source - https://stackoverflow.com/a/79805716
-// Posted by Amrita Pathak, modified by community. See post 'Timeline' for change history
-// Retrieved 2026-06-24, License - CC BY-SA 4.0
-
 import "dotenv/config";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
-const adapter = new PrismaPg({
+const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
+
+const adapter = new PrismaPg(pool);
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 

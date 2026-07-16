@@ -59,7 +59,6 @@ export function AppSidebar() {
                     <SidebarMenuItem>
                         <SidebarMenuButton
                             size="lg"
-                            asChild
                             className="hover:bg-sidebar-accent"
                         >
                             <Link href="/home" className="flex items-center gap-3">
@@ -92,7 +91,6 @@ export function AppSidebar() {
                             {mainNav.map(({ label, href, icon: Icon }) => (
                                 <SidebarMenuItem key={href}>
                                     <SidebarMenuButton
-                                        asChild
                                         isActive={pathname === href}
                                         tooltip={label}
                                         className="rounded-lg"
@@ -118,7 +116,6 @@ export function AppSidebar() {
                             {accountNav.map(({ label, href, icon: Icon }) => (
                                 <SidebarMenuItem key={href}>
                                     <SidebarMenuButton
-                                        asChild
                                         isActive={pathname === href}
                                         tooltip={label}
                                         className="rounded-lg"
@@ -143,7 +140,7 @@ export function AppSidebar() {
                     {/* Logout */}
                     <SidebarMenuItem>
                         <SidebarMenuButton
-                            asChild
+
                             tooltip="Log out"
                             className="rounded-lg text-sidebar-foreground/60 hover:text-red-500 hover:bg-red-50"
                         >
