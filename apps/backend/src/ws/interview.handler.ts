@@ -1,11 +1,24 @@
 import { prisma } from "@repo/db";
 import { createLLMProvider, createSTTProvider, createTTSProvider, type ChatMessage } from "@repo/llm";
 import { verify } from "jsonwebtoken";
-import { WebSocketServer } from "ws";
+import { WebSocket, WebSocketServer, type RawData } from "ws";
 
 interface DecodedToken {
     userId: string;
 };
+
+function sendJson(ws: WebSocket, payload: unknown) {
+    if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(payload));
+    }
+}
+
+function audioDataToBuffer(data: RawData): Buffer {
+    if (Buffer.isBuffer(data)) return data;
+    if (data instanceof ArrayBuffer) return Buffer.from(data);
+    if (Array.isArray(data)) return Buffer.concat(data);
+    return Buffer.from(data);
+}
 
 // function buildSystemPrompt(interviewDescription: string, githubData: unknown, resumeData: unknown): string {
 //     return `You are an expert Technical Interviewer conducting coding interview.
@@ -84,6 +97,22 @@ export function setupInterviewWS(wss: WebSocketServer) {
     const stt = createSTTProvider("groq");
     const tts = createTTSProvider("groq");
     const llm = createLLMProvider("groq");
+
+    async function sendSpeechIfAvailable(ws: WebSocket, text: string) {
+        try {
+            const audio = await tts.synthesize(text);
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(audio);
+            }
+        } catch (error) {
+            console.error("TTS failed; continuing with text-only response:", error);
+            sendJson(ws, {
+                type: "notice",
+                message: "Voice playback is unavailable, showing the response in chat."
+            });
+        }
+    }
+
     wss.on("connection", async (ws, req) => {
         console.log("Client Connected to interview Websocket");
         const url = new URL(req.url!, "http://localhost");
@@ -151,20 +180,21 @@ export function setupInterviewWS(wss: WebSocketServer) {
                 data: { status: "IN_PROGRESS" }
             });
             const openingText = await llm.chat(messageHistory);
-            llm.chat(messageHistory);
             messageHistory.push({ role: "assistant", content: openingText });
             await prisma.interviewMessage.create({
                 data: { interviewId, role: "ASSISTANT", content: openingText }
             });
-            ws.send(JSON.stringify({ type: "message", role: "ai", content: openingText }));
-            const openingAudio = await tts.synthesize(openingText);
-            ws.send(openingAudio);
+            sendJson(ws, { type: "message", role: "ai", content: openingText });
+
             ws.on("message", async (data) => {
                 try {
-                    const audioBuffer = Buffer.from(data as ArrayBuffer);
+                    const audioBuffer = audioDataToBuffer(data);
+                    if (audioBuffer.length === 0) return;
+
                     // transcribe the audio
                     const transcript = await stt.transcribe(audioBuffer);
                     if (!transcript.trim()) return;
+
                     messageHistory.push({ role: "user", content: transcript });
                     await prisma.interviewMessage.create({
                         data: {
@@ -173,6 +203,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
                             content: transcript
                         }
                     });
+                    sendJson(ws, { type: "message", role: "user", content: transcript });
 
                     const responseText = await llm.chat(messageHistory);
 
@@ -184,11 +215,11 @@ export function setupInterviewWS(wss: WebSocketServer) {
                             content: responseText
                         }
                     });
-                    const replyAudio = await tts.synthesize(responseText)
-                    ws.send(replyAudio);
+                    sendJson(ws, { type: "message", role: "ai", content: responseText });
+                    await sendSpeechIfAvailable(ws, responseText);
                 } catch (error) {
                     console.error(`Pipeline error (userId ${userId}):`, error);
-                    ws.send(JSON.stringify({ error: "Internal error – try again" }));
+                    sendJson(ws, { error: "Internal error - try again" });
                 }
             });
             ws.on("close", async () => {
@@ -204,6 +235,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
             ws.on("error", (err) => {
                 console.error(`WebSocket error for userId ${userId}:`, err);
             });
+            await sendSpeechIfAvailable(ws, openingText);
         } catch (error) {
             ws.close(1011, "Internal Server Error");
             return

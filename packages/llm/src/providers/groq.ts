@@ -50,13 +50,13 @@ export class GroqSTTProvider implements STTProvider {
 
 export class GroqTTSProvider implements TTSProvider {
     private ai = new Groq({ apiKey: process.env.GROQ_API_KEY! });
-    async synthesize(text: string, options?: { model?: string; voice?:string }): Promise<Buffer> {
-        const model = options?.model ?? "canopylabs/orpheus-v1-english"; 
-        const voice  = options?.voice ?? "autumn"
+    async synthesize(text: string, options?: { model?: string; voice?: string }): Promise<Buffer> {
+        const model = options?.model ?? "canopylabs/orpheus-v1-english";
+        const voice = options?.voice ?? "autumn"
         const speechResponse = await this.ai.audio.speech.create({
             model,
             voice,
-            input:text,
+            input: text,
             response_format: "wav",
         });
         const buffer = Buffer.from(await speechResponse.arrayBuffer());

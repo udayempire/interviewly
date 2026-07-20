@@ -2,23 +2,23 @@
 
 import { Clock, Mic, MicOff } from "lucide-react"
 import { Button } from "../ui/button";
-import type { MicStatus } from "@/hooks/use-microphone";
 
 interface AppbarInterviewSessionProps {
-    isMuted: boolean;
-    toggleMic: () => Promise<void>;
-    micStatus: MicStatus;
+    isAiSpeaking: boolean;
+    isUserRecording: boolean;
+    onMicDown: () => void;
+    onMicUp: () => void;
 }
 
 export const AppbarInterviewSession = ({
-    isMuted,
-    toggleMic,
-    micStatus,
+    isAiSpeaking,
+    isUserRecording,
+    onMicDown,
+    onMicUp,
 }: AppbarInterviewSessionProps) => {
     return (
-        <div className="flex justify-between p-2 px-6 border-b items-center">
+        <div className="flex justify-between p-2 px-6 border-b items-center select-none">
             <div className="flex">
-                {/* place for logo of interviewlly */}
                 <h1 className="font-semibold">Interviewlyy</h1>
             </div>
             <div className="flex gap-4 ml-24 font-medium">
@@ -26,38 +26,40 @@ export const AppbarInterviewSession = ({
             </div>
             <div className="flex items-center gap-5">
                 <div className="flex items-center gap-2">
-                    <span>
-                        <Clock size={20} />
-                    </span>
+                    <span><Clock size={20} /></span>
                     <p className="font-medium">00:18:42</p>
                 </div>
-                <button
-                    onClick={toggleMic}
-                    className={`p-2 rounded-md cursor-pointer transition-colors ${
-                        isMuted
-                            ? "bg-red-100"
-                            : "bg-green-100"
-                    }`}
-                    title={
-                        micStatus === "denied"
-                            ? "Microphone access denied — check browser settings"
-                            : isMuted
-                              ? "Unmute microphone"
-                              : "Mute microphone"
-                    }
-                >
-                    {isMuted ? (
-                        <MicOff className="text-red-500" size={20} />
-                    ) : (
-                        <Mic className="text-green-600" size={20} />
-                    )}
-                </button>
-                <div>
-                    <Button variant="destructive">Leave Interview</Button>
+
+                {/* Push-to-talk mic button */}
+                <div className="flex flex-col items-center gap-1">
+                    <button
+                        onMouseDown={onMicDown}
+                        onMouseUp={onMicUp}
+                        onMouseLeave={onMicUp}
+                        onTouchStart={(e) => { e.preventDefault(); onMicDown(); }}
+                        onTouchEnd={(e) => { e.preventDefault(); onMicUp(); }}
+                        disabled={isAiSpeaking}
+                        className={`p-3 rounded-full cursor-pointer transition-all duration-150 select-none ${isAiSpeaking
+                                ? "bg-zinc-100 text-zinc-300 cursor-not-allowed"
+                                : isUserRecording
+                                    ? "bg-red-500 text-white scale-110 shadow-lg shadow-red-200 ring-4 ring-red-200 animate-pulse"
+                                    : "bg-zinc-100 hover:bg-blue-50 text-zinc-600 hover:text-blue-600"
+                            }`}
+                        title={isAiSpeaking ? "Wait for AI to finish" : isUserRecording ? "Recording... Release to send" : "Hold to speak"}
+                    >
+                        {isUserRecording ? (
+                            <Mic size={20} className="text-white" />
+                        ) : (
+                            <MicOff size={20} />
+                        )}
+                    </button>
+                    <span className="text-[10px] text-zinc-400 font-medium">
+                        {isAiSpeaking ? "AI speaking..." : isUserRecording ? "Recording..." : "Hold to speak"}
+                    </span>
                 </div>
+
+                <Button variant="destructive">Leave Interview</Button>
             </div>
-
-
         </div>
     )
 }
