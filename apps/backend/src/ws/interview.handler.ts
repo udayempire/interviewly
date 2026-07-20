@@ -5,7 +5,7 @@ import { WebSocketServer } from "ws";
 
 interface DecodedToken {
     userId: string;
-}
+};
 
 // function buildSystemPrompt(interviewDescription: string, githubData: unknown, resumeData: unknown): string {
 //     return `You are an expert Technical Interviewer conducting coding interview.

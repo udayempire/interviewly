@@ -1,4 +1,4 @@
-import type { LLMProvider,STTProvider, TTSProvider } from "./types";
+import type { LLMProvider, STTProvider, TTSProvider } from "./types";
 import { GeminiProvider } from "./providers/gemini";
 import { GroqProvider, GroqSTTProvider, GroqTTSProvider } from "./providers/groq";
 
@@ -10,12 +10,12 @@ const providers = new Map<string, new () => LLMProvider>([
     ["groq", GroqProvider]
 ]);
 
-const sttProviders = new Map<string, new()=>STTProvider>([
-    ["groq",GroqSTTProvider],
+const sttProviders = new Map<string, new () => STTProvider>([
+    ["groq", GroqSTTProvider],
 ]);
 
-const ttsProviders = new Map<string, new()=>TTSProvider>([
-    ["groq",GroqTTSProvider],
+const ttsProviders = new Map<string, new () => TTSProvider>([
+    ["groq", GroqTTSProvider],
 ]);
 
 export function createLLMProvider(provider: string): LLMProvider {
@@ -25,25 +25,25 @@ export function createLLMProvider(provider: string): LLMProvider {
         throw new Error("Unknown provider");
     };
     return new Provider();
-}
+};
 
-export function createSTTProvider(provider:string): STTProvider {
+export function createSTTProvider(provider: string): STTProvider {
     const providerName = provider ?? process.env.DEFAULT_STT_PROVIDER;
     const sttProvider = sttProviders.get(providerName);
     if (!sttProvider) {
         throw new Error("Unknown provider");
     };
     return new sttProvider();
-}
+};
 
-export function createTTSProvider(provider:string): TTSProvider {
+export function createTTSProvider(provider: string): TTSProvider {
     const providerName = provider ?? process.env.DEFAULT_TTS_PROVIDER;
     const ttsProvider = ttsProviders.get(providerName);
     if (!ttsProvider) {
         throw new Error("Unknown provider");
     };
     return new ttsProvider();
-}
+};
 
 //Re-export types so consumers don't need separate imports like @repo/llm/types and can use @repo/llm
 export type { LLMProvider, ChatMessage, STTProvider, TTSProvider } from "./types.js";
