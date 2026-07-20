@@ -10,6 +10,7 @@ import { useMicrophone } from "@/hooks/use-microphone";
 import type { ConversationMessage } from "@/components/interviewSession.tsx/types";
 import { Preparation } from "@/components/interviewSession.tsx/preparing";
 import { ErrorLoading } from "@/components/interviewSession.tsx/errorLoading";
+import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 
 export default function InterviewPage() {
     const { isMuted, toggleMic, status } = useMicrophone();
@@ -20,7 +21,22 @@ export default function InterviewPage() {
     const [sessionState, setSessionState] = useState<"preparing" | "live" | "error">("preparing");
     const [messages, setMessages] = useState<ConversationMessage[]>([]);
     const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+    const { startListening, stopListening } = useVoiceRecorder({
+        onSpeechEnd: (audioBlob) => {
+            if (wsRef.current?.readyState === WebSocket.OPEN) {
+                wsRef.current.send(audioBlob);
+            }
+        },
+        silenceThreshold: 10,
+        silenceDurationMs: 1500,
+    });
     const wsRef = useRef<WebSocket | null>(null);
+    useEffect(() => {
+        if (sessionState === "live") {
+            startListening();
+        }
+        return () => stopListening();
+    }, [sessionState, startListening, stopListening]);
 
     useEffect(() => {
         if (!interviewId) return;
