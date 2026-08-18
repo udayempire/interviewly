@@ -94,9 +94,9 @@ export default function InterviewReportPage() {
                 {/* Header */}
                 <ReportHeader
                     interviewTitle="Frontend Developer Interview"
-                    date="May 30, 2025"
-                    time="10:30 AM"
-                    duration="52 mins"
+                    date="Aug 5, 2025"
+                    time="11:30 AM"
+                    duration="12 mins"
                 />
 
                 {/* Score Section */}

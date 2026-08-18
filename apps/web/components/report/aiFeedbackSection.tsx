@@ -10,7 +10,7 @@ export const AIFeedbackSection = ({ strengths, improvements }: AIFeedbackSection
     return (
         <Card className="p-6 bg-white">
             <div className="flex items-center gap-2 mb-5">
-                <span className="text-lg">✨</span>
+                <span className="text-lg">1</span>
                 <h2 className="text-lg font-bold text-zinc-800">AI Feedback</h2>
             </div>
 

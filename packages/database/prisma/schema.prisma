@@ -108,16 +108,47 @@ model InterviewMessage {
 }
 
 model InterviewReport {
-    id               String    @id @default(cuid())
-    userId           String
-    user             User      @relation(fields: [userId], references: [id])
-    interviewId      String    @unique
-    interview        Interview @relation(fields: [interviewId], references: [id])
-    strengths        String[]
-    improvements     String[]
-    detailedFeedback String    @db.Text
-    aiSummary        String    @db.Text
-    overallScore     Int? // 0‑100, computed after interview
-    breakdown        Json? // e.g. { communication: 80, technical: 70 }
-    createdAt        DateTime  @default(now())
+    id                String          @id @default(cuid())
+    userId            String
+    user              User            @relation(fields: [userId], references: [id])
+    interviewId       String          @unique
+    interview         Interview       @relation(fields: [interviewId], references: [id])
+    overallScore      Int? // 0‑100, computed after interview
+    scoreLabel        String? // e.g. "Great Performance! 🎉"
+    percentile        Float? // e.g. 78.0 = scored higher than 78% of users
+    strengths         String[]
+    improvements      String[]
+    totalQuestions    Int?
+    answeredQuestions Int?
+    detailedFeedback  String          @db.Text
+    aiSummary         String          @db.Text
+    breakdown         Json? // legacy; prefer SkillScore relation
+    skillScores       SkillScore[]
+    questionScores    QuestionScore[]
+    createdAt         DateTime        @default(now())
+}
+
+model SkillScore {
+    id          String          @id @default(cuid())
+    reportId    String
+    report      InterviewReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+    skillName   String // e.g. "Communication", "Problem Solving", "Technical Knowledge"
+    score       Int // 0-100
+    rating      String // "Excellent" | "Good" | "Average" | "Poor"
+    description String          @db.Text // per-skill AI feedback
+
+    @@unique([reportId, skillName])
+}
+
+model QuestionScore {
+    id           String          @id @default(cuid())
+    reportId     String
+    report       InterviewReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+    questionNum  Int // question number (1, 2, 3...)
+    questionType String // e.g. "React Concepts", "System Design", "Coding Challenge"
+    score        Int? // 0-100, null if skipped
+    timeSpentSec Int? // time in seconds, null if skipped
+    performance  String // "Excellent" | "Good" | "Average" | "Poor" | "Skipped"
+
+    @@unique([reportId, questionNum])
 }

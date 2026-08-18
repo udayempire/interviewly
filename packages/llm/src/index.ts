@@ -1,6 +1,7 @@
 import type { LLMProvider, STTProvider, TTSProvider } from "./types";
 import { GeminiProvider } from "./providers/gemini";
 import { GroqProvider, GroqSTTProvider, GroqTTSProvider } from "./providers/groq";
+import { DeepgramProvider } from "./providers/deepgram";
 
 
 // new () => LLMProvider means "a class that can create an LLMProvider object."
@@ -16,6 +17,7 @@ const sttProviders = new Map<string, new () => STTProvider>([
 
 const ttsProviders = new Map<string, new () => TTSProvider>([
     ["groq", GroqTTSProvider],
+    ["deepgram", DeepgramProvider]
 ]);
 
 export function createLLMProvider(provider: string): LLMProvider {
