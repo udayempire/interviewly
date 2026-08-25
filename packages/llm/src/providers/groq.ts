@@ -7,7 +7,7 @@ export class GroqProvider implements LLMProvider {
         const hasImage = messages.some(msg =>
             Array.isArray(msg.content) && msg.content.some(part => part.type === "image_url")
         );
-        const model = hasImage ? "meta-llama/llama-4-scout-17b-16e-instruct" : "llama-3.3-70b-versatile";
+        const model = hasImage ? "meta-llama/llama-4-scout-17b-16e-instruct" : "openai/gpt-oss-120b";
 
         const response = await this.ai.chat.completions.create({
             model: model,
@@ -20,7 +20,7 @@ export class GroqProvider implements LLMProvider {
         const hasImage = messages.some(msg =>
             Array.isArray(msg.content) && msg.content.some(part => part.type === "image_url")
         );
-        const model = hasImage ? "meta-llama/llama-4-scout-17b-16e-instruct " : "llama-3.3-70b-versatile";
+        const model = hasImage ? "meta-llama/llama-4-scout-17b-16e-instruct " : "openai/gpt-oss-120b";
 
         const stream = await this.ai.chat.completions.create({
             model: model,
