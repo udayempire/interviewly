@@ -1,154 +1,118 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-    provider = "prisma-client"
-    output   = "../generated/prisma"
+  provider = "prisma-client"
+  output   = "../generated/prisma"
 }
 
 datasource db {
-    provider = "postgresql"
-}
-
-enum MessageRole {
-    ASSISTANT
-    USER
-}
-
-enum InterviewType {
-    BEHAVIOURAL
-    TECHNICAL
-    CODING
-}
-
-enum AIMode {
-    TEXT
-    VOICE
-}
-
-enum InterviewStatus {
-    IN_PROGRESS
-    COMPLETED
-    ABANDONED
+  provider = "postgresql"
 }
 
 model User {
-    id              String            @id @default(cuid())
-    email           String?           @unique
-    name            String?
-    passwordHash    String? // null for OAuth users
-    createdAt       DateTime          @default(now())
-    userProfile     UserProfile?
-    interview       Interview[]
-    interviewReport InterviewReport[]
+  id              String            @id @default(cuid())
+  email           String?           @unique
+  name            String?
+  passwordHash    String?
+  createdAt       DateTime          @default(now())
+  interview       Interview[]
+  interviewReport InterviewReport[]
+  userProfile     UserProfile?
 }
 
 model UserProfile {
-    id         String      @id @default(cuid())
-    userId     String      @unique
-    user       User        @relation(fields: [userId], references: [id])
-    githubUrl  String      @unique
-    githubData Json?
-    resumeText Json?
-    createdAt  DateTime    @default(now())
-    updatedAt  DateTime    @updatedAt
-    interviews Interview[]
-}
-
-enum TemplateSource {
-    PLATFORM
-    USER
+  id         String      @id @default(cuid())
+  userId     String      @unique
+  githubUrl  String      @unique
+  githubData Json?
+  resumeText Json?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  interviews Interview[]
+  user       User        @relation(fields: [userId], references: [id])
 }
 
 model Template {
-    id             String         @id @default(cuid())
-    name           String
-    description    String?
-    createdById    String
-    isPublic       Boolean
-    templateSource TemplateSource
-    config         Json? // stores distribution, difficulty, etc.
-    createdAt      DateTime       @default(now())
-    interviews     Interview[]
+  id             String         @id @default(cuid())
+  name           String
+  description    String?
+  createdById    String
+  isPublic       Boolean
+  templateSource TemplateSource
+  config         Json?
+  createdAt      DateTime       @default(now())
+  interviews     Interview[]
 }
 
 model Interview {
-    id          String             @id @default(cuid())
-    userId      String
-    user        User               @relation(fields: [userId], references: [id])
-    description String?
-    joinCode    String?
-    githubData  Json? //snapshot of resume and gthub data
-    resumeText  Json?
-    profileId   String?
-    profile     UserProfile?       @relation(fields: [profileId], references: [id])
-    templateId  String?
-    template    Template?          @relation(fields: [templateId], references: [id])
-    mode        AIMode
-    status      InterviewStatus    @default(IN_PROGRESS)
-    startedAt   DateTime           @default(now())
-    completedAt DateTime?
-    report      InterviewReport?
-    messages    InterviewMessage[]
+  id          String             @id @default(cuid())
+  userId      String
+  profileId   String?
+  templateId  String?
+  mode        AIMode
+  status      InterviewStatus    @default(IN_PROGRESS)
+  startedAt   DateTime           @default(now())
+  completedAt DateTime?
+  description String?
+  githubData  Json?
+  joinCode    String?
+  resumeText  Json?
+  profile     UserProfile?       @relation(fields: [profileId], references: [id])
+  template    Template?          @relation(fields: [templateId], references: [id])
+  user        User               @relation(fields: [userId], references: [id])
+  messages    InterviewMessage[]
+  report      InterviewReport?
 }
 
 model InterviewMessage {
-    id          String         @id @default(cuid())
-    interviewId String
-    interview   Interview      @relation(references: [id], fields: [interviewId])
-    role        MessageRole
-    content     String         @db.Text
-    audioUrl    String?
-    questionNum Int?
-    type        InterviewType?
-    createdAt   DateTime       @default(now())
-    updatedAt   DateTime       @updatedAt
+  id          String         @id @default(cuid())
+  interviewId String
+  role        MessageRole
+  content     String
+  audioUrl    String?
+  questionNum Int?
+  type        InterviewType?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  interview   Interview      @relation(fields: [interviewId], references: [id])
 }
 
 model InterviewReport {
-    id                String          @id @default(cuid())
-    userId            String
-    user              User            @relation(fields: [userId], references: [id])
-    interviewId       String          @unique
-    interview         Interview       @relation(fields: [interviewId], references: [id])
-    overallScore      Int? // 0‑100, computed after interview
-    scoreLabel        String? // e.g. "Great Performance! 🎉"
-    percentile        Float? // e.g. 78.0 = scored higher than 78% of users
-    strengths         String[]
-    improvements      String[]
-    totalQuestions    Int?
-    answeredQuestions Int?
-    detailedFeedback  String          @db.Text
-    aiSummary         String          @db.Text
-    breakdown         Json? // legacy; prefer SkillScore relation
-    skillScores       SkillScore[]
-    questionScores    QuestionScore[]
-    createdAt         DateTime        @default(now())
+  id               String    @id @default(cuid())
+  userId           String
+  interviewId      String    @unique
+  strengths        String[]
+  improvements     String[]
+  detailedFeedback String
+  aiSummary        String
+  overallScore     Int?
+  breakdown        Json?
+  createdAt        DateTime  @default(now())
+  interview        Interview @relation(fields: [interviewId], references: [id])
+  user             User      @relation(fields: [userId], references: [id])
 }
 
-model SkillScore {
-    id          String          @id @default(cuid())
-    reportId    String
-    report      InterviewReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
-    skillName   String // e.g. "Communication", "Problem Solving", "Technical Knowledge"
-    score       Int // 0-100
-    rating      String // "Excellent" | "Good" | "Average" | "Poor"
-    description String          @db.Text // per-skill AI feedback
-
-    @@unique([reportId, skillName])
+enum MessageRole {
+  ASSISTANT
+  USER
 }
 
-model QuestionScore {
-    id           String          @id @default(cuid())
-    reportId     String
-    report       InterviewReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
-    questionNum  Int // question number (1, 2, 3...)
-    questionType String // e.g. "React Concepts", "System Design", "Coding Challenge"
-    score        Int? // 0-100, null if skipped
-    timeSpentSec Int? // time in seconds, null if skipped
-    performance  String // "Excellent" | "Good" | "Average" | "Poor" | "Skipped"
+enum InterviewType {
+  BEHAVIOURAL
+  TECHNICAL
+  CODING
+}
 
-    @@unique([reportId, questionNum])
+enum AIMode {
+  TEXT
+  VOICE
+}
+
+enum InterviewStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum TemplateSource {
+  PLATFORM
+  USER
 }

@@ -2,6 +2,7 @@
 
 import { Clock, Mic, MicOff } from "lucide-react"
 import { Button } from "../ui/button";
+import { useEffect, useState } from "react";
 
 interface AppbarInterviewSessionProps {
     isAiSpeaking: boolean;
@@ -16,6 +17,21 @@ export const AppbarInterviewSession = ({
     onMicDown,
     onMicUp,
 }: AppbarInterviewSessionProps) => {
+    const [seconds, setSeconds] = useState<number>(0);
+    const [isRunning, setIsRunning] = useState<boolean>(false);
+    useEffect(()=>{
+        if(!isRunning) return;
+        const interval = setInterval(()=>{
+            setSeconds((prev)=> prev+1);
+        },1000);
+        return() => clearInterval(interval);
+    },[isRunning]);
+    const reset = () =>{
+        setIsRunning(false);
+        setSeconds(0);
+    };
+    const minutes = Math.floor(seconds/60);
+    const secs= seconds % 60;
     return (
         <div className="flex justify-between p-2 px-6 border-b items-center select-none">
             <div className="flex">
@@ -27,7 +43,7 @@ export const AppbarInterviewSession = ({
             <div className="flex items-center gap-5">
                 <div className="flex items-center gap-2">
                     <span><Clock size={20} /></span>
-                    <p className="font-medium">00:18:42</p>
+                    <p className="font-medium">{minutes}:{secs < 10 ? `0${secs}`: secs}</p>
                 </div>
 
                 {/* Push-to-talk mic button */}
