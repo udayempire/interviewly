@@ -180,11 +180,6 @@ export function setupInterviewWS(wss: WebSocketServer) {
             ws.close(1008, "Unauthorized: Missing Token");
             return;
         };
-        if (!interviewId) {
-            ws.close(1008, "Unauthorized: Missing Interview ID");
-            return;
-        }
-        // verify jwt
         let userId: string;
         try {
             const decoded = verify(token, process.env.JWT_SECRET!) as DecodedToken;
@@ -193,6 +188,11 @@ export function setupInterviewWS(wss: WebSocketServer) {
             ws.close(1008, "Unauthorized: Invalid Token");
             return;
         };
+        if (!interviewId) {
+            ws.close(1008, "Unauthorized: Missing Interview ID");
+            return;
+        }
+        // verify jwt
         try {
             // const userProfile = await prisma.userProfile.findUnique({
             //     where: { userId },
@@ -294,13 +294,55 @@ export function setupInterviewWS(wss: WebSocketServer) {
             });
             ws.on("close", async () => {
                 console.log(`Client disconnected: userId ${userId}`);
-                await prisma.interview.update({
-                    where: { id: interviewId },
-                    data: {
-                        status: "COMPLETED",
-                        completedAt: new Date()
+                try {
+                    //mark interview as completed
+                    await prisma.interview.update({
+                        where: { id: interviewId },
+                        data: {
+                            status: "COMPLETED",
+                            completedAt: new Date()
+                        }
+                    });
+                    //convert chatMessage[] into the format expected
+                    // by buildEvaluationPrompt()
+                    const transcript = messageHistory.filter((message) => message.role !== "system").map((message) => ({
+                        role: message.role === "assistant" ? "ASSISTANT" as const : "USER" as const,
+                        content: message.content as string
+                    }));
+                    const evaluationPrompt = buildEvaluationPrompt(
+                        interview.description as string,
+                        transcript
+                    );
+                    // ask llm to interview the interview
+                    const evaluationResponse = await llm.chat([
+                        {
+                            role: "system",
+                            content: evaluationPrompt
+                        }
+                    ]);
+                    console.log("Evaluation response:", evaluationResponse);
+                    let evaluation;
+                    try {
+                        evaluation = JSON.parse(evaluationResponse);
+                    } catch (error) {
+                        console.error("Failed to parse evaluatiomn JSON", error);
+                        console.error("Raw response:", evaluationResponse);
+                        return;
                     }
-                });
+                    //save evaluation report
+                    await prisma.interviewReport.create({
+                        data: {
+                            interviewId: interviewId,
+                            userId: userId,
+                            detailedFeedback: evaluation.strengths ?? [],
+                            aiSummary: evaluation.detailedFeedback ?? "",
+                            overallScore: evaluation.overallScore ?? 0,
+                            breakdown: evaluation.breakdown ?? null
+                        }
+                    });
+                } catch (error) {
+                    console.error(`Evaluation failed for interview ${interviewId}:`, error);
+                };
             });
             ws.on("error", (err) => {
                 console.error(`WebSocket error for userId ${userId}:`, err);
