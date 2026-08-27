@@ -7,15 +7,13 @@ import { useEffect, useState } from "react";
 interface AppbarInterviewSessionProps {
     isAiSpeaking: boolean;
     isUserRecording: boolean;
-    onMicDown: () => void;
-    onMicUp: () => void;
+    onMicToggle: () => void;
 }
 
 export const AppbarInterviewSession = ({
     isAiSpeaking,
     isUserRecording,
-    onMicDown,
-    onMicUp,
+    onMicToggle,
 }: AppbarInterviewSessionProps) => {
     const [seconds, setSeconds] = useState<number>(0);
     const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -46,14 +44,10 @@ export const AppbarInterviewSession = ({
                     <p className="font-medium">{minutes}:{secs < 10 ? `0${secs}`: secs}</p>
                 </div>
 
-                {/* Push-to-talk mic button */}
+                {/* Tap-to-toggle mic button */}
                 <div className="flex flex-col items-center gap-1">
                     <button
-                        onMouseDown={onMicDown}
-                        onMouseUp={onMicUp}
-                        onMouseLeave={onMicUp}
-                        onTouchStart={(e) => { e.preventDefault(); onMicDown(); }}
-                        onTouchEnd={(e) => { e.preventDefault(); onMicUp(); }}
+                        onClick={onMicToggle}
                         disabled={isAiSpeaking}
                         className={`p-3 rounded-full cursor-pointer transition-all duration-150 select-none ${isAiSpeaking
                                 ? "bg-zinc-100 text-zinc-300 cursor-not-allowed"
@@ -61,7 +55,7 @@ export const AppbarInterviewSession = ({
                                     ? "bg-red-500 text-white scale-110 shadow-lg shadow-red-200 ring-4 ring-red-200 animate-pulse"
                                     : "bg-zinc-100 hover:bg-blue-50 text-zinc-600 hover:text-blue-600"
                             }`}
-                        title={isAiSpeaking ? "Wait for AI to finish" : isUserRecording ? "Recording... Release to send" : "Hold to speak"}
+                        title={isAiSpeaking ? "Wait for AI to finish" : isUserRecording ? "Tap to stop" : "Tap to speak"}
                     >
                         {isUserRecording ? (
                             <Mic size={20} className="text-white" />
@@ -70,7 +64,7 @@ export const AppbarInterviewSession = ({
                         )}
                     </button>
                     <span className="text-[10px] text-zinc-400 font-medium">
-                        {isAiSpeaking ? "AI speaking..." : isUserRecording ? "Recording..." : "Hold to speak"}
+                        {isAiSpeaking ? "AI speaking..." : isUserRecording ? "Tap to stop" : "Tap to speak"}
                     </span>
                 </div>
 

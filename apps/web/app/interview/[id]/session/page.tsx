@@ -98,16 +98,19 @@ export default function InterviewPage() {
         return () => ws.close();
     }, [interviewId]);
 
-    // Push-to-talk handlers
-    const handleMicDown = async () => {
+    // Tap-to-toggle mic handler
+    const handleMicToggle = async () => {
         if (isAiSpeaking) return; // don't record while AI is talking
-        setIsUserRecording(true);
-        await startRecording();
-    };
 
-    const handleMicUp = () => {
-        setIsUserRecording(false);
-        stopRecording();
+        if (isUserRecording) {
+            // Second tap → stop, blob is sent to AI via onSpeechEnd
+            setIsUserRecording(false);
+            stopRecording();
+        } else {
+            // First tap → start recording
+            setIsUserRecording(true);
+            await startRecording();
+        }
     };
 
     if (sessionState === "preparing") return <Preparation />;
@@ -118,8 +121,7 @@ export default function InterviewPage() {
             <AppbarInterviewSession
                 isAiSpeaking={isAiSpeaking}
                 isUserRecording={isUserRecording}
-                onMicDown={handleMicDown}
-                onMicUp={handleMicUp}
+                onMicToggle={handleMicToggle}
             />
             <div className="grid grid-cols-[65%_35%] flex-1 min-h-0 bg-zinc-100">
                 <div className="p-4 flex flex-col min-h-0">
