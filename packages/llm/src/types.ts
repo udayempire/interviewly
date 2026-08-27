@@ -23,6 +23,11 @@ export interface STTProvider {
     audio: Buffer,
     options?: {
       model?: string
+      // Conditioning text that biases the decoder toward these spellings, as a
+      // comma-separated term list. NOT an instruction - STT models don't follow
+      // directives. Providers without a free-text prompt map it onto their own
+      // term-boosting parameter.
+      prompt?: string
     }
   ): Promise<string>
 };

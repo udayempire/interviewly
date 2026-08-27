@@ -39,15 +39,23 @@ export class DeepgramSTTProvider implements STTProvider {
 
     async transcribe(
         audio: Buffer,
-        options?: { model?: string }
+        options?: { model?: string; prompt?: string }
     ): Promise<string> {
         const model = options?.model ?? "nova-3";
+
+        // Deepgram has no free-text prompt; the equivalent is keyterm boosting,
+        // which takes discrete terms and is nova-3 only.
+        const keyterm = options?.prompt
+            ?.split(",")
+            .map(term => term.trim())
+            .filter(Boolean);
 
         const response = await this.ai.listen.v1.media.transcribeFile(
             audio,
             {
                 model,
                 language: "en",
+                ...(keyterm?.length ? { keyterm } : {}),
             }
         );
 

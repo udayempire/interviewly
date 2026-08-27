@@ -35,14 +35,15 @@ export class GroqProvider implements LLMProvider {
 
 export class GroqSTTProvider implements STTProvider {
     private ai = new Groq({ apiKey: process.env.GROQ_API_KEY! });
-    async transcribe(audio: Buffer, options?: { model?: string; }): Promise<string> {
+    async transcribe(audio: Buffer, options?: { model?: string; prompt?: string; }): Promise<string> {
         const model = options?.model ?? "whisper-large-v3";
         const file = new File([new Uint8Array(audio)], "audio.webm", {
             type: "audio/webm"
         });
         const audioTranscript = await this.ai.audio.transcriptions.create({
             file,
-            model
+            model,
+            ...(options?.prompt ? { prompt: options.prompt } : {}),
         });
         return audioTranscript.text;
     };

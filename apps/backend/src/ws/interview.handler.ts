@@ -2,6 +2,7 @@ import { prisma } from "@repo/db";
 import { createLLMProvider, createSTTProvider, createTTSProvider, type ChatMessage } from "@repo/llm";
 import { verify } from "jsonwebtoken";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
+import { buildSTTVocabulary, isLikelyHallucination } from "../services/stt.service";
 
 interface DecodedToken {
     userId: string;
@@ -93,6 +94,62 @@ Rules:
 `;
 }
 
+function buildEvaluationPrompt(
+    interviewDescription: string,
+    transcript: { role: "USER" | "ASSISTANT"; content: string }[]
+): string {
+    const formatted = transcript
+        .map((m) => `${m.role === "ASSISTANT" ? "Interviewer" : "Candidate"}: ${m.content}`)
+        .join("\n\n");
+
+    return `
+You are a senior technical interview evaluator. You have just reviewed a complete interview transcript.
+Your job is to produce a thorough, honest, and actionable evaluation of the candidate's performance.
+
+INTERVIEW CONTEXT:
+${interviewDescription}
+
+FULL TRANSCRIPT:
+${formatted}
+
+EVALUATION INSTRUCTIONS:
+
+Analyse the entire transcript carefully. Then produce a structured evaluation in the following JSON format. Output ONLY valid JSON — no markdown, no explanation, no extra text.
+
+{
+  "overallScore": <integer from 0 to 100>,
+  "aiSummary": "<2-3 sentence high-level summary of how the candidate performed overall>",
+  "strengths": [
+    "<specific strength observed, with a concrete example from the transcript>",
+    "<another strength>"
+  ],
+  "improvements": [
+    "<specific area to improve, with a concrete example from the transcript>",
+    "<another improvement area>"
+  ],
+  "detailedFeedback": "<detailed paragraph-level feedback covering technical depth, communication, problem-solving approach, and any notable moments in the interview>",
+  "breakdown": {
+    "technicalKnowledge": <integer 0-100>,
+    "communication": <integer 0-100>,
+    "problemSolving": <integer 0-100>,
+    "relevantExperience": <integer 0-100>,
+    "overallImpression": <integer 0-100>
+  }
+}
+
+SCORING GUIDELINES:
+- 90-100: Exceptional. Candidate exceeded expectations on nearly all fronts.
+- 75-89: Strong. Solid performance with minor gaps.
+- 60-74: Average. Meets some expectations but has notable weaknesses.
+- 40-59: Below average. Significant gaps in knowledge or communication.
+- 0-39: Poor. Struggled throughout the interview.
+
+Be fair but honest. Do not inflate scores. Base everything strictly on what was said in the transcript.
+`;
+}
+
+
+
 export function setupInterviewWS(wss: WebSocketServer) {
     const stt = createSTTProvider("groq");
     const tts = createTTSProvider("groq");
@@ -165,6 +222,11 @@ export function setupInterviewWS(wss: WebSocketServer) {
                 return;
             };
             // Session state - scoped per connection
+            // Bias transcription toward this candidate's own stack. The same
+            // resume/GitHub data already feeds the interviewer prompt; here it
+            // doubles as the STT term list so jargon they are about to say is
+            // spelled correctly instead of guessed phonetically.
+            const sttVocabulary = buildSTTVocabulary(interview.resumeText, interview.githubData);
             const messageHistory: ChatMessage[] = [
                 {
                     role: "system",
@@ -192,8 +254,16 @@ export function setupInterviewWS(wss: WebSocketServer) {
                     if (audioBuffer.length === 0) return;
 
                     // transcribe the audio
-                    const transcript = await stt.transcribe(audioBuffer);
+                    const transcript = await stt.transcribe(audioBuffer, { prompt: sttVocabulary });
                     if (!transcript.trim()) return;
+                    // Whisper invents subtitle boilerplate when handed audio with
+                    // no speech in it. The client gates on speech detection, but a
+                    // stray artifact must never become a candidate turn - it would
+                    // be persisted and answered as if the candidate had spoken.
+                    if (isLikelyHallucination(transcript)) {
+                        console.warn(`Dropped likely STT hallucination: ${JSON.stringify(transcript)}`);
+                        return;
+                    }
 
                     messageHistory.push({ role: "user", content: transcript });
                     await prisma.interviewMessage.create({
