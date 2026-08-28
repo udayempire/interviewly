@@ -334,8 +334,10 @@ export function setupInterviewWS(wss: WebSocketServer) {
                         data: {
                             interviewId: interviewId,
                             userId: userId,
-                            detailedFeedback: evaluation.strengths ?? [],
-                            aiSummary: evaluation.detailedFeedback ?? "",
+                            strengths: evaluation.strengths ?? [],
+                            improvements: evaluation.improvements ?? [],
+                            detailedFeedback: evaluation.detailedFeedback ?? "",
+                            aiSummary: evaluation.aiSummary ?? "",
                             overallScore: evaluation.overallScore ?? 0,
                             breakdown: evaluation.breakdown ?? null
                         }

@@ -47,4 +47,30 @@ interviewRouter.post("/create", authMiddleware, upload.single("resume"), async (
 
 });
 
+// GET /report/:interviewId — returns report or 202 if still generating
+interviewRouter.get("/report/:interviewId", authMiddleware, async (req, res) => {
+    const { interviewId } = req.params;
+    const userId = req.userId as string;
+
+    const report = await prisma.interviewReport.findUnique({
+        where: { interviewId },
+        include: {
+            interview: {
+                select: { description: true, startedAt: true, completedAt: true, userId: true }
+            }
+        }
+    });
+
+    if (!report) {
+        // Report not yet generated — still processing
+        return res.status(202).json({ status: "pending" });
+    }
+
+    if (report.userId !== userId) {
+        return res.status(403).json({ error: "Forbidden" });
+    }
+
+    return res.status(200).json({ status: "ready", report });
+});
+
 export default interviewRouter;

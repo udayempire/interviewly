@@ -8,12 +8,14 @@ interface AppbarInterviewSessionProps {
     isAiSpeaking: boolean;
     isUserRecording: boolean;
     onMicToggle: () => void;
+    onLeave: () => void;
 }
 
 export const AppbarInterviewSession = ({
     isAiSpeaking,
     isUserRecording,
     onMicToggle,
+    onLeave,
 }: AppbarInterviewSessionProps) => {
     const [seconds, setSeconds] = useState<number>(0);
     const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -68,7 +70,7 @@ export const AppbarInterviewSession = ({
                     </span>
                 </div>
 
-                <Button variant="destructive">Leave Interview</Button>
+                <Button variant="destructive" onClick={onLeave}>Leave Interview</Button>
             </div>
         </div>
     )

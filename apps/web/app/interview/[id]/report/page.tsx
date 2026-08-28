@@ -1,86 +1,226 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { ReportHeader } from "@/components/report/reportHeader";
 import { OverallScoreRing } from "@/components/report/overallScoreRing";
 import { SkillScoreCard } from "@/components/report/skillScoreCard";
 import { AIFeedbackSection } from "@/components/report/aiFeedbackSection";
-import { QuestionBreakdown, type QuestionRow } from "@/components/report/questionBreakdown";
 import {
     MessageSquare,
     Lightbulb,
     Code2,
-    LayoutGrid,
-    FileCode2,
-    BrainCircuit,
+    Brain,
     Users,
-    Search,
-    MessageCircle,
+    Loader2,
+    AlertCircle,
 } from "lucide-react";
 
-// todo : Replace all placeholder data below with
-// actual backend API calls using the interview ID
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-const placeholderSkills = [
-    {
-        icon: MessageSquare,
-        iconColor: "text-blue-600",
-        iconBgColor: "bg-blue-50",
-        skillName: "Communication",
-        score: 85,
-        rating: "Good",
-        description: "You communicated your thoughts clearly and structured your answers well.",
-    },
-    {
-        icon: Lightbulb,
-        iconColor: "text-yellow-500",
-        iconBgColor: "bg-yellow-50",
-        skillName: "Problem Solving",
-        score: 80,
-        rating: "Good",
-        description: "You approached problems with good logic and broke them down effectively.",
-    },
-    {
-        icon: Code2,
-        iconColor: "text-green-600",
-        iconBgColor: "bg-green-50",
-        skillName: "Technical Knowledge",
-        score: 84,
-        rating: "Good",
-        description: "You demonstrated strong understanding of core concepts and technologies.",
-    },
-];
+interface Breakdown {
+    technicalKnowledge: number;
+    communication: number;
+    problemSolving: number;
+    relevantExperience: number;
+    overallImpression: number;
+}
 
-const placeholderStrengths = [
-    "Strong understanding of React concepts and component lifecycle.",
-    "Good problem solving skills and ability to handle edge cases.",
-    "Clear and structured communication throughout the interview.",
-];
+interface ReportData {
+    id: string;
+    interviewId: string;
+    strengths: string[];
+    improvements: string[];
+    detailedFeedback: string;
+    aiSummary: string;
+    overallScore: number;
+    breakdown: Breakdown;
+    createdAt: string;
+    interview: {
+        description: string;
+        startedAt: string;
+        completedAt: string | null;
+    };
+}
 
-const placeholderImprovements = [
-    "Optimize your code for better performance in large scale applications.",
-    "Improve explanations for system design trade-offs.",
-    "Practice more on advanced JavaScript concepts and async patterns.",
-];
+// Helpers 
 
-const placeholderQuestions: QuestionRow[] = [
-    { number: 1, icon: LayoutGrid, iconColor: "text-blue-500", questionType: "React Concepts", score: "85/100", timeSpent: "6m 12s", performance: "Good" },
-    { number: 2, icon: LayoutGrid, iconColor: "text-purple-500", questionType: "System Design", score: "78/100", timeSpent: "8m 45s", performance: "Good" },
-    { number: 3, icon: FileCode2, iconColor: "text-yellow-500", questionType: "JavaScript", score: "90/100", timeSpent: "4m 30s", performance: "Excellent" },
-    { number: 4, icon: Code2, iconColor: "text-green-500", questionType: "Coding Challenge", score: "80/100", timeSpent: "15m 20s", performance: "Good" },
-    { number: 5, icon: BrainCircuit, iconColor: "text-orange-500", questionType: "Problem Solving", score: "75/100", timeSpent: "6m 05s", performance: "Good" },
-    { number: 6, icon: Users, iconColor: "text-pink-500", questionType: "Behavioral", score: "88/100", timeSpent: "5m 10s", performance: "Excellent" },
-    { number: 7, icon: Search, iconColor: "text-indigo-500", questionType: "Code Review", score: "—", timeSpent: "—", performance: "Skipped" },
-    { number: 8, icon: MessageCircle, iconColor: "text-teal-500", questionType: "Follow-up", score: "82/100", timeSpent: "4m 00s", performance: "Good" },
-];
+function formatDuration(startedAt: string, completedAt: string | null): string {
+    if (!completedAt) return "—";
+    const ms = new Date(completedAt).getTime() - new Date(startedAt).getTime();
+    const totalSecs = Math.floor(ms / 1000);
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    return `${mins}m ${secs}s`;
+}
+
+function formatDate(iso: string): string {
+    return new Date(iso).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+    });
+}
+
+function formatTime(iso: string): string {
+    return new Date(iso).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+}
+
+function scoreLabel(score: number): string {
+    if (score >= 90) return "Exceptional 🌟";
+    if (score >= 75) return "Great Performance! 🎉";
+    if (score >= 60) return "Good Effort 👍";
+    if (score >= 40) return "Needs Improvement";
+    return "Keep Practising";
+}
+
+// Loading screen
+
+function GeneratingReport() {
+    const steps = [
+        "Reviewing interview transcript…",
+        "Analysing technical depth…",
+        "Evaluating communication…",
+        "Generating personalised feedback…",
+        "Almost ready…",
+    ];
+    const [step, setStep] = useState(0);
+
+    useEffect(() => {
+        const t = setInterval(() => setStep((s) => (s + 1) % steps.length), 2500);
+        return () => clearInterval(t);
+    }, []);
+
+    return (
+        <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center gap-6 px-4">
+            <div className="flex flex-col items-center gap-4 text-center">
+                <div className="relative">
+                    <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
+                        <Brain size={36} className="text-blue-600" />
+                    </div>
+                    <Loader2 size={28} className="text-blue-500 animate-spin absolute -bottom-1 -right-1" />
+                </div>
+                <h1 className="text-2xl font-semibold text-zinc-800">Generating your report</h1>
+                <p className="text-zinc-500 text-sm max-w-xs">
+                    Our AI is evaluating your interview. This usually takes under a minute.
+                </p>
+                <p className="text-blue-600 text-sm font-medium animate-pulse min-h-[20px]">
+                    {steps[step]}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+// Error screen
+
+function ReportError() {
+    return (
+        <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center gap-4 px-4 text-center">
+            <AlertCircle size={48} className="text-red-400" />
+            <h1 className="text-xl font-semibold text-zinc-800">Could not load report</h1>
+            <p className="text-zinc-500 text-sm max-w-xs">
+                Something went wrong fetching your report. Please try refreshing the page.
+            </p>
+        </div>
+    );
+}
+
+// Main page 
 
 export default function InterviewReportPage() {
     const params = useParams<{ id: string }>();
     const interviewId = params?.id;
 
-    // TODO: Fetch report data from backend using interviewId
-    // const { data: report, isLoading } = useQuery(...)
+    const [report, setReport] = useState<ReportData | null>(null);
+    const [status, setStatus] = useState<"loading" | "pending" | "ready" | "error">("loading");
+
+    useEffect(() => {
+        if (!interviewId) return;
+        const token = localStorage.getItem("token");
+        if (!token) { setStatus("error"); return; }
+
+        let cancelled = false;
+
+        async function poll() {
+            try {
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/interview/report/${interviewId}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+
+                if (cancelled) return;
+
+                if (res.status === 202) {
+                    // Still generating — try again in 3 seconds
+                    setStatus("pending");
+                    setTimeout(poll, 3000);
+                    return;
+                }
+
+                if (!res.ok) {
+                    setStatus("error");
+                    return;
+                }
+
+                const data = await res.json();
+                setReport(data.report);
+                setStatus("ready");
+            } catch {
+                if (!cancelled) setStatus("error");
+            }
+        }
+
+        poll();
+        return () => { cancelled = true; };
+    }, [interviewId]);
+
+    if (status === "loading" || status === "pending") return <GeneratingReport />;
+    if (status === "error" || !report) return <ReportError />;
+
+    const breakdown = report.breakdown ?? {};
+    const skillCards = [
+        {
+            icon: MessageSquare,
+            iconColor: "text-blue-600",
+            iconBgColor: "bg-blue-50",
+            skillName: "Communication",
+            score: breakdown.communication ?? 0,
+            rating: breakdown.communication >= 75 ? "Good" : "Needs Work",
+            description: "How clearly and confidently you communicated your ideas.",
+        },
+        {
+            icon: Lightbulb,
+            iconColor: "text-yellow-500",
+            iconBgColor: "bg-yellow-50",
+            skillName: "Problem Solving",
+            score: breakdown.problemSolving ?? 0,
+            rating: breakdown.problemSolving >= 75 ? "Good" : "Needs Work",
+            description: "Your ability to break down problems and reason through solutions.",
+        },
+        {
+            icon: Code2,
+            iconColor: "text-green-600",
+            iconBgColor: "bg-green-50",
+            skillName: "Technical Knowledge",
+            score: breakdown.technicalKnowledge ?? 0,
+            rating: breakdown.technicalKnowledge >= 75 ? "Good" : "Needs Work",
+            description: "Depth of understanding of core concepts and technologies.",
+        },
+        {
+            icon: Users,
+            iconColor: "text-purple-600",
+            iconBgColor: "bg-purple-50",
+            skillName: "Experience",
+            score: breakdown.relevantExperience ?? 0,
+            rating: breakdown.relevantExperience >= 75 ? "Good" : "Needs Work",
+            description: "Relevance and depth of your real-world experience.",
+        },
+    ];
 
     return (
         <div className="min-h-screen bg-zinc-50">
@@ -93,21 +233,29 @@ export default function InterviewReportPage() {
             <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
                 {/* Header */}
                 <ReportHeader
-                    interviewTitle="Frontend Developer Interview"
-                    date="Aug 5, 2025"
-                    time="11:30 AM"
-                    duration="12 mins"
+                    interviewTitle={report.interview.description ?? "Interview"}
+                    date={formatDate(report.interview.startedAt)}
+                    time={formatTime(report.interview.startedAt)}
+                    duration={formatDuration(report.interview.startedAt, report.interview.completedAt)}
                 />
+
+                {/* AI Summary */}
+                {report.aiSummary && (
+                    <Card className="p-6 bg-white">
+                        <p className="text-sm text-zinc-500 font-medium mb-1">AI Summary</p>
+                        <p className="text-zinc-700 leading-relaxed">{report.aiSummary}</p>
+                    </Card>
+                )}
 
                 {/* Score Section */}
                 <Card className="p-6 bg-white">
-                    <div className="grid grid-cols-4 gap-6 items-start">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 items-start">
                         <OverallScoreRing
-                            score={82}
-                            label="Great Performance! 🎉"
-                            sublabel="You scored higher than 78% of users"
+                            score={report.overallScore}
+                            label={scoreLabel(report.overallScore)}
+                            sublabel={`Overall score: ${report.overallScore}/100`}
                         />
-                        {placeholderSkills.map((skill) => (
+                        {skillCards.map((skill) => (
                             <SkillScoreCard key={skill.skillName} {...skill} />
                         ))}
                     </div>
@@ -115,16 +263,19 @@ export default function InterviewReportPage() {
 
                 {/* AI Feedback */}
                 <AIFeedbackSection
-                    strengths={placeholderStrengths}
-                    improvements={placeholderImprovements}
+                    strengths={report.strengths}
+                    improvements={report.improvements}
                 />
 
-                {/* Question Breakdown */}
-                <QuestionBreakdown
-                    totalQuestions={8}
-                    answeredQuestions={7}
-                    questions={placeholderQuestions}
-                />
+                {/* Detailed Feedback */}
+                {report.detailedFeedback && (
+                    <Card className="p-6 bg-white">
+                        <p className="text-sm text-zinc-500 font-medium mb-2">Detailed Feedback</p>
+                        <p className="text-zinc-700 leading-relaxed whitespace-pre-line">
+                            {report.detailedFeedback}
+                        </p>
+                    </Card>
+                )}
             </div>
         </div>
     );

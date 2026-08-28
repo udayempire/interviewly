@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { AppbarInterviewSession } from "@/components/interviewSession.tsx/appbarInterviewSession";
 import { CodeEditor } from "@/components/interviewSession.tsx/codeEditor";
 import { Conversations } from "@/components/interviewSession.tsx/conversations";
@@ -14,6 +14,7 @@ import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 export default function InterviewPage() {
     const params = useParams<{ id: string }>();
     const interviewId = params?.id;
+    const router = useRouter();
 
     // Session state machine
     const [sessionState, setSessionState] = useState<"preparing" | "live" | "error">("preparing");
@@ -113,6 +114,13 @@ export default function InterviewPage() {
         }
     };
 
+    // Leave interview: close WS (triggers backend evaluation) then go to report
+    const handleLeave = () => {
+        if (isUserRecording) stopRecording();
+        wsRef.current?.close();
+        router.push(`/interview/${interviewId}/report`);
+    };
+
     if (sessionState === "preparing") return <Preparation />;
     if (sessionState === "error") return <ErrorLoading />;
 
@@ -122,6 +130,7 @@ export default function InterviewPage() {
                 isAiSpeaking={isAiSpeaking}
                 isUserRecording={isUserRecording}
                 onMicToggle={handleMicToggle}
+                onLeave={handleLeave}
             />
             <div className="grid grid-cols-[65%_35%] flex-1 min-h-0 bg-zinc-100">
                 <div className="p-4 flex flex-col min-h-0">
