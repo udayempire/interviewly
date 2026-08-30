@@ -161,3 +161,18 @@
     @apply font-sans;
   }
 }
+
+.landing-page {
+  background-image: radial-gradient(
+    rgba(33, 33, 30, 0.08) 0.7px,
+    transparent 0.7px
+  );
+  background-size: 7px 7px;
+}
+
+.landing-grid {
+  background-image:
+    linear-gradient(rgba(32, 32, 30, 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(32, 32, 30, 0.35) 1px, transparent 1px);
+  background-size: 64px 64px;
+}

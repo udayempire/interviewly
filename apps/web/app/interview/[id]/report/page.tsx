@@ -16,9 +16,6 @@ import {
     Loader2,
     AlertCircle,
 } from "lucide-react";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface Breakdown {
     technicalKnowledge: number;
     communication: number;

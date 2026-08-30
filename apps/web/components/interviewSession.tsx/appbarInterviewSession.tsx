@@ -18,18 +18,12 @@ export const AppbarInterviewSession = ({
     onLeave,
 }: AppbarInterviewSessionProps) => {
     const [seconds, setSeconds] = useState<number>(0);
-    const [isRunning, setIsRunning] = useState<boolean>(false);
     useEffect(()=>{
-        if(!isRunning) return;
         const interval = setInterval(()=>{
             setSeconds((prev)=> prev+1);
         },1000);
         return() => clearInterval(interval);
-    },[isRunning]);
-    const reset = () =>{
-        setIsRunning(false);
-        setSeconds(0);
-    };
+    },[]);
     const minutes = Math.floor(seconds/60);
     const secs= seconds % 60;
     return (
@@ -38,7 +32,7 @@ export const AppbarInterviewSession = ({
                 <h1 className="font-semibold">Interviewlyy</h1>
             </div>
             <div className="flex gap-4 ml-24 font-medium">
-                <h1>Frontend Developer Interview</h1>
+                {/* <h1>Frontend Developer Interview</h1> */}
             </div>
             <div className="flex items-center gap-5">
                 <div className="flex items-center gap-2">
@@ -60,9 +54,9 @@ export const AppbarInterviewSession = ({
                         title={isAiSpeaking ? "Wait for AI to finish" : isUserRecording ? "Tap to stop" : "Tap to speak"}
                     >
                         {isUserRecording ? (
-                            <Mic size={20} className="text-white" />
+                            <Mic size={18} className="text-white" />
                         ) : (
-                            <MicOff size={20} />
+                            <MicOff size={18} />
                         )}
                     </button>
                     <span className="text-[10px] text-zinc-400 font-medium">
