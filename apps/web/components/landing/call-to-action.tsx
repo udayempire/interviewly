@@ -12,12 +12,14 @@ export function CallToAction() {
           <br />
           We&apos;ll ask about it.
         </h2>
-        <a
-          href="/signup"
-          className="mt-10 inline-flex items-center gap-2 rounded-full bg-[#20201e] px-6 py-3.5 text-sm font-semibold text-[#fffdf7]"
-        >
-          Start a practice interview <Mic size={16} />
-        </a>
+        {/*
+          <a href="/signup" className="mt-10 inline-flex items-center gap-2 rounded-full bg-[#20201e] px-6 py-3.5 text-sm font-semibold text-[#fffdf7]">
+            Start a practice interview <Mic size={16} />
+          </a>
+        */}
+        <span className="mt-10 inline-flex items-center gap-2 rounded-full bg-[#20201e] px-6 py-3.5 text-sm font-semibold text-[#fffdf7]">
+          Launching soon <Mic size={16} />
+        </span>
       </div>
     </section>
   );

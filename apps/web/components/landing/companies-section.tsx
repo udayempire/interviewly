@@ -44,7 +44,9 @@ export function CompaniesSection() {
               ))}
             </div>
             <a
-              href="mailto:hello@interviewlyy.com"
+              href="https://udayempire.me/contact"
+              target="_blank"
+              rel="noopener noreferrer"
               className="mt-10 inline-flex items-center gap-2 border-b border-[#f4c632] pb-1 text-sm font-semibold text-[#f4c632]"
             >
               Talk to us about your hiring loop <ArrowRight size={15} />

@@ -22,16 +22,16 @@ export function LandingNavigation() {
         <a className="transition-opacity hover:opacity-55" href="#how-it-works">
           How it works
         </a>
-        <a className="transition-opacity hover:opacity-55" href="/signin">
-          Sign in
-        </a>
+        {/* <a className="transition-opacity hover:opacity-55" href="/signin">Sign in</a> */}
       </div>
-      <a
-        href="/signup"
-        className="inline-flex items-center gap-2 rounded-full bg-[#20201e] px-4 py-2.5 text-sm font-semibold text-[#fffdf7] transition-transform hover:-translate-y-0.5"
-      >
-        Start interview <ArrowRight size={15} />
-      </a>
+      {/*
+        <a href="/signup" className="inline-flex items-center gap-2 rounded-full bg-[#20201e] px-4 py-2.5 text-sm font-semibold text-[#fffdf7] transition-transform hover:-translate-y-0.5">
+          Start interview <ArrowRight size={15} />
+        </a>
+      */}
+      <span className="inline-flex items-center gap-2 rounded-full bg-[#20201e] px-4 py-2.5 text-sm font-semibold text-[#fffdf7]">
+        Launching soon 
+      </span>
     </nav>
   );
 }
