@@ -37,13 +37,14 @@ export function SocialLoginButtons({ compact = false }: { compact?: boolean }) {
   return (
     <>
       <div className="grid grid-cols-2 gap-2">
-        <button
+        <a
+          href={`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/google`}
           type="button"
           className={`flex items-center justify-center gap-2 border border-[#8d8c85] bg-[#fffdf8] text-xs font-semibold transition-colors hover:border-[#20201e] hover:bg-[#f6f4ec] ${compact ? "h-9" : "h-10"}`}
         >
           <GoogleMark />
           Google
-        </button>
+        </a>
         <button
           type="button"
           className={`flex items-center justify-center gap-2 border border-[#8d8c85] bg-[#fffdf8] text-xs font-semibold transition-colors hover:border-[#20201e] hover:bg-[#f6f4ec] ${compact ? "h-9" : "h-10"}`}

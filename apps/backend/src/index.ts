@@ -1,5 +1,4 @@
-import { config } from "dotenv";
-config(); 
+// Bun auto-loads .env — no dotenv needed
 import { createLLMProvider } from '@repo/llm';
 import express from 'express';
 import router from "./routes";
