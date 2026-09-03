@@ -5,11 +5,15 @@ import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { useMutation } from "@tanstack/react-query";
 import { ArrowRight, Eye, EyeClosed, Mail } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
-export default function Signin() {
+function SigninForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlError = searchParams.get("error");
+  const nextRoute = searchParams.get("next") || "/home";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -17,7 +21,7 @@ export default function Signin() {
   const {
     mutate: signin,
     isPending,
-    error,
+    error: apiError,
   } = useMutation({
     mutationFn: async (formData: { email: string; password: string }) => {
       const response = await fetch(
@@ -45,9 +49,10 @@ export default function Signin() {
     onSuccess: (data) => {
       if (data.token) {
         localStorage.setItem("token", data.token);
+        document.cookie = `token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
         localStorage.setItem("user", JSON.stringify(data.user));
       }
-      router.push("/dashboard");
+      router.push(nextRoute);
     },
   });
 
@@ -55,6 +60,8 @@ export default function Signin() {
     event.preventDefault();
     signin({ email, password });
   };
+
+  const errorMessage = apiError ? apiError.message : urlError;
 
   return (
     <AuthShell
@@ -106,9 +113,9 @@ export default function Signin() {
           </span>
         </label>
 
-        {error && (
+        {errorMessage && (
           <p className="border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error.message}
+            {errorMessage}
           </p>
         )}
 
@@ -131,5 +138,13 @@ export default function Signin() {
         </Link>
       </p>
     </AuthShell>
+  );
+}
+
+export default function Signin() {
+  return (
+    <Suspense fallback={<div>Loading…</div>}>
+      <SigninForm />
+    </Suspense>
   );
 }

@@ -10,7 +10,7 @@ export default function AuthCallback() {
         const token = params.get("token");
         if (token) {
             localStorage.setItem("token", token);
-            router.replace("/dashboard");
+            router.replace("/home");
         } else {
             router.replace("/signin?error=oauth_failed");
         }

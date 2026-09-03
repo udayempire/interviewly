@@ -38,12 +38,15 @@ authRouter.get("/google", (req, res) => {
     }
 });
 
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+
 // GET /google/callback — handles redirect from Google
 authRouter.get("/google/callback", async (req, res) => {
     try {
         const { code } = req.query;
         if (!code || typeof code !== "string") {
-            return res.status(400).json({ error: "Missing authorization code" });
+            const errorMsg = encodeURIComponent("Missing authorization code");
+            return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
         }
 
         const { tokens } = await oauth2Client.getToken(code);
@@ -56,7 +59,8 @@ authRouter.get("/google/callback", async (req, res) => {
 
         const profile = await profileRes.json() as { sub: string; email?: string; name?: string };
         if (!profile.email) {
-            return res.status(400).json({ error: "No email found on Google account" });
+            const errorMsg = encodeURIComponent("No email found on Google account");
+            return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
         }
 
         // 1. Check if this Google account is already linked to any user
@@ -68,19 +72,22 @@ authRouter.get("/google/callback", async (req, res) => {
         if (existingAccount) {
             // Already linked — just log them in
             const token = issueJwt(existingAccount.userId);
-            return res.json({
-                token,
-                user: { id: existingAccount.user.id, email: existingAccount.user.email, name: existingAccount.user.name },
-            });
+            const userStr = encodeURIComponent(JSON.stringify({
+                id: existingAccount.user.id,
+                email: existingAccount.user.email,
+                name: existingAccount.user.name,
+            }));
+            res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
+            return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${userStr}`);
         }
 
         // 2. No linked account — check if email already belongs to a user
         const existingUser = await prisma.user.findUnique({ where: { email: profile.email } });
         if (existingUser) {
-            return res.status(409).json({
-                error: `This email is already registered with ${providerLabel(existingUser.authProvider)}. Sign in with that method, then link Google in Settings.`,
-                authProvider: existingUser.authProvider,
-            });
+            const errorMsg = encodeURIComponent(
+                `This email is already registered with ${providerLabel(existingUser.authProvider)}. Sign in with that method, then link Google in Settings.`
+            );
+            return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
         }
 
         // 3. New user — create User + UserAccount
@@ -96,11 +103,14 @@ authRouter.get("/google/callback", async (req, res) => {
         });
 
         const token = issueJwt(user.id);
-        return res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
+        const userStr = encodeURIComponent(JSON.stringify({ id: user.id, email: user.email, name: user.name }));
+        res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
+        return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${userStr}`);
 
     } catch (error: any) {
         console.error("Error in Google Auth Callback:", error.response?.data || error);
-        return res.status(500).json({ error: "Google authentication failed" });
+        const errorMsg = encodeURIComponent("Google authentication failed");
+        return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
     }
 });
 
@@ -124,7 +134,8 @@ authRouter.get("/github/callback", async (req, res) => {
     try {
         const { code } = req.query;
         if (!code || typeof code !== "string") {
-            return res.status(400).json({ error: "Missing authorization code" });
+            const errorMsg = encodeURIComponent("Missing authorization code");
+            return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
         }
 
         // Exchange code for access token
@@ -161,7 +172,8 @@ authRouter.get("/github/callback", async (req, res) => {
             email = emails.find((e) => e.primary && e.verified)?.email ?? null;
         }
         if (!email) {
-            return res.status(400).json({ error: "No verified email found on GitHub account" });
+            const errorMsg = encodeURIComponent("No verified email found on GitHub account");
+            return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
         }
 
         const githubId = String(profile.id);
@@ -174,19 +186,22 @@ authRouter.get("/github/callback", async (req, res) => {
 
         if (existingAccount) {
             const token = issueJwt(existingAccount.userId);
-            return res.json({
-                token,
-                user: { id: existingAccount.user.id, email: existingAccount.user.email, name: existingAccount.user.name },
-            });
+            const userStr = encodeURIComponent(JSON.stringify({
+                id: existingAccount.user.id,
+                email: existingAccount.user.email,
+                name: existingAccount.user.name,
+            }));
+            res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
+            return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${userStr}`);
         }
 
         // 2. Check if email already belongs to a user
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
-            return res.status(409).json({
-                error: `This email is already registered with ${providerLabel(existingUser.authProvider)}. Sign in with that method, then link GitHub in Settings.`,
-                authProvider: existingUser.authProvider,
-            });
+            const errorMsg = encodeURIComponent(
+                `This email is already registered with ${providerLabel(existingUser.authProvider)}. Sign in with that method, then link GitHub in Settings.`
+            );
+            return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
         }
 
         // 3. New user — create User + UserAccount
@@ -202,11 +217,14 @@ authRouter.get("/github/callback", async (req, res) => {
         });
 
         const token = issueJwt(user.id);
-        return res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
+        const userStr = encodeURIComponent(JSON.stringify({ id: user.id, email: user.email, name: user.name }));
+        res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
+        return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${userStr}`);
 
     } catch (error: any) {
         console.error("Error in GitHub Auth Callback:", error);
-        return res.status(500).json({ error: "GitHub authentication failed" });
+        const errorMsg = encodeURIComponent("GitHub authentication failed");
+        return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
     }
 });
 

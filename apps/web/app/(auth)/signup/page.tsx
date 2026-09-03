@@ -6,11 +6,14 @@ import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { useMutation } from "@tanstack/react-query";
 import { ArrowRight, Eye, EyeClosed, Mail, User } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
-export default function Signup() {
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlError = searchParams.get("error");
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +23,7 @@ export default function Signup() {
   const {
     mutate: signup,
     isPending,
-    error,
+    error: apiError,
   } = useMutation({
     mutationFn: async (formData: {
       name: string;
@@ -52,6 +55,7 @@ export default function Signup() {
     onSuccess: (data) => {
       if (data.token) {
         localStorage.setItem("token", data.token);
+        document.cookie = `token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
         localStorage.setItem("user", JSON.stringify(data.user));
       }
       router.push("/interview");
@@ -62,6 +66,8 @@ export default function Signup() {
     event.preventDefault();
     signup({ name, email, password });
   };
+
+  const errorMessage = apiError ? apiError.message : urlError;
 
   return (
     <AuthShell
@@ -137,9 +143,9 @@ export default function Signup() {
           </span>
         </label>
 
-        {error && (
+        {errorMessage && (
           <p className="border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error.message}
+            {errorMessage}
           </p>
         )}
 
@@ -162,5 +168,13 @@ export default function Signup() {
         </Link>
       </p>
     </AuthShell>
+  );
+}
+
+export default function Signup() {
+  return (
+    <Suspense fallback={<div>Loading…</div>}>
+      <SignupForm />
+    </Suspense>
   );
 }
