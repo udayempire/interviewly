@@ -12,6 +12,7 @@ model User {
   email           String?           @unique
   name            String?
   googleId        String?           @unique
+  githubId        String?           @unique
   passwordHash    String?
   createdAt       DateTime          @default(now())
   interview       Interview[]
