@@ -7,17 +7,35 @@ datasource db {
   provider = "postgresql"
 }
 
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  GITHUB
+}
+
 model User {
   id              String            @id @default(cuid())
-  email           String?           @unique
+  email           String            @unique
   name            String?
-  googleId        String?           @unique
-  githubId        String?           @unique
-  passwordHash    String?
+  authProvider    AuthProvider
   createdAt       DateTime          @default(now())
+  accounts        UserAccount[]
   interview       Interview[]
   interviewReport InterviewReport[]
   userProfile     UserProfile?
+}
+
+model UserAccount {
+  id           String       @id @default(cuid())
+  userId       String
+  provider     AuthProvider
+  providerId   String? // null for email
+  passwordHash String? //only for email password 
+  createdAt    DateTime     @default(now())
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@unique([userId, provider])
+  @@unique([provider, providerId])
 }
 
 model UserProfile {
