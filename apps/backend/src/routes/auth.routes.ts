@@ -259,6 +259,7 @@ authRouter.post("/signup", async (req, res) => {
     });
 
     const token = issueJwt(user.id);
+    res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "lax" });
     return res.status(201).json({ token, user: { id: user.id, email: user.email, name: user.name } });
 });
 
@@ -294,7 +295,37 @@ authRouter.post("/signin", async (req, res) => {
     }
 
     const token = issueJwt(user.id);
+    res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "lax" });
     return res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
+});
+
+// POST /logout 
+authRouter.post("/logout", async (req, res) => {
+    res.clearCookie("token", { path: "/", sameSite: "lax", httpOnly: true });
+    res.redirect(`${process.env.NEXT_PUBLIC_FRONTEND_URL}`);
+    return res.json({
+        success: true,
+        message: "Logged out successfully"
+    });
+})
+
+// GET /me — return current authenticated user profile
+authRouter.get("/me", authMiddleware, async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.userId },
+            select: { id: true, name: true, email: true, authProvider: true },
+        });
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        return res.json({ user });
+    } catch (error) {
+        console.error("Error in GET /me:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
 });
 
 // Account Linking (requires existing session) 

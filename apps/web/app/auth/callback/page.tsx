@@ -19,15 +19,7 @@ function CallbackHandler() {
     }
 
     if (token) {
-      localStorage.setItem("token", token);
       document.cookie = `token=${token}; path=/; max-age=604800; SameSite=Lax`;
-      if (userStr) {
-        try {
-          localStorage.setItem("user", userStr);
-        } catch (e) {
-          console.error("Failed to save user info:", e);
-        }
-      }
       router.replace(next);
     } else {
       router.replace("/signin");

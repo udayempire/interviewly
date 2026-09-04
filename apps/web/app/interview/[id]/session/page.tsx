@@ -10,6 +10,7 @@ import type { ConversationMessage } from "@/components/interviewSession.tsx/type
 import { Preparation } from "@/components/interviewSession.tsx/preparing";
 import { ErrorLoading } from "@/components/interviewSession.tsx/errorLoading";
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
+import { getCookie } from "@/lib/cookies";
 
 export default function InterviewPage() {
     const params = useParams<{ id: string }>();
@@ -35,7 +36,7 @@ export default function InterviewPage() {
     // WebSocket connection
     useEffect(() => {
         if (!interviewId) return;
-        const token = localStorage.getItem("token");
+        const token = getCookie("token");
         if (!token) {
             setSessionState("error");
             return;

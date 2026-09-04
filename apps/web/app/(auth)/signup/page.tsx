@@ -35,6 +35,7 @@ function SignupForm() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify(formData),
         },
       );
@@ -54,9 +55,7 @@ function SignupForm() {
     },
     onSuccess: (data) => {
       if (data.token) {
-        localStorage.setItem("token", data.token);
         document.cookie = `token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
-        localStorage.setItem("user", JSON.stringify(data.user));
       }
       router.push("/interview");
     },

@@ -9,7 +9,8 @@ export default function AuthCallback() {
     useEffect(() => {
         const token = params.get("token");
         if (token) {
-            localStorage.setItem("token", token);
+            document.cookie = `token=${token}; path=/; max-age=60480
+            0; SameSite=Lax`;
             router.replace("/home");
         } else {
             router.replace("/signin?error=oauth_failed");

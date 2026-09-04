@@ -8,9 +8,16 @@ import http from "http";
 import { WebSocketServer } from "ws";
 import { setupInterviewWS } from "./ws/interview.handler";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 app.use(express.json());
-app.use(cors());
+app.use(cookieParser());
+app.use(
+    cors({
+        origin: process.env.FRONTEND_URL || "http://localhost:3000",
+        credentials: true,
+    })
+);
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({server,path:"/ws/interview"})

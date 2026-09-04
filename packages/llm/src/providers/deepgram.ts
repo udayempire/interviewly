@@ -1,5 +1,5 @@
 import { DeepgramClient } from "@deepgram/sdk";
-import { STTProvider, TTSProvider } from "../types";
+import type { STTProvider, TTSProvider } from "../types";
 
 export class DeepgramProvider implements TTSProvider {
     private ai = new DeepgramClient({

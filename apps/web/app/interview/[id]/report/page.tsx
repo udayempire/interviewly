@@ -138,8 +138,6 @@ export default function InterviewReportPage() {
 
     useEffect(() => {
         if (!interviewId) return;
-        const token = localStorage.getItem("token");
-        if (!token) { setStatus("error"); return; }
 
         let cancelled = false;
 
@@ -147,7 +145,7 @@ export default function InterviewReportPage() {
             try {
                 const res = await fetch(
                     `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/interview/report/${interviewId}`,
-                    { headers: { Authorization: `Bearer ${token}` } }
+                    { credentials: "include" }
                 );
 
                 if (cancelled) return;

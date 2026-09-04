@@ -49,7 +49,7 @@ interviewRouter.post("/create", authMiddleware, upload.single("resume"), async (
 
 // GET /report/:interviewId — returns report or 202 if still generating
 interviewRouter.get("/report/:interviewId", authMiddleware, async (req, res) => {
-    const { interviewId } = req.params;
+    const interviewId = req.params.interviewId as string;
     const userId = req.userId as string;
 
     const report = await prisma.interviewReport.findUnique({

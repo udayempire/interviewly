@@ -23,6 +23,9 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
+import { useRouter } from "next/navigation"
+import { eraseCookie } from "@/lib/cookies"
+
 const mainNav = [
     { label: "Home", href: "/home", icon: LayoutDashboard },
     { label: "Interviews", href: "/interview", icon: Mic2 },
@@ -35,21 +38,39 @@ const accountNav = [
 
 export function AppSidebar() {
     const pathname = usePathname()
+    const router = useRouter()
     const [userName, setUserName] = useState("You")
     const [userInitial, setUserInitial] = useState("Y")
 
     useEffect(() => {
-        try {
-            const raw = localStorage.getItem("user")
-            if (raw) {
-                const u = JSON.parse(raw)
-                if (u?.name) {
-                    setUserName(u.name)
-                    setUserInitial(u.name.charAt(0).toUpperCase())
+        async function fetchUser() {
+            try {
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/auth/me`,
+                    { credentials: "include" }
+                );
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.user?.name) {
+                        setUserName(data.user.name);
+                        setUserInitial(data.user.name.charAt(0).toUpperCase());
+                    }
                 }
-            }
-        } catch { /* ignore */ }
+            } catch { /* ignore */ }
+        }
+        fetchUser();
     }, [])
+
+    const handleLogout = async () => {
+        try {
+            await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/auth/logout`,
+                { method: "POST", credentials: "include" }
+            );
+        } catch { /* ignore */ }
+        eraseCookie("token");
+        router.push("/signin");
+    };
 
     return (
         <Sidebar collapsible="icon">
@@ -140,14 +161,14 @@ export function AppSidebar() {
                     {/* Logout */}
                     <SidebarMenuItem>
                         <SidebarMenuButton
-
                             tooltip="Log out"
-                            className="rounded-lg text-sidebar-foreground/60 hover:text-red-500 hover:bg-red-50"
+                            onClick={handleLogout}
+                            className="rounded-lg text-sidebar-foreground/60 hover:text-red-500 hover:bg-red-50 cursor-pointer"
                         >
-                            <Link href="/signin" className="flex items-center gap-2.5">
+                            <div className="flex items-center gap-2.5">
                                 <LogOut className="h-4.25 w-4.25 shrink-0" />
                                 <span className="text-[13px] font-medium">Log out</span>
-                            </Link>
+                            </div>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
 

@@ -25,9 +25,7 @@ export default function Interview() {
             }
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/interview/create`, {
                 method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${localStorage.getItem("token")}`
-                },
+                credentials: "include",
                 body: formData,
             });
             const data = await response.json();
