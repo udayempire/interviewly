@@ -32,6 +32,7 @@ profileRouter.get("/profile", authMiddleware, async (req: Request, res: Response
                         profileImageUrl: true,
                         githubUrl: true,
                         resumeText: true,
+                        resumePdf: true,
                     }
                 },
                 accounts: {
@@ -46,7 +47,17 @@ profileRouter.get("/profile", authMiddleware, async (req: Request, res: Response
             return res.status(404).json({ error: "User not found" });
         }
 
-        return res.json({ success: true, user });
+        // Don't send raw PDF bytes in JSON — just a flag
+        const response = {
+            ...user,
+            userProfile: user.userProfile ? {
+                ...user.userProfile,
+                hasResumePdf: !!user.userProfile.resumePdf,
+                resumePdf: undefined,
+            } : null,
+        };
+
+        return res.json({ success: true, user: response });
     } catch (error) {
         console.error("Error in GET /profile:", error);
         return res.status(500).json({ error: "Failed to fetch profile" });
@@ -170,9 +181,11 @@ profileRouter.post("/profile/resume", authMiddleware, upload.single("resume"), a
             create: {
                 userId,
                 resumeText: parsedResumeJson,
+                resumePdf: file.buffer,
             },
             update: {
                 resumeText: parsedResumeJson,
+                resumePdf: file.buffer,
             },
         });
 
@@ -180,6 +193,29 @@ profileRouter.post("/profile/resume", authMiddleware, upload.single("resume"), a
     } catch (error) {
         console.error("Error in POST /profile/resume:", error);
         return res.status(500).json({ error: "Failed to upload resume" });
+    }
+});
+
+// GET /api/v1/user/profile/resume/view — serve the stored PDF for viewing in browser
+profileRouter.get("/profile/resume/view", authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const userId = req.userId as string;
+
+        const profile = await prisma.userProfile.findUnique({
+            where: { userId },
+            select: { resumePdf: true },
+        });
+
+        if (!profile?.resumePdf) {
+            return res.status(404).json({ error: "No resume found" });
+        }
+
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", "inline; filename=resume.pdf");
+        return res.send(Buffer.from(profile.resumePdf));
+    } catch (error) {
+        console.error("Error in GET /profile/resume/view:", error);
+        return res.status(500).json({ error: "Failed to retrieve resume" });
     }
 });
 

@@ -1,11 +1,28 @@
 import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { verify, type JwtPayload } from "jsonwebtoken";
 import { prisma } from "@repo/db";
 import { signupSchema, signinSchema } from "@repo/types";
 import { OAuth2Client } from "google-auth-library";
 import { URLSearchParams } from "url";
 import { authMiddleware } from "../middleware/auth";
+
+interface AuthPayload extends JwtPayload {
+    userId: string
+}
+
+// Helper: extract userId from cookie (for linking flows — does not reject, returns null)
+function getUserIdFromCookie(req: express.Request): string | null {
+    try {
+        const token = req.cookies?.token;
+        if (!token) return null;
+        const decoded = verify(token, process.env.JWT_SECRET!) as unknown as AuthPayload;
+        return decoded?.userId || null;
+    } catch {
+        return null;
+    }
+}
 
 const authRouter = express.Router();
 
@@ -23,13 +40,15 @@ function providerLabel(provider: string) {
     return provider.charAt(0) + provider.slice(1).toLowerCase(); // "EMAIL" → "Email"
 }
 
-// GET /google — initiates Google Auth
+// GET /google — initiates Google Auth (pass ?action=link to link to existing account)
 authRouter.get("/google", (req, res) => {
     try {
+        const action = req.query.action === "link" ? "link" : "login";
         const url = oauth2Client.generateAuthUrl({
             access_type: "offline",
             scope: ["openid", "email", "profile"],
             redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+            state: action,
         });
         res.redirect(url);
     } catch (error) {
@@ -43,10 +62,12 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 // GET /google/callback — handles redirect from Google
 authRouter.get("/google/callback", async (req, res) => {
     try {
-        const { code } = req.query;
+        const { code, state } = req.query;
+        const isLinkAction = state === "link";
+
         if (!code || typeof code !== "string") {
             const errorMsg = encodeURIComponent("Missing authorization code");
-            return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
+            return res.redirect(isLinkAction ? `${FRONTEND_URL}/profile?error=${errorMsg}` : `${FRONTEND_URL}/signin?error=${errorMsg}`);
         }
 
         const { tokens } = await oauth2Client.getToken(code);
@@ -60,8 +81,37 @@ authRouter.get("/google/callback", async (req, res) => {
         const profile = await profileRes.json() as { sub: string; email?: string; name?: string; picture?: string };
         if (!profile.email) {
             const errorMsg = encodeURIComponent("No email found on Google account");
-            return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
+            return res.redirect(isLinkAction ? `${FRONTEND_URL}/profile?error=${errorMsg}` : `${FRONTEND_URL}/signin?error=${errorMsg}`);
         }
+
+        // ─── LINK MODE: attach this Google account to the logged-in user ───
+        if (isLinkAction) {
+            const loggedInUserId = getUserIdFromCookie(req);
+            if (!loggedInUserId) {
+                const errorMsg = encodeURIComponent("You must be logged in to link an account.");
+                return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
+            }
+
+            // Check if this Google account is already linked to someone
+            const existingAccount = await prisma.userAccount.findUnique({
+                where: { provider_providerId: { provider: "GOOGLE", providerId: profile.sub } },
+            });
+            if (existingAccount && existingAccount.userId !== loggedInUserId) {
+                const errorMsg = encodeURIComponent("This Google account is already linked to a different Interviewly account.");
+                return res.redirect(`${FRONTEND_URL}/profile?error=${errorMsg}`);
+            }
+            if (existingAccount && existingAccount.userId === loggedInUserId) {
+                return res.redirect(`${FRONTEND_URL}/profile?success=${encodeURIComponent("Google is already linked.")}`);
+            }
+
+            await prisma.userAccount.create({
+                data: { userId: loggedInUserId, provider: "GOOGLE", providerId: profile.sub },
+            });
+
+            return res.redirect(`${FRONTEND_URL}/profile?success=${encodeURIComponent("Google account linked successfully!")}`);
+        }
+
+        // ─── LOGIN / SIGNUP MODE (original behavior) ───
 
         // 1. Check if this Google account is already linked to any user
         const existingAccount = await prisma.userAccount.findUnique({
@@ -117,13 +167,15 @@ authRouter.get("/google/callback", async (req, res) => {
     }
 });
 
-// initiates GitHub Auth
+// initiates GitHub Auth (pass ?action=link to link to existing account)
 authRouter.get("/github", (req, res) => {
     try {
+        const action = req.query.action === "link" ? "link" : "login";
         const params = new URLSearchParams({
             client_id: process.env.GITHUB_CLIENT_ID!,
             redirect_uri: process.env.GITHUB_REDIRECT_URI!,
             scope: "read:user user:email",
+            state: action,
         });
         res.redirect(`https://github.com/login/oauth/authorize?${params.toString()}`);
     } catch (error) {
@@ -135,10 +187,12 @@ authRouter.get("/github", (req, res) => {
 // GET /github/callback — handles redirect from GitHub
 authRouter.get("/github/callback", async (req, res) => {
     try {
-        const { code } = req.query;
+        const { code, state } = req.query;
+        const isLinkAction = state === "link";
+
         if (!code || typeof code !== "string") {
             const errorMsg = encodeURIComponent("Missing authorization code");
-            return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
+            return res.redirect(isLinkAction ? `${FRONTEND_URL}/profile?error=${errorMsg}` : `${FRONTEND_URL}/signin?error=${errorMsg}`);
         }
 
         // Exchange code for access token
@@ -176,10 +230,38 @@ authRouter.get("/github/callback", async (req, res) => {
         }
         if (!email) {
             const errorMsg = encodeURIComponent("No verified email found on GitHub account");
-            return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
+            return res.redirect(isLinkAction ? `${FRONTEND_URL}/profile?error=${errorMsg}` : `${FRONTEND_URL}/signin?error=${errorMsg}`);
         }
 
         const githubId = String(profile.id);
+
+        // ─── LINK MODE: attach this GitHub account to the logged-in user ───
+        if (isLinkAction) {
+            const loggedInUserId = getUserIdFromCookie(req);
+            if (!loggedInUserId) {
+                const errorMsg = encodeURIComponent("You must be logged in to link an account.");
+                return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
+            }
+
+            const existingAccount = await prisma.userAccount.findUnique({
+                where: { provider_providerId: { provider: "GITHUB", providerId: githubId } },
+            });
+            if (existingAccount && existingAccount.userId !== loggedInUserId) {
+                const errorMsg = encodeURIComponent("This GitHub account is already linked to a different Interviewly account.");
+                return res.redirect(`${FRONTEND_URL}/profile?error=${errorMsg}`);
+            }
+            if (existingAccount && existingAccount.userId === loggedInUserId) {
+                return res.redirect(`${FRONTEND_URL}/profile?success=${encodeURIComponent("GitHub is already linked.")}`);
+            }
+
+            await prisma.userAccount.create({
+                data: { userId: loggedInUserId, provider: "GITHUB", providerId: githubId },
+            });
+
+            return res.redirect(`${FRONTEND_URL}/profile?success=${encodeURIComponent("GitHub account linked successfully!")}`);
+        }
+
+        // ─── LOGIN / SIGNUP MODE (original behavior) ───
 
         // 1. Check if this GitHub account is already linked to any user
         const existingAccount = await prisma.userAccount.findUnique({
@@ -219,7 +301,6 @@ authRouter.get("/github/callback", async (req, res) => {
                 userProfile: {
                     create: { profileImageUrl: profile.avatar_url }
                 }
-
             },
         });
 
@@ -350,90 +431,7 @@ authRouter.get("/me", authMiddleware, async (req, res) => {
     }
 });
 
-// Account Linking (requires existing session) 
-
-// POST /link/google — link Google to an existing account from Settings
-authRouter.post("/link/google", authMiddleware, async (req, res) => {
-    try {
-        const { code } = req.body;
-        if (!code) return res.status(400).json({ error: "Missing authorization code" });
-
-        const { tokens } = await oauth2Client.getToken(code);
-        const profileRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-            headers: { Authorization: `Bearer ${tokens.access_token}` },
-        });
-        if (!profileRes.ok) throw new Error("Failed to fetch Google profile");
-
-        const profile = await profileRes.json() as { sub: string; email?: string };
-
-        // Block if this Google account is already linked to a different user
-        const existingAccount = await prisma.userAccount.findUnique({
-            where: { provider_providerId: { provider: "GOOGLE", providerId: profile.sub } },
-        });
-        if (existingAccount && existingAccount.userId !== req.userId) {
-            return res.status(409).json({ error: "This Google account is already linked to a different Interviewly account." });
-        }
-        if (existingAccount && existingAccount.userId === req.userId) {
-            return res.status(409).json({ error: "Google is already linked to your account." });
-        }
-
-        await prisma.userAccount.create({
-            data: { userId: req.userId!, provider: "GOOGLE", providerId: profile.sub },
-        });
-
-        return res.json({ success: true, message: "Google account linked successfully." });
-    } catch (error: any) {
-        console.error("Error linking Google:", error);
-        return res.status(500).json({ error: "Failed to link Google account" });
-    }
-});
-
-// POST /link/github — link GitHub to an existing account from Settings
-authRouter.post("/link/github", authMiddleware, async (req, res) => {
-    try {
-        const { code } = req.body;
-        if (!code) return res.status(400).json({ error: "Missing authorization code" });
-
-        const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Accept: "application/json" },
-            body: JSON.stringify({
-                client_id: process.env.GITHUB_CLIENT_ID,
-                client_secret: process.env.GITHUB_CLIENT_SECRET,
-                code,
-            }),
-        });
-        const tokenData = await tokenRes.json() as { access_token?: string; error?: string };
-        if (!tokenData.access_token) throw new Error(tokenData.error || "Failed to get GitHub access token");
-
-        const profileRes = await fetch("https://api.github.com/user", {
-            headers: { Authorization: `Bearer ${tokenData.access_token}`, Accept: "application/vnd.github+json" },
-        });
-        if (!profileRes.ok) throw new Error("Failed to fetch GitHub profile");
-
-        const profile = await profileRes.json() as { id: number };
-        const githubId = String(profile.id);
-
-        // Block if this GitHub account is already linked to a different user
-        const existingAccount = await prisma.userAccount.findUnique({
-            where: { provider_providerId: { provider: "GITHUB", providerId: githubId } },
-        });
-        if (existingAccount && existingAccount.userId !== req.userId) {
-            return res.status(409).json({ error: "This GitHub account is already linked to a different Interviewly account." });
-        }
-        if (existingAccount && existingAccount.userId === req.userId) {
-            return res.status(409).json({ error: "GitHub is already linked to your account." });
-        }
-
-        await prisma.userAccount.create({
-            data: { userId: req.userId!, provider: "GITHUB", providerId: githubId },
-        });
-
-        return res.json({ success: true, message: "GitHub account linked successfully." });
-    } catch (error: any) {
-        console.error("Error linking GitHub:", error);
-        return res.status(500).json({ error: "Failed to link GitHub account" });
-    }
-});
+// Account linking is now handled via ?action=link on the /google and /github OAuth flows.
+// The old POST /link/* endpoints are no longer needed.
 
 export default authRouter;
