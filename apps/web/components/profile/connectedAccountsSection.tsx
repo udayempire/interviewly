@@ -1,5 +1,8 @@
 "use client"
 
+import { useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
+
 interface ConnectedAccountsSectionProps {
     linkedProviders: string[]
     authProvider: string
@@ -9,23 +12,56 @@ export function ConnectedAccountsSection({
     linkedProviders,
     authProvider,
 }: ConnectedAccountsSectionProps) {
+    const searchParams = useSearchParams()
     const isGoogleLinked = linkedProviders.includes("GOOGLE")
     const isGithubLinked = linkedProviders.includes("GITHUB")
 
+    // Show success/error messages from OAuth redirect
+    const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+
+    useEffect(() => {
+        const success = searchParams.get("success")
+        const error = searchParams.get("error")
+        if (success) {
+            setMessage({ type: "success", text: success })
+        } else if (error) {
+            setMessage({ type: "error", text: error })
+        }
+    }, [searchParams])
+
     const handleLinkGoogle = () => {
-        window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/auth/google`
+        window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/auth/google?action=link`
     }
 
     const handleLinkGithub = () => {
-        window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/auth/github`
+        window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/auth/github?action=link`
     }
 
     return (
         <div>
             <h2 className="text-lg font-semibold text-zinc-900 mb-1">Connected Accounts</h2>
             <p className="text-sm text-zinc-500 mb-6">
-                Manage your linked authentication providers.
+                Manage your linked authentication providers. You can connect new accounts but cannot unlink existing ones.
             </p>
+
+            {/* OAuth redirect message */}
+            {message && (
+                <div
+                    className={`mb-4 rounded-md px-4 py-2.5 text-sm border ${
+                        message.type === "success"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-red-50 text-red-700 border-red-200"
+                    }`}
+                >
+                    {message.text}
+                    <button
+                        onClick={() => setMessage(null)}
+                        className="ml-2 text-xs opacity-60 hover:opacity-100 cursor-pointer"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
 
             <div className="space-y-3">
                 {/* Google */}

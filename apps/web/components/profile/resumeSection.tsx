@@ -3,14 +3,15 @@
 import { useCallback, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useMutation } from "@tanstack/react-query"
-import { Upload, FileText, Loader2, Check, X } from "lucide-react"
+import { Upload, FileText, Loader2, Check, X, ExternalLink } from "lucide-react"
 
 interface ResumeSectionProps {
     resumeData: any | null
+    hasResumePdf: boolean
     onUpdated: () => void
 }
 
-export function ResumeSection({ resumeData, onUpdated }: ResumeSectionProps) {
+export function ResumeSection({ resumeData, hasResumePdf, onUpdated }: ResumeSectionProps) {
     const [dragActive, setDragActive] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
@@ -61,6 +62,13 @@ export function ResumeSection({ resumeData, onUpdated }: ResumeSectionProps) {
         }
     }
 
+    const handleViewResume = () => {
+        window.open(
+            `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/user/profile/resume/view`,
+            "_blank"
+        )
+    }
+
     // Extract skills from parsed resume if available
     const skills = resumeData?.skills || []
 
@@ -74,9 +82,20 @@ export function ResumeSection({ resumeData, onUpdated }: ResumeSectionProps) {
             {/* Current resume preview */}
             {resumeData && (
                 <div className="mb-5 rounded-lg border border-zinc-200 bg-zinc-50/50 p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                        <FileText className="h-4 w-4 text-zinc-500" />
-                        <span className="text-sm font-medium text-zinc-700">Current Resume</span>
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-zinc-500" />
+                            <span className="text-sm font-medium text-zinc-700">Current Resume</span>
+                        </div>
+                        {hasResumePdf && (
+                            <button
+                                onClick={handleViewResume}
+                                className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors cursor-pointer"
+                            >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                View PDF
+                            </button>
+                        )}
                     </div>
                     {resumeData.name && (
                         <p className="text-sm text-zinc-800 font-medium">{resumeData.name}</p>

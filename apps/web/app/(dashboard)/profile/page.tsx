@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { PersonalInfoSection } from "@/components/profile/personalInfoSection"
 import { ConnectedAccountsSection } from "@/components/profile/connectedAccountsSection"
@@ -17,7 +18,7 @@ async function fetchProfile() {
     return res.json()
 }
 
-export default function Profile() {
+function ProfileContent() {
     const queryClient = useQueryClient()
     const { data, isLoading, error } = useQuery({
         queryKey: ["profile"],
@@ -92,6 +93,7 @@ export default function Profile() {
             {/* Resume Upload */}
             <ResumeSection
                 resumeData={user?.userProfile?.resumeText || null}
+                hasResumePdf={user?.userProfile?.hasResumePdf || false}
                 onUpdated={handleUpdated}
             />
 
@@ -100,5 +102,18 @@ export default function Profile() {
             {/* Change Password */}
             <ChangePasswordSection hasEmailAccount={hasEmailAccount} />
         </div>
+    )
+}
+
+export default function Profile() {
+    return (
+        <Suspense fallback={
+            <div className="max-w-2xl mx-10 px-6 py-8">
+                <Skeleton className="h-8 w-48 mb-2" />
+                <Skeleton className="h-4 w-72 mb-8" />
+            </div>
+        }>
+            <ProfileContent />
+        </Suspense>
     )
 }
