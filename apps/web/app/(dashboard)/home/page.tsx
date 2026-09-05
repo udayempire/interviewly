@@ -1,15 +1,59 @@
 'use client'
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { InterviewActionCards } from "@/components/home/interviewActionCards";
 import { InterviewReportCard } from "@/components/home/interviewReportCard";
 import { QuickStats } from "@/components/home/quickStats";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+
+async function fetchRecentInterviews() {
+    const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/interview?limit=5`,
+        {
+            credentials: "include",
+            method: "GET"
+        }
+    )
+    if (!response.ok) {
+        throw new Error("Failed to fetch recent interviews");
+    }
+    return response.json();
+}
 
 export default function Home() {
     const router = useRouter();
     const [joinDialogOpen, setJoinDialogOpen] = useState(false);
+    const { data, isLoading, error } = useQuery({
+        queryKey: ["interviews", { limit: 5 }],
+        queryFn: fetchRecentInterviews,
+    });
+    const interviews = data?.interviews || [];
+
+    useEffect(() => {
+        const fetchRecentInterviews = async () => {
+            try {
+                const response = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/interview?limit=5`,
+                    {
+                        credentials: "include",
+                        method: "GET",
+                    }
+                );
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(data);
+                } else {
+                    console.error("Failed to fetch recent interviews");
+                }
+            } catch (error) {
+                console.error("Failed to fetch recent interviews", error);
+            }
+        };
+        fetchRecentInterviews();
+    }, []);
 
     return (
         <div className="grid grid-cols-[70%_30%] min-h-screen">
@@ -38,10 +82,22 @@ export default function Home() {
                         <Link href="/all-interviews" className="text-blue-600 font-semibold">View All</Link>
                     </div>
                     <div className="space-y-1.5 mt-6">
-                        <InterviewReportCard title={"Frontend Developer Interview"} status="Completed" timeAgo={"2 Days ago"} />
-                        <InterviewReportCard title={"Frontend Developer Interview"} status="Processing" timeAgo={"2 Days ago"} />
-                        <InterviewReportCard title={"Frontend Developer Interview"} status="Completed" timeAgo={"2 Days ago"} />
-                        <InterviewReportCard title={"Frontend Developer Interview"} status="Completed" timeAgo={"2 Days ago"} />
+                        {isLoading ? (
+                            <p className="text-sm text-gray-500">Loading recent interviews...</p>
+                        ) : error ? (
+                            <p className="text-sm text-red-500">Failed to load interviews.</p>
+                        ) : interviews.length === 0 ? (
+                            <p className="text-sm text-gray-500">No interviews found.</p>
+                        ) : (
+                            interviews.map((interview: any) => (
+                                <InterviewReportCard
+                                    key={interview.id}
+                                    title={interview.description || "Interview Session"}
+                                    status={interview.status}
+                                    timeAgo={new Date(interview.createdAt).toLocaleDateString()}
+                                />
+                            ))
+                        )}
                     </div>
                 </div>
 

@@ -16,6 +16,7 @@ import {
     Loader2,
     AlertCircle,
 } from "lucide-react";
+import Link from "next/link";
 interface Breakdown {
     technicalKnowledge: number;
     communication: number;
@@ -221,7 +222,7 @@ export default function InterviewReportPage() {
         <div className="min-h-screen bg-zinc-50">
             {/* Top bar */}
             <div className="bg-white border-b px-8 py-3 flex items-center">
-                <h1 className="font-semibold text-zinc-800">interviewlyy</h1>
+                <Link href="/home" className="font-semibold text-zinc-800">interviewlyy</Link>
             </div>
 
             {/* Main content */}

@@ -45,7 +45,7 @@ model UserProfile {
   githubData Json?
   resumeText Json?
   createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  updatedAt  DateTime    @default(now()) @updatedAt
   interviews Interview[]
   user       User        @relation(fields: [userId], references: [id])
 }
@@ -80,6 +80,8 @@ model Interview {
   user        User               @relation(fields: [userId], references: [id])
   messages    InterviewMessage[]
   report      InterviewReport?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @default(now()) @updatedAt
 }
 
 model InterviewMessage {
@@ -91,7 +93,7 @@ model InterviewMessage {
   questionNum Int?
   type        InterviewType?
   createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  updatedAt   DateTime       @default(now()) @updatedAt
   interview   Interview      @relation(fields: [interviewId], references: [id])
 }
 

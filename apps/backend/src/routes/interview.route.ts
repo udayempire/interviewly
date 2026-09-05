@@ -25,17 +25,27 @@ interviewRouter.post("/create", authMiddleware, upload.single("resume"), async (
     const { githubUrl, description } = result.data;
     const userId = req.userId as string;
     //extract github data
-    const githubUsername = extractGithubUsername(githubUrl);
-    const githubData = await getGithubData(githubUsername);
+    let githubData = null;
+    if (githubUrl) {
+        try {
+            const githubUsername = extractGithubUsername(githubUrl);
+            githubData = await getGithubData(githubUsername);
+        } catch (err) {
+            console.error("Failed to fetch GitHub data:", err);
+        }
+    }
     //extract resume data
-    const parsedResumeJson = await extractResumeData(file?.buffer);
+    let parsedResumeJson = null;
+    if (file?.buffer) {
+        parsedResumeJson = await extractResumeData(file.buffer);
+    }
 
     const interview = await prisma.interview.create({
         data: {
             userId,
             description,
-            githubData: JSON.stringify(githubData),
-            resumeText: JSON.stringify(parsedResumeJson),
+            githubData: githubData ?? undefined,
+            resumeText: parsedResumeJson ?? undefined,
             mode: AIMode.VOICE,
             joinCode: generateCode(),
         }
@@ -80,6 +90,10 @@ interviewRouter.get('/', authMiddleware, async (req, res) => {
         const limit = req.query.limit ? Number(req.query.limit) : undefined;
         const interviews = await prisma.interview.findMany({
             where: { userId },
+            take: limit,
+            orderBy: {
+                createdAt: "desc"
+            },
             include: {
                 report: true
             }

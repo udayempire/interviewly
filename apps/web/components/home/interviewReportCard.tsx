@@ -12,7 +12,7 @@ export const InterviewReportCard = ({ title, status, timeAgo }: InterviewReportC
             <div>
                 <h1 className="font-medium text-zinc-800">{title}</h1>
                 <div className="flex gap-2 items-center mt-1">
-                    <p className={`text-sm ${status === "Completed" ? "text-green-600" : "text-red-600"}`}>{status}</p>
+                    <p className={`text-sm font-semibold ${status === "COMPLETED" ? "text-green-600" : "text-red-400"}`}>{status}</p>
                     <div className="bg-muted-foreground rounded-full p-0.5">
                     </div>
                     <p className="text-muted-foreground text-sm">{timeAgo}</p>
