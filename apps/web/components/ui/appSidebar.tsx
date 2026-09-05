@@ -25,6 +25,7 @@ import { useEffect, useState } from "react"
 
 import { useRouter } from "next/navigation"
 import { eraseCookie } from "@/lib/cookies"
+import Image from "next/image"
 
 const mainNav = [
     { label: "Home", href: "/home", icon: LayoutDashboard },
@@ -40,6 +41,7 @@ export function AppSidebar() {
     const pathname = usePathname()
     const router = useRouter()
     const [userName, setUserName] = useState("You")
+    const [userProfileImage, setUserProfileImage] = useState("")
     const [userInitial, setUserInitial] = useState("Y")
 
     useEffect(() => {
@@ -54,6 +56,7 @@ export function AppSidebar() {
                     if (data.user?.name) {
                         setUserName(data.user.name);
                         setUserInitial(data.user.name.charAt(0).toUpperCase());
+                        setUserProfileImage(data.user.userProfile.profileImageUrl ?? "");
                     }
                 }
             } catch { /* ignore */ }
@@ -181,18 +184,30 @@ export function AppSidebar() {
                         >
                             <Link href="/profile" className="flex items-center gap-3">
                                 {/* Gradient avatar with initial */}
-                                <div className="h-8 w-8 shrink-0 rounded-full bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
-                                    <span className="text-[12px] font-semibold text-white leading-none">
-                                        {userInitial}
-                                    </span>
-                                </div>
+                                {
+                                    userProfileImage ? (
+                                        <Image
+                                            src={userProfileImage}
+                                            alt="Profile"
+                                            width={32}
+                                            height={32}
+                                            className="rounded-full"
+                                        />
+                                    ) : (
+                                        <div className="h-8 w-8 shrink-0 rounded-full bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
+                                            <span className="text-[12px] font-semibold text-white leading-none">
+                                                {userInitial}
+                                            </span>
+                                        </div>
+                                    )
+                                }
                                 <div className="flex flex-col leading-tight min-w-0">
                                     <span className="text-[13px] font-medium text-sidebar-foreground truncate">
                                         {userName}
                                     </span>
-                                    <span className="text-[11px] text-sidebar-foreground/50">
+                                    {/* <span className="text-[11px] text-sidebar-foreground/50">
                                         View profile
-                                    </span>
+                                    </span> */}
                                 </div>
                             </Link>
                         </SidebarMenuButton>
