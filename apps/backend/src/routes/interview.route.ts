@@ -73,4 +73,73 @@ interviewRouter.get("/report/:interviewId", authMiddleware, async (req, res) => 
     return res.status(200).json({ status: "ready", report });
 });
 
+//GET all interviews for the user
+interviewRouter.get('/', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.userId as string;
+        const limit = req.query.limit ? Number(req.query.limit) : undefined;
+        const interviews = await prisma.interview.findMany({
+            where: { userId },
+            include: {
+                report: true
+            }
+        });
+        return res.status(200).json({
+            success: true,
+            interviews
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            error: "Failed to fetch interviews"
+        });
+    }
+});
+
+//GET specific interview for the user
+interviewRouter.get('/:interviewId', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.userId as string;
+        const interviewId = req.params.interviewId as string;
+        const interview = await prisma.interview.findUnique({
+            where: {
+                id: interviewId,
+                userId
+            }
+        });
+        return res.status(200).json({
+            success: true,
+            interview
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            error: "Failed to fetch interview"
+        });
+    }
+});
+
+//DELETE specific interview for the user
+interviewRouter.delete('/:interviewId', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.userId as string;
+        const interviewId = req.params.interviewId as string;
+        const interview = await prisma.interview.delete({
+            where: {
+                id: interviewId,
+                userId
+            }
+        });
+        return res.status(200).json({
+            success: true,
+            interview
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            error: "Failed to delete interview"
+        });
+    }
+});
+
 export default interviewRouter;
