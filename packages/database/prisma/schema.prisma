@@ -26,28 +26,30 @@ model User {
 }
 
 model UserAccount {
-  id           String       @id @default(cuid())
-  userId       String
-  provider     AuthProvider
-  providerId   String? // null for email
-  passwordHash String? //only for email password 
-  createdAt    DateTime     @default(now())
-  user         User         @relation(fields: [userId], references: [id])
+  id               String       @id @default(cuid())
+  userId           String
+  provider         AuthProvider
+  providerId       String? // null for email
+  passwordHash     String? //only for email password 
+  createdAt        DateTime     @default(now())
+  user             User         @relation(fields: [userId], references: [id])
+  providerImageUrl String? // profile picture gave by google/github
 
   @@unique([userId, provider])
   @@unique([provider, providerId])
 }
 
 model UserProfile {
-  id         String      @id @default(cuid())
-  userId     String      @unique
-  githubUrl  String      @unique
-  githubData Json?
-  resumeText Json?
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @default(now()) @updatedAt
-  interviews Interview[]
-  user       User        @relation(fields: [userId], references: [id])
+  id              String      @id @default(cuid())
+  userId          String      @unique
+  githubUrl       String      @unique
+  githubData      Json?
+  resumeText      Json?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @default(now()) @updatedAt
+  interviews      Interview[]
+  profileImageUrl String? // profile picture gave by user later
+  user            User        @relation(fields: [userId], references: [id])
 }
 
 model Template {
