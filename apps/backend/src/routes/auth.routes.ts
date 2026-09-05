@@ -57,7 +57,7 @@ authRouter.get("/google/callback", async (req, res) => {
         });
         if (!profileRes.ok) throw new Error("Failed to fetch Google user profile");
 
-        const profile = await profileRes.json() as { sub: string; email?: string; name?: string };
+        const profile = await profileRes.json() as { sub: string; email?: string; name?: string; picture?: string };
         if (!profile.email) {
             const errorMsg = encodeURIComponent("No email found on Google account");
             return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
@@ -97,7 +97,10 @@ authRouter.get("/google/callback", async (req, res) => {
                 email: profile.email,
                 authProvider: "GOOGLE",
                 accounts: {
-                    create: { provider: "GOOGLE", providerId: profile.sub },
+                    create: { provider: "GOOGLE", providerId: profile.sub, providerImageUrl: profile.picture },
+                },
+                userProfile: {
+                    create: { profileImageUrl: profile.picture }
                 },
             },
         });
@@ -160,7 +163,7 @@ authRouter.get("/github/callback", async (req, res) => {
         });
         if (!profileRes.ok) throw new Error("Failed to fetch GitHub user profile");
 
-        const profile = await profileRes.json() as { id: number; name?: string; email?: string | null; login: string };
+        const profile = await profileRes.json() as { id: number; name?: string; email?: string | null; login: string, avatar_url?: string };
 
         // GitHub may not expose email publicly — fetch separately
         let email = profile.email;
@@ -211,8 +214,12 @@ authRouter.get("/github/callback", async (req, res) => {
                 email,
                 authProvider: "GITHUB",
                 accounts: {
-                    create: { provider: "GITHUB", providerId: githubId },
+                    create: { provider: "GITHUB", providerId: githubId, providerImageUrl: profile.avatar_url },
                 },
+                userProfile: {
+                    create: { profileImageUrl: profile.avatar_url }
+                }
+
             },
         });
 
@@ -314,7 +321,22 @@ authRouter.get("/me", authMiddleware, async (req, res) => {
     try {
         const user = await prisma.user.findUnique({
             where: { id: req.userId },
-            select: { id: true, name: true, email: true, authProvider: true },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                authProvider: true,
+                userProfile: {
+                    select: {
+                        profileImageUrl: true,
+                    }
+                },
+                accounts: {
+                    select: {
+                        provider: true,
+                    }
+                }
+            },
         });
 
         if (!user) {

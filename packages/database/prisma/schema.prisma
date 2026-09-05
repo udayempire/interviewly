@@ -42,7 +42,7 @@ model UserAccount {
 model UserProfile {
   id              String      @id @default(cuid())
   userId          String      @unique
-  githubUrl       String      @unique
+  githubUrl       String?     @unique
   githubData      Json?
   resumeText      Json?
   createdAt       DateTime    @default(now())
