@@ -147,7 +147,7 @@ export function ChangePasswordSection({ hasEmailAccount }: ChangePasswordSection
                     </p>
                 )}
 
-                <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
+                <Button type="submit" disabled={isPending} className="w-full sm:w-auto bg-blue-600">
                     {isPending ? (
                         <>
                             <Loader2 className="h-4 w-4 animate-spin" />

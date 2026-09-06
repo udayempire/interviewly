@@ -45,6 +45,7 @@ model UserProfile {
   githubUrl       String?     @unique
   githubData      Json?
   resumeText      Json?
+  resumePdf       Bytes?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @default(now()) @updatedAt
   interviews      Interview[]
