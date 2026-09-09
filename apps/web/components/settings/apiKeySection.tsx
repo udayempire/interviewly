@@ -166,7 +166,6 @@ export function ApiKeySection({ savedProvider, hasApiKey = false }: ApiKeySectio
                 <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
                 <p className="text-xs text-blue-700 leading-relaxed">
                     This key is used <span className="font-semibold">only for AI question generation and answer evaluation</span> (LLM).
-                    Speech-to-text and text-to-speech are handled by us — no setup needed on your end.
                 </p>
             </div>
 

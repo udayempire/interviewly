@@ -21,6 +21,12 @@ export const resumeDataSchema = z.object({
     })),
 });
 
+export const userProfileApiKeySchema = z.object({
+    llmProvider: z.string(),
+    llmApiKey: z.string(),
+    useCustomKey: z.boolean().default(false),
+});
+
 export type ResumeData = z.infer<typeof resumeDataSchema>;
 
-export type CreateProfileInput= z.infer<typeof createProfileSchema>;
+export type CreateProfileInput = z.infer<typeof createProfileSchema>;

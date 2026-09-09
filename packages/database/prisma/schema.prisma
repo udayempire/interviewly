@@ -46,6 +46,9 @@ model UserProfile {
   githubData      Json?
   resumeText      Json?
   resumePdf       Bytes?
+  llmProvider     String?
+  llmApiKey       String?
+  useCustomKey    Boolean     @default(false)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @default(now()) @updatedAt
   interviews      Interview[]

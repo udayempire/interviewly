@@ -1,6 +1,6 @@
 import express from "express";
 import { type Request, type Response } from "express";
-import { createProfileSchema } from "@repo/types"
+import { createProfileSchema, userProfileApiKeySchema } from "@repo/types"
 import { authMiddleware } from "../middleware/auth";
 import multer from "multer";
 import { prisma, Prisma } from "@repo/db";
@@ -263,6 +263,58 @@ profileRouter.post("/profile", authMiddleware, upload.single("resume"), async (r
             error: "Failed to process profile"
         })
     };
+});
+
+// PUT /api/v1/user/api-key (add/update apikey)
+profileRouter.put("/api-key", authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const result = userProfileApiKeySchema.safeParse(req.body);
+        if (!result.success) {
+            return res.status(400).json({ error: "Invalid api key provided", details: result.error.flatten() });
+        }
+        const { llmProvider, llmApiKey, useCustomKey } = result.data;
+        const userId = req.userId as string;
+        await prisma.userProfile.upsert({
+            where: {
+                userId,
+            },
+            create: {
+                userId,
+                llmApiKey,
+                llmProvider,
+                useCustomKey,
+            },
+            update: {
+                llmApiKey,
+                llmProvider,
+                useCustomKey,
+            },
+        });
+        return res.json({ success: true, message: "User's API key updated successfully" });
+    } catch (error) {
+        console.error("Error in PUT /api-key:", error);
+        return res.status(500).json({ error: "Failed to update user's api key" });
+    }
+});
+
+// patch /api/v1/user/api-key/toggle - to toggle btw platform api key and user api key 
+
+profileRouter.patch("/api-key/toggle", authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const userId = req.userId as string;
+        await prisma.userProfile.update({
+            where: {
+                userId,
+            },
+            data: {
+                useCustomKey: !req.body.useCustomKey,
+            },
+        });
+        return res.json({ success: true, message: "User's API key usage toggled successfully" });
+    } catch (error) {
+        console.error("Error in PATCH /api-key/toggle:", error);
+        return res.status(500).json({ error: "Failed to toggle user's API key usage" });
+    }
 });
 
 export default profileRouter;
