@@ -7,6 +7,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "test:fallback": "bun run src/test-fallback.ts"
+  },
   "dependencies": {
     "@deepgram/sdk": "^5.8.0",
     "@google/genai": "^2.10.0",

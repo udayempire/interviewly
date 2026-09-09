@@ -122,6 +122,20 @@ export async function executeLLMWithFallback(options: LLMExecutionOptions): Prom
     };
 }
 
+export async function validateApiKey(provider: string, apiKey: string): Promise<{ valid: boolean; error?: string }> {
+    if (!apiKey || apiKey.trim().length === 0) {
+        return { valid: false, error: "ApiKeyRequired" };
+    }
+    try {
+        const llm = createLLMProvider(provider, apiKey);
+        await llm.chat([{ role: "user", content: "ping" }]);
+        return { valid: true };
+    } catch (error) {
+        const reason = classifyLLMError(error);
+        return { valid: false, error: reason };
+    }
+}
+
 //Re-export types so consumers don't need separate imports like @repo/llm/types and can use @repo/llm
 export type {
     LLMProvider,

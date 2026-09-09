@@ -1,6 +1,7 @@
 import express from "express";
 import { type Request, type Response } from "express";
-import { createProfileSchema, userProfileApiKeySchema } from "@repo/types"
+import { createProfileSchema, userProfileApiKeySchema } from "@repo/types";
+import { validateApiKey } from "@repo/llm";
 import { authMiddleware } from "../middleware/auth";
 import multer from "multer";
 import { prisma, Prisma } from "@repo/db";
@@ -314,6 +315,25 @@ profileRouter.patch("/api-key/toggle", authMiddleware, async (req: Request, res:
     } catch (error) {
         console.error("Error in PATCH /api-key/toggle:", error);
         return res.status(500).json({ error: "Failed to toggle user's API key usage" });
+    }
+});
+
+// POST /api/v1/user/api-key/validate - test connection for user's custom API key
+profileRouter.post("/api-key/validate", authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { llmProvider, llmApiKey } = req.body;
+        if (!llmProvider || !llmApiKey) {
+            return res.status(400).json({ success: false, error: "llmProvider and llmApiKey are required" });
+        }
+        const result = await validateApiKey(llmProvider, llmApiKey);
+        if (result.valid) {
+            return res.json({ success: true, message: "API key is valid and working" });
+        } else {
+            return res.status(400).json({ success: false, error: result.error || "Invalid API key" });
+        }
+    } catch (error) {
+        console.error("Error in POST /api-key/validate:", error);
+        return res.status(500).json({ success: false, error: "Failed to validate API key" });
     }
 });
 
