@@ -41,3 +41,25 @@ export interface TTSProvider {
     }
   ): Promise<Buffer>
 };
+
+export interface FallbackNotice {
+  occurred: boolean;
+  reason?: string;
+}
+
+export interface LLMExecutionResult {
+  content: string;
+  fallbackNotice?: FallbackNotice;
+}
+
+export interface UserProfileLLMConfig {
+  useCustomKey?: boolean | null;
+  llmProvider?: string | null;
+  llmApiKey?: string | null;
+}
+
+export interface LLMExecutionOptions {
+  messages: ChatMessage[];
+  userProfile?: UserProfileLLMConfig | null;
+  defaultProvider?: string;
+}

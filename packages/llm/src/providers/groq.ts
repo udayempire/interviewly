@@ -2,7 +2,15 @@ import Groq from "groq-sdk";
 import type { ChatMessage, LLMProvider, STTProvider, TTSProvider } from "../types";
 
 export class GroqProvider implements LLMProvider {
-    private ai = new Groq({ apiKey: process.env.GROQ_API_KEY! });
+    private ai: Groq;
+
+    constructor(apiKey?: string) {
+        const key = apiKey || process.env.GROQ_API_KEY;
+        if (!key) {
+            throw new Error("Groq API key is not configured.");
+        }
+        this.ai = new Groq({ apiKey: key });
+    }
     async chat(messages: ChatMessage[]): Promise<string> {
         const hasImage = messages.some(msg =>
             Array.isArray(msg.content) && msg.content.some(part => part.type === "image_url")
