@@ -57,7 +57,8 @@ export default function Settings() {
             {/* AI API Key (BYOK) */}
             <ApiKeySection
                 savedProvider={user?.userProfile?.llmProvider || null}
-                hasApiKey={!!user?.userProfile?.llmApiKey}
+                hasApiKey={Boolean(user?.userProfile?.hasLlmApiKey || user?.userProfile?.llmApiKey)}
+                useCustomKey={user?.userProfile?.useCustomKey ?? false}
             />
         </div>
     )

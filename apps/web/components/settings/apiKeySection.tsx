@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Eye, EyeOff, Key, Loader2, Check, Trash2, Zap, Info, ChevronDown } from "lucide-react"
+import { Eye, EyeOff, Key, Loader2, Check, Trash2, Zap, Info, ChevronDown, ShieldCheck } from "lucide-react"
 
 // Only show providers that are actually implemented in packages/llm
 const LLM_PROVIDERS = [
@@ -43,9 +43,14 @@ const LLM_PROVIDERS = [
 interface ApiKeySectionProps {
     savedProvider?: string | null
     hasApiKey?: boolean
+    useCustomKey?: boolean
 }
 
-export function ApiKeySection({ savedProvider, hasApiKey = false }: ApiKeySectionProps) {
+export function ApiKeySection({
+    savedProvider,
+    hasApiKey = false,
+    useCustomKey: initialUseCustomKey = false,
+}: ApiKeySectionProps) {
     const [selectedProvider, setSelectedProvider] = useState(savedProvider || "")
     const [apiKey, setApiKey] = useState("")
     const [showKey, setShowKey] = useState(false)
@@ -55,9 +60,19 @@ export function ApiKeySection({ savedProvider, hasApiKey = false }: ApiKeySectio
     const [isSaving, setIsSaving] = useState(false)
     const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null)
     const [isRemoving, setIsRemoving] = useState(false)
+
+    // Custom API Key Toggle state
+    const [useCustomKey, setUseCustomKey] = useState(initialUseCustomKey)
+    const [isToggling, setIsToggling] = useState(false)
+    const [toggleResult, setToggleResult] = useState<{ success: boolean; message: string } | null>(null)
+
     const dropdownRef = useRef<HTMLDivElement>(null)
 
     const selectedProviderInfo = LLM_PROVIDERS.find((p) => p.id === selectedProvider)
+
+    useEffect(() => {
+        setUseCustomKey(initialUseCustomKey)
+    }, [initialUseCustomKey])
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -70,24 +85,30 @@ export function ApiKeySection({ savedProvider, hasApiKey = false }: ApiKeySectio
         return () => document.removeEventListener("mousedown", handleClickOutside)
     }, [])
 
+    const getApiUrl = (endpoint: string) => {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+        const version = process.env.NEXT_PUBLIC_API_VERSION || "api/v1"
+        if (baseUrl.includes("/api/v1")) {
+            return `${baseUrl}/user/${endpoint}`
+        }
+        return `${baseUrl}/${version}/user/${endpoint}`
+    }
+
     const handleTestKey = async () => {
         if (!apiKey || !selectedProvider) return
         setIsTesting(true)
         setTestResult(null)
 
         try {
-            const res = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/user/profile/api-key/test`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ provider: selectedProvider, apiKey }),
-                }
-            )
+            const res = await fetch(getApiUrl("api-key/validate"), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ llmProvider: selectedProvider, llmApiKey: apiKey }),
+            })
             const data = await res.json()
-            if (res.ok) {
-                setTestResult({ success: true, message: "API key is valid!" })
+            if (res.ok && data.success) {
+                setTestResult({ success: true, message: "API key is valid and working!" })
             } else {
                 setTestResult({ success: false, message: data.error || "Invalid API key" })
             }
@@ -104,17 +125,14 @@ export function ApiKeySection({ savedProvider, hasApiKey = false }: ApiKeySectio
         setSaveResult(null)
 
         try {
-            const res = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/user/profile/api-key`,
-                {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ provider: selectedProvider, apiKey }),
-                }
-            )
+            const res = await fetch(getApiUrl("api-key"), {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ llmProvider: selectedProvider, llmApiKey: apiKey }),
+            })
             const data = await res.json()
-            if (res.ok) {
+            if (res.ok && data.success) {
                 setSaveResult({ success: true, message: "API key saved successfully!" })
                 setApiKey("")
             } else {
@@ -132,22 +150,50 @@ export function ApiKeySection({ savedProvider, hasApiKey = false }: ApiKeySectio
         setSaveResult(null)
 
         try {
-            const res = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/user/profile/api-key`,
-                {
-                    method: "DELETE",
-                    credentials: "include",
-                }
-            )
+            const res = await fetch(getApiUrl("api-key"), {
+                method: "DELETE",
+                credentials: "include",
+            })
             if (res.ok) {
-                setSaveResult({ success: true, message: "API key removed. Using default." })
+                setSaveResult({ success: true, message: "API key removed. Using default platform key." })
                 setSelectedProvider("")
                 setApiKey("")
+                setUseCustomKey(false)
             }
         } catch {
             setSaveResult({ success: false, message: "Failed to remove key." })
         } finally {
             setIsRemoving(false)
+        }
+    }
+
+    const handleToggleKeyUsage = async () => {
+        setIsToggling(true)
+        setToggleResult(null)
+        const targetState = !useCustomKey
+
+        try {
+            const res = await fetch(getApiUrl("api-key/toggle"), {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ useCustomKey: targetState }),
+            })
+            const data = await res.json()
+            if (res.ok && data.success) {
+                const nextVal = typeof data.useCustomKey === "boolean" ? data.useCustomKey : targetState
+                setUseCustomKey(nextVal)
+                setToggleResult({
+                    success: true,
+                    message: nextVal ? "Custom API key usage enabled." : "Switched to platform default key.",
+                })
+            } else {
+                setToggleResult({ success: false, message: data.error || "Failed to toggle key usage" })
+            }
+        } catch {
+            setToggleResult({ success: false, message: "Network error when toggling key usage." })
+        } finally {
+            setIsToggling(false)
         }
     }
 
@@ -158,43 +204,94 @@ export function ApiKeySection({ savedProvider, hasApiKey = false }: ApiKeySectio
                 <h2 className="text-lg font-semibold text-zinc-900">AI Model Configuration</h2>
             </div>
             <p className="text-sm text-zinc-500 mb-2">
-                Bring your own API key to use your preferred AI model for interviews. Leave blank to use our default (limited usage).
+                Bring your own API key (BYOK) to use your preferred AI model for interviews. Leave blank or toggle OFF to use platform default.
             </p>
 
             {/* Info banner — STT/TTS clarification */}
             <div className="flex items-start gap-2.5 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 mb-6">
                 <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
                 <p className="text-xs text-blue-700 leading-relaxed">
-                    This key is used <span className="font-semibold">only for AI question generation and answer evaluation</span> (LLM).
+                    This key is used <span className="font-semibold">for AI question generation and answer evaluation</span> (LLM). Platform default key automatically acts as a backup fallback if your key reaches quota.
                 </p>
             </div>
 
-            {/* Current status — shown when a key is already saved */}
+            {/* Current status & Toggle Switch — shown when a key is saved */}
             {hasApiKey && savedProvider && (
-                <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 mb-5">
-                    <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                            <Zap className="h-4 w-4 text-emerald-600" />
+                <div className="space-y-3 mb-6">
+                    <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-xs space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className={`h-9 w-9 rounded-full flex items-center justify-center transition-colors ${useCustomKey ? "bg-emerald-100 text-emerald-600" : "bg-zinc-100 text-zinc-500"}`}>
+                                    {useCustomKey ? <Zap className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-sm font-semibold text-zinc-900">
+                                            {LLM_PROVIDERS.find((p) => p.id === savedProvider)?.name || savedProvider} Key Configured
+                                        </p>
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${useCustomKey ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
+                                            {useCustomKey ? "● Custom Key Active" : "○ Platform Fallback Active"}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-zinc-500 mt-0.5">
+                                        {useCustomKey
+                                            ? "Your custom API key is primary. Platform key acts as fallback."
+                                            : "Currently using Platform default API key."}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleRemoveKey}
+                                disabled={isRemoving}
+                                className="text-xs font-medium text-red-500 hover:text-red-700 bg-red-50/50 hover:bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                                {isRemoving ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                    <Trash2 className="h-3 w-3" />
+                                )}
+                                Remove
+                            </button>
                         </div>
-                        <div>
-                            <p className="text-sm font-medium text-emerald-800">
-                                Custom key active — {LLM_PROVIDERS.find((p) => p.id === savedProvider)?.name || savedProvider}
-                            </p>
-                            <p className="text-xs text-emerald-600">Your own API key is being used for interviews</p>
+
+                        {/* Modern Toggle Switch Row */}
+                        <div className="pt-3 border-t border-zinc-100 flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="custom-key-toggle" className="text-sm font-medium text-zinc-800 cursor-pointer">
+                                    Use Custom API Key
+                                </Label>
+                                <p className="text-xs text-zinc-400">
+                                    Toggle between your custom key and platform default key
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                {isToggling && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
+                                <button
+                                    id="custom-key-toggle"
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={useCustomKey}
+                                    disabled={isToggling}
+                                    onClick={handleToggleKeyUsage}
+                                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                                        useCustomKey ? "bg-blue-600" : "bg-zinc-200"
+                                    } ${isToggling ? "opacity-60 cursor-wait" : ""}`}
+                                >
+                                    <span
+                                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                                            useCustomKey ? "translate-x-5" : "translate-x-0"
+                                        }`}
+                                    />
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                    <button
-                        onClick={handleRemoveKey}
-                        disabled={isRemoving}
-                        className="text-xs font-medium text-red-500 hover:text-red-700 bg-white hover:bg-red-50 border border-red-200 px-3 py-1.5 rounded-full transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                    >
-                        {isRemoving ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                            <Trash2 className="h-3 w-3" />
+
+                        {toggleResult && (
+                            <div className={`text-xs px-3 py-1.5 rounded-md border ${toggleResult.success ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}`}>
+                                {toggleResult.message}
+                            </div>
                         )}
-                        Remove
-                    </button>
+                    </div>
                 </div>
             )}
 
@@ -356,7 +453,7 @@ export function ApiKeySection({ savedProvider, hasApiKey = false }: ApiKeySectio
                                 type="button"
                                 onClick={handleSave}
                                 disabled={!apiKey || isSaving}
-                                className="bg-blue-600 cursor-pointer"
+                                className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
                             >
                                 {isSaving ? (
                                     <>

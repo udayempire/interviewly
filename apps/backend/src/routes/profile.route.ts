@@ -34,6 +34,9 @@ profileRouter.get("/profile", authMiddleware, async (req: Request, res: Response
                         githubUrl: true,
                         resumeText: true,
                         resumePdf: true,
+                        llmProvider: true,
+                        llmApiKey: true,
+                        useCustomKey: true,
                     }
                 },
                 accounts: {
@@ -48,11 +51,13 @@ profileRouter.get("/profile", authMiddleware, async (req: Request, res: Response
             return res.status(404).json({ error: "User not found" });
         }
 
-        // Don't send raw PDF bytes in JSON — just a flag
+        // Don't send raw PDF bytes or raw API key in JSON — just flags
         const response = {
             ...user,
             userProfile: user.userProfile ? {
                 ...user.userProfile,
+                hasLlmApiKey: !!user.userProfile.llmApiKey,
+                llmApiKey: undefined,
                 hasResumePdf: !!user.userProfile.resumePdf,
                 resumePdf: undefined,
             } : null,
@@ -298,20 +303,42 @@ profileRouter.put("/api-key", authMiddleware, async (req: Request, res: Response
     }
 });
 
+// DELETE /api/v1/user/api-key (remove user api key)
+profileRouter.delete("/api-key", authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const userId = req.userId as string;
+        await prisma.userProfile.update({
+            where: { userId },
+            data: {
+                llmApiKey: null,
+                llmProvider: null,
+                useCustomKey: false,
+            },
+        });
+        return res.json({ success: true, message: "User API key removed successfully" });
+    } catch (error) {
+        console.error("Error in DELETE /api-key:", error);
+        return res.status(500).json({ error: "Failed to remove API key" });
+    }
+});
+
 // patch /api/v1/user/api-key/toggle - to toggle btw platform api key and user api key 
 
 profileRouter.patch("/api-key/toggle", authMiddleware, async (req: Request, res: Response) => {
     try {
         const userId = req.userId as string;
+        const currentProfile = await prisma.userProfile.findUnique({ where: { userId } });
+        const newStatus = typeof req.body.useCustomKey === "boolean" ? req.body.useCustomKey : !currentProfile?.useCustomKey;
+
         await prisma.userProfile.update({
             where: {
                 userId,
             },
             data: {
-                useCustomKey: !req.body.useCustomKey,
+                useCustomKey: newStatus,
             },
         });
-        return res.json({ success: true, message: "User's API key usage toggled successfully" });
+        return res.json({ success: true, useCustomKey: newStatus, message: "User's API key usage toggled successfully" });
     } catch (error) {
         console.error("Error in PATCH /api-key/toggle:", error);
         return res.status(500).json({ error: "Failed to toggle user's API key usage" });
