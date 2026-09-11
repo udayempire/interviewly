@@ -8,7 +8,7 @@ import { prisma, Prisma } from "@repo/db";
 import { extractResumeData } from "../services/resumeExtraction.service";
 import { extractGithubUsername, getGithubData } from "../services/githubExtraction.service";
 import bcrypt from "bcrypt";
-import { encrypt } from "../services/encryption";
+import { encrypt, decrypt } from "../services/encryption";
 
 const profileRouter = express.Router();
 
@@ -293,6 +293,36 @@ profileRouter.post("/profile", authMiddleware, upload.single("resume"), async (r
             error: "Failed to process profile"
         })
     };
+});
+
+// GET /api/v1/user/api-key (fetch decrypted custom API key)
+profileRouter.get("/api-key", authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const userId = req.userId as string;
+        const profile = await prisma.userProfile.findUnique({
+            where: { userId },
+            select: { llmApiKey: true, llmProvider: true }
+        });
+
+        if (!profile || !profile.llmApiKey) {
+            return res.status(404).json({ success: false, error: "No API key found" });
+        }
+
+        try {
+            const decryptedKey = decrypt(profile.llmApiKey);
+            return res.json({
+                success: true,
+                llmApiKey: decryptedKey,
+                llmProvider: profile.llmProvider
+            });
+        } catch (decryptErr) {
+            console.error("Failed to decrypt API key:", decryptErr);
+            return res.status(500).json({ success: false, error: "Failed to decrypt API key" });
+        }
+    } catch (error) {
+        console.error("Error in GET /api-key:", error);
+        return res.status(500).json({ success: false, error: "Failed to fetch API key" });
+    }
 });
 
 // PUT /api/v1/user/api-key (add/update apikey)

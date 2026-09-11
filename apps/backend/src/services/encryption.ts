@@ -55,6 +55,10 @@ export function decrypt(encryptedData: string): string {
 
     const [ivBase64, authTagBase64, encryptedBase64] = parts;
 
+    if (!ivBase64 || !authTagBase64 || !encryptedBase64) {
+        throw new Error("Invalid encrypted data format");
+    }
+
     const iv = Buffer.from(ivBase64, "base64");
     const authTag = Buffer.from(authTagBase64, "base64");
     const encrypted = Buffer.from(encryptedBase64, "base64");

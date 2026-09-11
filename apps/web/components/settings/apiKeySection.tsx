@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Eye, EyeOff, Key, Loader2, Check, Trash2, Zap, Info, ChevronDown, ShieldCheck } from "lucide-react"
+import { Eye, EyeOff, Key, Loader2, Check, Trash2, Zap, Info, ChevronDown, ShieldCheck, Copy } from "lucide-react"
 
 // Only show providers that are actually implemented in packages/llm
 const LLM_PROVIDERS = [
@@ -65,6 +65,12 @@ export function ApiKeySection({
     const [useCustomKey, setUseCustomKey] = useState(initialUseCustomKey)
     const [isToggling, setIsToggling] = useState(false)
     const [toggleResult, setToggleResult] = useState<{ success: boolean; message: string } | null>(null)
+
+    // Saved Key Reveal state
+    const [isKeyRevealed, setIsKeyRevealed] = useState(false)
+    const [revealedKey, setRevealedKey] = useState<string | null>(null)
+    const [isFetchingKey, setIsFetchingKey] = useState(false)
+    const [isCopied, setIsCopied] = useState(false)
 
     const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -135,6 +141,8 @@ export function ApiKeySection({
             if (res.ok && data.success) {
                 setSaveResult({ success: true, message: "API key saved successfully!" })
                 setApiKey("")
+                setRevealedKey(null)
+                setIsKeyRevealed(false)
             } else {
                 setSaveResult({ success: false, message: data.error || "Failed to save API key" })
             }
@@ -159,6 +167,8 @@ export function ApiKeySection({
                 setSelectedProvider("")
                 setApiKey("")
                 setUseCustomKey(false)
+                setRevealedKey(null)
+                setIsKeyRevealed(false)
             }
         } catch {
             setSaveResult({ success: false, message: "Failed to remove key." })
@@ -197,10 +207,44 @@ export function ApiKeySection({
         }
     }
 
+    const handleToggleRevealKey = async () => {
+        if (isKeyRevealed) {
+            setIsKeyRevealed(false)
+            return
+        }
+
+        if (revealedKey) {
+            setIsKeyRevealed(true)
+            return
+        }
+
+        setIsFetchingKey(true)
+        try {
+            const res = await fetch(getApiUrl("api-key"), {
+                credentials: "include",
+            })
+            const data = await res.json()
+            if (res.ok && data.success && data.llmApiKey) {
+                setRevealedKey(data.llmApiKey)
+                setIsKeyRevealed(true)
+            }
+        } catch (err) {
+            console.error("Failed to fetch API key:", err)
+        } finally {
+            setIsFetchingKey(false)
+        }
+    }
+
+    const handleCopyKey = () => {
+        if (!revealedKey) return
+        navigator.clipboard.writeText(revealedKey)
+        setIsCopied(true)
+        setTimeout(() => setIsCopied(false), 2000)
+    }
+
     return (
         <div>
             <div className="flex items-center gap-2 mb-1">
-                <Key className="h-5 w-5 text-zinc-700" />
                 <h2 className="text-lg font-semibold text-zinc-900">AI Model Configuration</h2>
             </div>
             <p className="text-sm text-zinc-500 mb-2">
@@ -221,9 +265,6 @@ export function ApiKeySection({
                     <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-xs space-y-4">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className={`h-9 w-9 rounded-full flex items-center justify-center transition-colors ${useCustomKey ? "bg-emerald-100 text-emerald-600" : "bg-zinc-100 text-zinc-500"}`}>
-                                    {useCustomKey ? <Zap className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
-                                </div>
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <p className="text-sm font-semibold text-zinc-900">
@@ -252,6 +293,62 @@ export function ApiKeySection({
                                 )}
                                 Remove
                             </button>
+                        </div>
+
+                        {/* Saved API Key Reveal Row */}
+                        <div className="pt-3 border-t border-zinc-100 flex items-center justify-between gap-4">
+                            <div className="space-y-1 min-w-0">
+                                <span className="text-xs font-medium text-zinc-500">Saved API Key</span>
+                                <div className="flex items-center gap-2">
+                                    <code className="text-xs font-mono bg-zinc-100 px-2.5 py-1 rounded text-zinc-800 tracking-wider border border-zinc-200/80 truncate max-w-[200px] sm:max-w-[320px]">
+                                        {isKeyRevealed && revealedKey ? revealedKey : "••••••••••••••••••••••••"}
+                                    </code>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={handleToggleRevealKey}
+                                    disabled={isFetchingKey}
+                                    className="text-xs font-medium text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200/80 border border-zinc-200/60 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                                    title={isKeyRevealed ? "Hide API key" : "Show API key"}
+                                >
+                                    {isFetchingKey ? (
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : isKeyRevealed ? (
+                                        <>
+                                            <EyeOff className="h-3.5 w-3.5" />
+                                            <span>Hide Key</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Eye className="h-3.5 w-3.5" />
+                                            <span>Show Key</span>
+                                        </>
+                                    )}
+                                </button>
+
+                                {isKeyRevealed && revealedKey && (
+                                    <button
+                                        type="button"
+                                        onClick={handleCopyKey}
+                                        className="text-xs font-medium text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200/80 border border-zinc-200/60 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                                        title="Copy API key"
+                                    >
+                                        {isCopied ? (
+                                            <>
+                                                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                                <span className="text-emerald-600 font-semibold">Copied</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Copy className="h-3.5 w-3.5" />
+                                                <span>Copy</span>
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         {/* Modern Toggle Switch Row */}
