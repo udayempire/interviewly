@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { InterviewAbout } from "@/components/interview/interviewAbout";
 import { GithubEntry } from "@/components/interview/githubEntry";
 import { ResumeEntry } from "@/components/interview/resumeEntry";
@@ -14,7 +14,28 @@ export default function Interview() {
     const [githubUrl, setGithubUrl] = useState("");
     const [topic, setTopic] = useState("");
     const [resumeFile, setResumeFile] = useState<File | null>(null);
+    const [hasSavedResume, setHasSavedResume] = useState(false);
     const router = useRouter();
+
+    // Fetch autofill data once at page level — fast, lightweight endpoint
+    useEffect(() => {
+        const fetchAutofill = async () => {
+            try {
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/user/interview-prefilldata`,
+                    { credentials: "include" }
+                )
+                const data = await res.json()
+                if (data.success) {
+                    if (data.githubUrl && !githubUrl) setGithubUrl(data.githubUrl)
+                    if (data.hasResume) setHasSavedResume(true)
+                }
+            } catch {
+                // Silent fail - autofill is a convenience, not critical
+            }
+        }
+        fetchAutofill()
+    }, [])
     const { mutate: createInterview, isPending, error } = useMutation({
         mutationFn: async () => {
             const formData = new FormData();
@@ -22,6 +43,8 @@ export default function Interview() {
             formData.append("githubUrl", githubUrl);
             if (resumeFile) {
                 formData.append("resume", resumeFile);
+            } else if (hasSavedResume) {
+                formData.append("useProfileResume", "true");
             }
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/interview/create`, {
                 method: "POST",
@@ -61,7 +84,7 @@ export default function Interview() {
                 {/* Card 1: topic is controlled from this page */}
                 <InterviewAbout value={description} onChange={setDescription} />
                 <GithubEntry value={githubUrl} onChange={setGithubUrl} />
-                <ResumeEntry onFileChange={setResumeFile} />
+                <ResumeEntry onFileChange={setResumeFile} hasSavedResume={hasSavedResume} />
             </div>
 
             {/* Create Interview CTA */}

@@ -15,6 +15,29 @@ const upload = multer({
     storage: multer.memoryStorage()
 });
 
+// GET /api/v1/user/interview-prefilldata — lightweight endpoint for interview setup prefill
+profileRouter.get("/interview-prefilldata", authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const userId = req.userId as string;
+        const profile = await prisma.userProfile.findUnique({
+            where: { userId },
+            select: {
+                githubUrl: true,
+                resumeText: true,
+            }
+        });
+        return res.json({
+            success: true,
+            githubUrl: profile?.githubUrl || null,
+            resumeText: profile?.resumeText || null,
+            hasResume: Boolean(profile?.resumeText),
+        });
+    } catch (error) {
+        console.error("Error in GET /interview-prefilldata:", error);
+        return res.status(500).json({ error: "Failed to fetch prefill data" });
+    }
+});
+
 // GET /api/v1/user/profile — full profile data for the settings page
 profileRouter.get("/profile", authMiddleware, async (req: Request, res: Response) => {
     try {
