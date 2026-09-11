@@ -8,6 +8,7 @@ import { prisma, Prisma } from "@repo/db";
 import { extractResumeData } from "../services/resumeExtraction.service";
 import { extractGithubUsername, getGithubData } from "../services/githubExtraction.service";
 import bcrypt from "bcrypt";
+import { encrypt } from "../services/encryption";
 
 const profileRouter = express.Router();
 
@@ -302,6 +303,7 @@ profileRouter.put("/api-key", authMiddleware, async (req: Request, res: Response
             return res.status(400).json({ error: "Invalid api key provided", details: result.error.flatten() });
         }
         const { llmProvider, llmApiKey, useCustomKey } = result.data;
+        const encryptedllmApiKey = encrypt(llmApiKey);
         const userId = req.userId as string;
         await prisma.userProfile.upsert({
             where: {
@@ -309,12 +311,12 @@ profileRouter.put("/api-key", authMiddleware, async (req: Request, res: Response
             },
             create: {
                 userId,
-                llmApiKey,
+                llmApiKey: encryptedllmApiKey,
                 llmProvider,
                 useCustomKey,
             },
             update: {
-                llmApiKey,
+                llmApiKey: encryptedllmApiKey,
                 llmProvider,
                 useCustomKey,
             },
