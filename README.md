@@ -1,159 +1,226 @@
-# Turborepo starter
+# Interviewly
 
-This Turborepo starter is maintained by the Turborepo core team.
+AI-powered mock interview platform. Practice technical interviews with real-time AI feedback, voice interaction, and code editing — all in your browser.
 
-## Using this example
+## Tech Stack
 
-Run the following command:
+| Layer       | Technology                                    |
+| ----------- | --------------------------------------------- |
+| Monorepo    | Turborepo + Bun workspaces                    |
+| Frontend    | Next.js 16, React 19, Tailwind CSS 4, shadcn  |
+| Backend     | Express 5, Bun runtime, WebSockets            |
+| Database    | PostgreSQL, Prisma 7 ORM                      |
+| AI / LLM    | Gemini, Groq, Deepgram (STT/TTS)              |
+| Auth        | JWT, Google OAuth, GitHub OAuth                |
 
-```sh
-npx create-turbo@latest
+## Project Structure
+
+```
+interviewlyy/
+├── apps/
+│   ├── web/          # Next.js frontend (port 3000)
+│   ├── backend/      # Express API server (port 4000)
+│   └── docs/         # Documentation site
+├── packages/
+│   ├── database/     # Prisma schema, migrations, DB client (@repo/db)
+│   ├── llm/          # LLM provider abstraction (@repo/llm)
+│   ├── types/        # Shared TypeScript types (@repo/types)
+│   ├── ui/           # Shared React component library (@repo/ui)
+│   ├── eslint-config/
+│   └── typescript-config/
 ```
 
-## What's inside?
+## Prerequisites
 
-This Turborepo includes the following packages/apps:
+- [Bun](https://bun.sh) (v1.3.14+)
+- [Node.js](https://nodejs.org) (v18+)
+- [Docker](https://www.docker.com/) & Docker Compose (for local PostgreSQL)
+- A [Neon](https://neon.tech) database **or** a local PostgreSQL instance
 
-### Apps and Packages
+## Getting Started
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+### 1. Clone the repository
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```bash
+git clone https://github.com/udayempire/interviewly.git
+cd interviewly
 ```
 
-Without global `turbo`, use your package manager:
+### 2. Install dependencies
 
-```sh
-cd my-turborepo
-npx turbo build
-bun dlx turbo build
-bun exec turbo build
+```bash
+bun install
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+### 3. Set up the database
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+**Option A — Local PostgreSQL via Docker:**
 
-```sh
-turbo build --filter=docs
+```bash
+docker compose up -d
 ```
 
-Without global `turbo`:
+This starts PostgreSQL on `localhost:5432` with:
+- User: `postgres`
+- Password: `password`
+- Database: `interviewly`
 
-```sh
-npx turbo build --filter=docs
-bun exec turbo build --filter=docs
-bun exec turbo build --filter=docs
+Your `DATABASE_URL` would be:
+
+```
+postgresql://postgres:password@localhost:5432/interviewly
 ```
 
-### Develop
+**Option B — Neon (or any remote PostgreSQL):**
 
-To develop all apps and packages, run the following command:
+Create a database on [Neon](https://neon.tech) and grab your connection string.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+### 4. Configure environment variables
 
-```sh
-cd my-turborepo
-turbo dev
+Create `.env` files in the locations below. Use the `.env.example` files as reference if available, or follow the templates here.
+
+#### Root `.env`
+
+```bash
+# interviewlyy/.env
+DATABASE_URL="postgresql://<user>:<password>@<host>/<database>"
 ```
 
-Without global `turbo`, use your package manager:
+#### Backend `.env`
 
-```sh
-cd my-turborepo
-npx turbo dev
-bun exec turbo dev
-bun exec turbo dev
+```bash
+# apps/backend/.env
+DATABASE_URL="postgresql://<user>:<password>@<host>/<database>"
+
+# LLM Providers (at least one required)
+GEMINI_API_KEY=your_gemini_api_key
+GROQ_API_KEY=your_groq_api_key
+DEEPGRAM_API_KEY=your_deepgram_api_key
+LLM_PROVIDER=gemini
+DEFAULT_LLM_PROVIDER=groq
+DEFAULT_STT_PROVIDER=groq
+DEFAULT_TTS_PROVIDER=deepgram
+
+# Auth
+JWT_SECRET=your_jwt_secret
+ENCRYPTION_KEY=your_base64_encryption_key
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_SECRET=your_google_secret
+GOOGLE_REDIRECT_URI=http://localhost:4000/api/v1/auth/google/callback
+
+# GitHub OAuth
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+GITHUB_REDIRECT_URI=http://localhost:4000/api/v1/auth/github/callback
+GITHUB_TOKEN=your_github_pat
+
+FRONTEND_URL=http://localhost:3000
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+#### Web `.env`
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
+```bash
+# apps/web/.env
+NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_API_VERSION=api/v1
 ```
 
-Without global `turbo`:
+### 5. Generate the Prisma client & run migrations
 
-```sh
-npx turbo dev --filter=web
-bun exec turbo dev --filter=web
-bun exec turbo dev --filter=web
+```bash
+cd packages/database
+bun run db:generate
+bun run db:migrate
+cd ../..
 ```
 
-### Remote Caching
+### 6. Start the development servers
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
+```bash
+bun run dev
 ```
 
-Without global `turbo`, use your package manager:
+This runs all apps in parallel via Turborepo:
 
-```sh
-cd my-turborepo
-npx turbo login
-bun exec turbo login
-bun exec turbo login
+- **Web** → [http://localhost:3000](http://localhost:3000)
+- **Backend** → [http://localhost:4000](http://localhost:4000)
+
+To run a specific app:
+
+```bash
+# Frontend only
+bun run dev --filter=web
+
+# Backend only
+bun run dev --filter=backend
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+## Available Scripts
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+| Command                | Description                                |
+| ---------------------- | ------------------------------------------ |
+| `bun run dev`          | Start all apps in development mode         |
+| `bun run build`        | Build all apps and packages                |
+| `bun run lint`         | Lint all packages                          |
+| `bun run format`       | Format code with Prettier                  |
+| `bun run check-types`  | Run TypeScript type checking               |
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+### Database scripts (run from `packages/database/`)
 
-```sh
-turbo link
+| Command                | Description                                |
+| ---------------------- | ------------------------------------------ |
+| `bun run db:generate`  | Generate Prisma client                     |
+| `bun run db:migrate`   | Create and apply migrations                |
+| `bun run db:deploy`    | Apply pending migrations (production)      |
+
+## Contributing
+
+Contributions are welcome! Here's how to get started:
+
+### 1. Fork the repository
+
+Click the **Fork** button at the top-right of the [repo page](https://github.com/udayempire/interviewly).
+
+### 2. Create a feature branch
+
+```bash
+git checkout -b feature/your-feature-name
 ```
 
-Without global `turbo`:
+### 3. Make your changes
 
-```sh
-npx turbo link
-bun exec turbo link
-bun exec turbo link
+- Follow the existing code style and conventions
+- Write meaningful commit messages
+- Keep PRs focused — one feature or fix per PR
+
+### 4. Test your changes
+
+```bash
+bun run build        # Make sure everything compiles
+bun run lint         # No lint errors
+bun run check-types  # No type errors
 ```
 
-## Useful Links
+### 5. Push and open a pull request
 
-Learn more about the power of Turborepo:
+```bash
+git push origin feature/your-feature-name
+```
 
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+Then open a PR against the `main` branch with a clear description of what you changed and why.
+
+### Contribution Guidelines
+
+- **Branch naming**: `feature/`, `fix/`, `docs/`, `refactor/` prefixes
+- **Commits**: Use clear, descriptive commit messages
+- **Code style**: Run `bun run format` before committing
+- **Types**: Shared types go in `packages/types`
+- **Components**: Shared UI components go in `packages/ui`
+- **Database changes**: Add Prisma migrations via `bun run db:migrate` in `packages/database`
+- **No secrets**: Never commit API keys, tokens, or `.env` files
+
+## License
+
+This project is open source. See the [LICENSE](LICENSE) file for details.
