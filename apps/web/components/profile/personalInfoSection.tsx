@@ -61,8 +61,8 @@ export function PersonalInfoSection({
 
     return (
         <div>
-            <h2 className="text-lg font-semibold text-zinc-900 mb-1">Personal Information</h2>
-            <p className="text-sm text-zinc-500 mb-6">Update your name and GitHub profile link.</p>
+            <h2 className="text-lg font-semibold text-foreground mb-1">Personal Information</h2>
+            <p className="text-sm text-muted-foreground mb-6">Update your name and GitHub profile link.</p>
 
             <form onSubmit={handleSubmit} className="space-y-5">
                 {/* Avatar display */}
@@ -73,7 +73,7 @@ export function PersonalInfoSection({
                             alt="Profile"
                             width={64}
                             height={64}
-                            className="rounded-full ring-2 ring-zinc-100"
+                            className="rounded-full ring-2 ring-border"
                         />
                     ) : (
                         <div className="h-16 w-16 shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
@@ -83,8 +83,8 @@ export function PersonalInfoSection({
                         </div>
                     )}
                     <div>
-                        <p className="text-sm font-medium text-zinc-800">{name || "User"}</p>
-                        <p className="text-xs text-zinc-400">
+                        <p className="text-sm font-medium text-foreground">{name || "User"}</p>
+                        <p className="text-xs text-muted-foreground">
                             Joined {new Date(createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
                             {" · "}
                             Signed up via {authProvider.charAt(0) + authProvider.slice(1).toLowerCase()}
@@ -110,9 +110,9 @@ export function PersonalInfoSection({
                         id="profile-email"
                         value={email}
                         disabled
-                        className="bg-zinc-50 text-zinc-500 cursor-not-allowed"
+                        className="bg-muted text-muted-foreground cursor-not-allowed"
                     />
-                    <p className="text-xs text-zinc-400">Email cannot be changed.</p>
+                    <p className="text-xs text-muted-foreground">Email cannot be changed.</p>
                 </div>
 
                 {/* GitHub URL */}

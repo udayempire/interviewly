@@ -57,10 +57,10 @@ export const CodeEditor = ({ onCodeChange }: CodeEditorProps) => {
     };
 
     return (
-        <div className="flex h-full flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white">
+        <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card">
             {/* Toolbar with language selector */}
-            <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-2">
-                <p className="text-sm font-semibold text-zinc-700">Code Editor</p>
+            <div className="flex items-center justify-between border-b border-border px-4 py-2">
+                <p className="text-sm font-semibold text-foreground">Code Editor</p>
 
                 <div className="relative">
                     <select
@@ -68,7 +68,7 @@ export const CodeEditor = ({ onCodeChange }: CodeEditorProps) => {
                         onChange={(e) =>
                             handleLanguageChange(e.target.value as SupportedLanguage)
                         }
-                        className="appearance-none rounded-md border border-zinc-200 bg-zinc-50 py-1.5 pl-3 pr-8 text-sm font-medium text-zinc-700 outline-none transition-colors hover:bg-zinc-100 focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+                        className="appearance-none rounded-md border border-border bg-muted py-1.5 pl-3 pr-8 text-sm font-medium text-foreground outline-none transition-colors hover:bg-accent focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
                     >
                         {LANGUAGES.map((lang) => (
                             <option key={lang.value} value={lang.value}>
@@ -78,7 +78,7 @@ export const CodeEditor = ({ onCodeChange }: CodeEditorProps) => {
                     </select>
                     <ChevronDown
                         size={14}
-                        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400"
+                        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
                     />
                 </div>
             </div>
@@ -110,7 +110,7 @@ export const CodeEditor = ({ onCodeChange }: CodeEditorProps) => {
                     }}
                     loading={
                         <div className="flex h-full items-center justify-center">
-                            <p className="text-sm text-zinc-400">Loading editor...</p>
+                            <p className="text-sm text-muted-foreground">Loading editor...</p>
                         </div>
                     }
                 />

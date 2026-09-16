@@ -39,8 +39,8 @@ export function ConnectedAccountsSection({
 
     return (
         <div>
-            <h2 className="text-lg font-semibold text-zinc-900 mb-1">Connected Accounts</h2>
-            <p className="text-sm text-zinc-500 mb-6">
+            <h2 className="text-lg font-semibold text-foreground mb-1">Connected Accounts</h2>
+            <p className="text-sm text-muted-foreground mb-6">
                 Manage your linked authentication providers. You can connect new accounts but cannot unlink existing ones.
             </p>
 
@@ -49,8 +49,8 @@ export function ConnectedAccountsSection({
                 <div
                     className={`mb-4 rounded-md px-4 py-2.5 text-sm border ${
                         message.type === "success"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-red-50 text-red-700 border-red-200"
+                            ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                            : "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"
                     }`}
                 >
                     {message.text}
@@ -65,9 +65,9 @@ export function ConnectedAccountsSection({
 
             <div className="space-y-3">
                 {/* Google */}
-                <div className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3.5 bg-white">
+                <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3.5 bg-card">
                     <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-white border border-zinc-200 flex items-center justify-center">
+                        <div className="h-9 w-9 rounded-full bg-background border border-border flex items-center justify-center">
                             <svg width="18" height="18" viewBox="0 0 24 24">
                                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
                                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -76,8 +76,8 @@ export function ConnectedAccountsSection({
                             </svg>
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-zinc-800">Google</p>
-                            <p className="text-xs text-zinc-400">
+                            <p className="text-sm font-medium text-foreground">Google</p>
+                            <p className="text-xs text-muted-foreground">
                                 {isGoogleLinked
                                     ? authProvider === "GOOGLE"
                                         ? "Primary sign-in method"
@@ -88,13 +88,13 @@ export function ConnectedAccountsSection({
                         </div>
                     </div>
                     {isGoogleLinked ? (
-                        <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2.5 py-1 rounded-full">
                             Connected
                         </span>
                     ) : (
                         <button
                             onClick={handleLinkGoogle}
-                            className="text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors cursor-pointer"
+                            className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 px-3 py-1.5 rounded-full transition-colors cursor-pointer"
                         >
                             Connect
                         </button>
@@ -102,16 +102,16 @@ export function ConnectedAccountsSection({
                 </div>
 
                 {/* GitHub */}
-                <div className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3.5 bg-white">
+                <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3.5 bg-card">
                     <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-zinc-900 flex items-center justify-center">
-                            <svg className="h-4.5 w-4.5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <div className="h-9 w-9 rounded-full bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center">
+                            <svg className="h-4.5 w-4.5 text-white dark:text-zinc-900" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
                             </svg>
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-zinc-800">GitHub</p>
-                            <p className="text-xs text-zinc-400">
+                            <p className="text-sm font-medium text-foreground">GitHub</p>
+                            <p className="text-xs text-muted-foreground">
                                 {isGithubLinked
                                     ? authProvider === "GITHUB"
                                         ? "Primary sign-in method"
@@ -122,13 +122,13 @@ export function ConnectedAccountsSection({
                         </div>
                     </div>
                     {isGithubLinked ? (
-                        <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2.5 py-1 rounded-full">
                             Connected
                         </span>
                     ) : (
                         <button
                             onClick={handleLinkGithub}
-                            className="text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors cursor-pointer"
+                            className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 px-3 py-1.5 rounded-full transition-colors cursor-pointer"
                         >
                             Connect
                         </button>

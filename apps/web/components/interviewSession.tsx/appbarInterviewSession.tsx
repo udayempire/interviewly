@@ -46,10 +46,10 @@ export const AppbarInterviewSession = ({
                         onClick={onMicToggle}
                         disabled={isAiSpeaking}
                         className={`p-3 rounded-full cursor-pointer transition-all duration-150 select-none ${isAiSpeaking
-                                ? "bg-zinc-100 text-zinc-300 cursor-not-allowed"
+                                ? "bg-muted text-muted-foreground/40 cursor-not-allowed"
                                 : isUserRecording
-                                    ? "bg-red-500 text-white scale-110 shadow-lg shadow-red-200 ring-4 ring-red-200 animate-pulse"
-                                    : "bg-zinc-100 hover:bg-blue-50 text-zinc-600 hover:text-blue-600"
+                                    ? "bg-red-500 text-white scale-110 shadow-lg shadow-red-200 dark:shadow-red-900/30 ring-4 ring-red-200 dark:ring-red-800 animate-pulse"
+                                    : "bg-muted hover:bg-blue-50 dark:hover:bg-blue-950/30 text-muted-foreground hover:text-blue-600"
                             }`}
                         title={isAiSpeaking ? "Wait for AI to finish" : isUserRecording ? "Tap to stop" : "Tap to speak"}
                     >
@@ -59,7 +59,7 @@ export const AppbarInterviewSession = ({
                             <MicOff size={18} />
                         )}
                     </button>
-                    <span className="text-[10px] text-zinc-400 font-medium">
+                    <span className="text-[10px] text-muted-foreground font-medium">
                         {isAiSpeaking ? "AI speaking..." : isUserRecording ? "Tap to stop" : "Tap to speak"}
                     </span>
                 </div>

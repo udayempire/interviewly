@@ -35,18 +35,18 @@ export const ResumeEntry = ({ onFileChange, hasSavedResume = false }: ResumeEntr
     const showSavedResumeBanner = hasSavedResume && !fileName && !wantsToChange
 
     return (
-        <div className="border border-zinc-200 p-5 rounded-lg bg-white flex flex-col gap-5">
+        <div className="border border-border p-5 rounded-lg bg-card flex flex-col gap-5">
             {/* Header */}
             <div className="flex items-start gap-3">
-                <div className="shrink-0 h-9 w-9 rounded-lg bg-purple-50 flex items-center justify-center">
+                <div className="shrink-0 h-9 w-9 rounded-lg bg-purple-50 dark:bg-purple-950/30 flex items-center justify-center">
                     <FileText className="h-4.5 w-4.5 text-purple-500" />
                 </div>
                 <div>
-                    <h2 className="font-semibold text-[14px] text-zinc-900 leading-tight">
+                    <h2 className="font-semibold text-[14px] text-foreground leading-tight">
                         3. Upload your resume{" "}
-                        <span className="font-normal text-zinc-400">(optional)</span>
+                        <span className="font-normal text-muted-foreground">(optional)</span>
                     </h2>
-                    <p className="text-[12.5px] text-zinc-400 mt-0.5">
+                    <p className="text-[12.5px] text-muted-foreground mt-0.5">
                         We&apos;ll tailor questions to your experience
                     </p>
                 </div>
@@ -54,22 +54,22 @@ export const ResumeEntry = ({ onFileChange, hasSavedResume = false }: ResumeEntr
 
             {showSavedResumeBanner ? (
                 /* Saved resume indicator with change option */
-                <div className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-emerald-200 rounded-lg py-10 px-4 bg-emerald-50/50">
-                    <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                <div className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-emerald-200 dark:border-emerald-800 rounded-lg py-10 px-4 bg-emerald-50/50 dark:bg-emerald-950/20">
+                    <div className="h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
                         <CheckCircle className="h-5 w-5 text-emerald-600" />
                     </div>
                     <div className="text-center">
-                        <p className="text-[13px] font-medium text-emerald-800">
+                        <p className="text-[13px] font-medium text-emerald-800 dark:text-emerald-300">
                             Resume from your profile will be used
                         </p>
-                        <p className="text-[12px] text-emerald-600 mt-0.5">
+                        <p className="text-[12px] text-emerald-600 dark:text-emerald-400 mt-0.5">
                             Your saved resume data will be sent automatically
                         </p>
                     </div>
                     <Button
                         variant="outline"
                         size="sm"
-                        className="mt-1 text-[12px] font-medium border-zinc-300 bg-white hover:bg-zinc-50 text-zinc-600 gap-1.5"
+                        className="mt-1 text-[12px] font-medium border-border bg-background hover:bg-accent text-muted-foreground gap-1.5"
                         onClick={() => setWantsToChange(true)}
                     >
                         <RefreshCw className="h-3.5 w-3.5" />
@@ -82,25 +82,25 @@ export const ResumeEntry = ({ onFileChange, hasSavedResume = false }: ResumeEntr
                     onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
                     onDragLeave={() => setDragging(false)}
                     onDrop={handleDrop}
-                    className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-lg py-12 px-4 text-center cursor-pointer transition-colors ${dragging ? "border-blue-400 bg-blue-50" : "border-zinc-200 bg-zinc-50 hover:border-zinc-300"}`}
+                    className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-lg py-12 px-4 text-center cursor-pointer transition-colors ${dragging ? "border-blue-400 bg-blue-50 dark:bg-blue-950/20" : "border-border bg-muted hover:border-muted-foreground/30"}`}
                     onClick={() => inputRef.current?.click()}
                 >
-                    <CloudUpload className="h-8 w-8 text-zinc-400" strokeWidth={1.5} />
+                    <CloudUpload className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
                     {fileName ? (
-                        <p className="text-[13px] font-medium text-zinc-700">{fileName}</p>
+                        <p className="text-[13px] font-medium text-foreground">{fileName}</p>
                     ) : (
                         <>
-                            <p className="text-[13px] text-zinc-500 font-medium leading-tight">
+                            <p className="text-[13px] text-muted-foreground font-medium leading-tight">
                                 Drag &amp; drop your resume here
                             </p>
-                            <p className="text-[12px] text-zinc-400">PDF, DOCX (Max 5MB)</p>
+                            <p className="text-[12px] text-muted-foreground">PDF, DOCX (Max 5MB)</p>
                         </>
                     )}
                     <div className="flex items-center gap-2 mt-1">
                         <Button
                             variant="outline"
                             size="sm"
-                            className="text-[13px] font-medium border-zinc-300 bg-white hover:bg-zinc-50 text-zinc-700"
+                            className="text-[13px] font-medium border-border bg-background hover:bg-accent text-foreground"
                             onClick={(e) => { e.stopPropagation(); inputRef.current?.click() }}
                         >
                             Choose File
@@ -109,7 +109,7 @@ export const ResumeEntry = ({ onFileChange, hasSavedResume = false }: ResumeEntr
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-[12px] font-medium border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-700"
+                                className="text-[12px] font-medium border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300"
                                 onClick={(e) => {
                                     e.stopPropagation()
                                     setWantsToChange(false)

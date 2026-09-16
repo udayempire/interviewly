@@ -74,18 +74,18 @@ export function ResumeSection({ resumeData, hasResumePdf, onUpdated }: ResumeSec
 
     return (
         <div>
-            <h2 className="text-lg font-semibold text-zinc-900 mb-1">Default Resume</h2>
-            <p className="text-sm text-zinc-500 mb-6">
+            <h2 className="text-lg font-semibold text-foreground mb-1">Default Resume</h2>
+            <p className="text-sm text-muted-foreground mb-6">
                 Upload a resume to use as default for new interviews.
             </p>
 
             {/* Current resume preview */}
             {resumeData && (
-                <div className="mb-5 rounded-lg border border-zinc-200 bg-zinc-50/50 p-4">
+                <div className="mb-5 rounded-lg border border-border bg-muted/50 p-4">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-zinc-500" />
-                            <span className="text-sm font-medium text-zinc-700">Current Resume</span>
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium text-foreground">Current Resume</span>
                         </div>
                         {hasResumePdf && (
                             <button
@@ -98,23 +98,23 @@ export function ResumeSection({ resumeData, hasResumePdf, onUpdated }: ResumeSec
                         )}
                     </div>
                     {resumeData.name && (
-                        <p className="text-sm text-zinc-800 font-medium">{resumeData.name}</p>
+                        <p className="text-sm text-foreground font-medium">{resumeData.name}</p>
                     )}
                     {resumeData.currentRole && (
-                        <p className="text-xs text-zinc-500 mt-0.5">{resumeData.currentRole}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{resumeData.currentRole}</p>
                     )}
                     {skills.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mt-3">
                             {(Array.isArray(skills) ? skills : []).slice(0, 12).map((skill: string, i: number) => (
                                 <span
                                     key={i}
-                                    className="text-xs bg-white border border-zinc-200 text-zinc-600 px-2 py-0.5 rounded-md"
+                                    className="text-xs bg-background border border-border text-muted-foreground px-2 py-0.5 rounded-md"
                                 >
                                     {skill}
                                 </span>
                             ))}
                             {skills.length > 12 && (
-                                <span className="text-xs text-zinc-400 px-1 py-0.5">
+                                <span className="text-xs text-muted-foreground px-1 py-0.5">
                                     +{skills.length - 12} more
                                 </span>
                             )}
@@ -130,14 +130,14 @@ export function ResumeSection({ resumeData, hasResumePdf, onUpdated }: ResumeSec
                 onDrop={handleDrop}
                 className={`relative rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
                     dragActive
-                        ? "border-blue-400 bg-blue-50/50"
-                        : "border-zinc-200 bg-white hover:border-zinc-300"
+                        ? "border-blue-400 bg-blue-50/50 dark:bg-blue-950/20"
+                        : "border-border bg-background hover:border-muted-foreground/30"
                 }`}
             >
-                <Upload className="h-8 w-8 text-zinc-300 mx-auto mb-3" />
-                <p className="text-sm text-zinc-600 mb-1">
+                <Upload className="h-8 w-8 text-muted-foreground/50 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground mb-1">
                     {selectedFile ? (
-                        <span className="font-medium text-zinc-800">{selectedFile.name}</span>
+                        <span className="font-medium text-foreground">{selectedFile.name}</span>
                     ) : (
                         <>
                             Drag and drop your resume PDF here, or{" "}
@@ -153,7 +153,7 @@ export function ResumeSection({ resumeData, hasResumePdf, onUpdated }: ResumeSec
                         </>
                     )}
                 </p>
-                <p className="text-xs text-zinc-400">PDF files only</p>
+                <p className="text-xs text-muted-foreground">PDF files only</p>
             </div>
 
             {/* Upload button */}

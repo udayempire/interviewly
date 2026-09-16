@@ -18,11 +18,11 @@ interface QuestionBreakdownProps {
 }
 
 const performanceColor: Record<string, string> = {
-    Excellent: "text-blue-600 bg-blue-50",
-    Good: "text-green-600 bg-green-50",
-    Average: "text-yellow-600 bg-yellow-50",
-    Poor: "text-red-600 bg-red-50",
-    Skipped: "text-zinc-400 bg-zinc-100",
+    Excellent: "text-blue-600 bg-blue-50 dark:bg-blue-950/30",
+    Good: "text-green-600 bg-green-50 dark:bg-green-950/30",
+    Average: "text-yellow-600 bg-yellow-50 dark:bg-yellow-950/30",
+    Poor: "text-red-600 bg-red-50 dark:bg-red-950/30",
+    Skipped: "text-muted-foreground bg-muted",
 };
 
 export const QuestionBreakdown = ({
@@ -31,14 +31,14 @@ export const QuestionBreakdown = ({
     questions,
 }: QuestionBreakdownProps) => {
     return (
-        <Card className="p-6 bg-white">
-            <h2 className="text-lg font-bold text-zinc-800">Question Breakdown</h2>
-            <p className="text-sm text-zinc-400 mt-1 mb-4">
+        <Card className="p-6 bg-card">
+            <h2 className="text-lg font-bold text-foreground">Question Breakdown</h2>
+            <p className="text-sm text-muted-foreground mt-1 mb-4">
                 {answeredQuestions} out of {totalQuestions} questions answered
             </p>
 
             {/* Table header */}
-            <div className="grid grid-cols-[40px_1fr_120px_120px_120px] gap-2 px-3 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide border-b">
+            <div className="grid grid-cols-[40px_1fr_120px_120px_120px] gap-2 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b">
                 <span>#</span>
                 <span>Question Type</span>
                 <span>Your Score</span>
@@ -49,20 +49,20 @@ export const QuestionBreakdown = ({
             {/* Question rows */}
             {questions.map((q) => {
                 const Icon = q.icon;
-                const colors = performanceColor[q.performance] || "text-zinc-400 bg-zinc-100";
+                const colors = performanceColor[q.performance] || "text-muted-foreground bg-muted";
 
                 return (
                     <div
                         key={q.number}
-                        className="grid grid-cols-[40px_1fr_120px_120px_120px] gap-2 px-3 py-3 items-center border-b last:border-b-0 hover:bg-zinc-50 transition-colors"
+                        className="grid grid-cols-[40px_1fr_120px_120px_120px] gap-2 px-3 py-3 items-center border-b last:border-b-0 hover:bg-accent transition-colors"
                     >
-                        <span className="text-sm font-medium text-zinc-500">{q.number}</span>
+                        <span className="text-sm font-medium text-muted-foreground">{q.number}</span>
                         <div className="flex items-center gap-3">
-                            <Icon className={`size-5 ${q.iconColor || "text-zinc-500"}`} />
-                            <span className="text-sm font-medium text-zinc-700">{q.questionType}</span>
+                            <Icon className={`size-5 ${q.iconColor || "text-muted-foreground"}`} />
+                            <span className="text-sm font-medium text-foreground">{q.questionType}</span>
                         </div>
-                        <span className="text-sm font-medium text-zinc-700">{q.score}</span>
-                        <span className="text-sm text-zinc-500">{q.timeSpent}</span>
+                        <span className="text-sm font-medium text-foreground">{q.score}</span>
+                        <span className="text-sm text-muted-foreground">{q.timeSpent}</span>
                         <div className="flex justify-end">
                             <span className={`text-xs font-semibold px-3 py-1 rounded-full ${colors}`}>
                                 {q.performance}

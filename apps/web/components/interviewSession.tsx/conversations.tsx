@@ -72,7 +72,7 @@ export const Conversations = ({ messages }: ConversationsProps) => {
     const data = messages ?? PLACEHOLDER_MESSAGES;
 
     return (
-        <div className="flex h-full flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white">
+        <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card">
             <ConversationHeader />
 
             {/* Scrollable message area */}

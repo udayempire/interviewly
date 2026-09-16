@@ -12,17 +12,17 @@ interface InterviewAboutProps {
 
 export const InterviewAbout = ({ value, onChange }: InterviewAboutProps) => {
     return (
-        <div className="border border-zinc-200 p-5 rounded-lg bg-white flex flex-col gap-5">
+        <div className="border border-border p-5 rounded-lg bg-card flex flex-col gap-5">
             {/* Header */}
             <div className="flex items-start gap-3">
-                <div className="shrink-0 h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center">
+                <div className="shrink-0 h-9 w-9 rounded-lg bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center">
                     <MessageSquare className="h-4.5 w-4.5 text-blue-600" />
                 </div>
                 <div>
-                    <h2 className="font-semibold text-[14px] text-zinc-900 leading-tight">
+                    <h2 className="font-semibold text-[14px] text-foreground leading-tight">
                         1. What kind of interview?
                     </h2>
-                    <p className="text-[12.5px] text-zinc-400 mt-0.5">
+                    <p className="text-[12.5px] text-muted-foreground mt-0.5">
                         Describe the role, skills or scenario
                     </p>
                 </div>
@@ -35,11 +35,11 @@ export const InterviewAbout = ({ value, onChange }: InterviewAboutProps) => {
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder="e.g. Frontend Developer interview focusing on React, JavaScript, and System Design..."
-                    className="resize-none min-h-[200px] text-[13px] text-zinc-700 placeholder:text-zinc-400 border-zinc-200 rounded-lg bg-zinc-50 focus-visible:ring-1 focus-visible:ring-blue-400 focus-visible:border-blue-400 placeholder:text-sm"
+                    className="resize-none min-h-[200px] text-[13px] text-foreground placeholder:text-muted-foreground border-border rounded-lg bg-muted focus-visible:ring-1 focus-visible:ring-blue-400 focus-visible:border-blue-400 placeholder:text-sm"
                     rows={5}
                 />
                 {/* Character counter */}
-                <span className="absolute bottom-2.5 right-3 text-[11px] text-zinc-400 select-none">
+                <span className="absolute bottom-2.5 right-3 text-[11px] text-muted-foreground select-none">
                     {value.length}/{MAX_CHARS}
                 </span>
             </div>

@@ -2,7 +2,7 @@ import { Calendar, ChartNoAxesCombined, CheckCircle, Clock } from "lucide-react"
 
 export const QuickStats = () => {
     return (
-        <div className="p-3 px-3 border border-zinc-200 rounded-md">
+        <div className="p-3 px-3 border border-border rounded-md">
             <h1 className="font-bold text-[18px]"> Quick Stats </h1>
             <div className="grid grid-cols-2 gap-x-4 gap-y-3 w-full max-w-md mt-4">
                 <div className="border p-2 px-4 rounded-md py-3">

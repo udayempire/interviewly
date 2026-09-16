@@ -60,7 +60,7 @@ export default function Home() {
             <div className="p-6">
                 <div className="space-y-2">
                     <h1 className="text-2xl font-bold">Welcome back, Uday ! 👋</h1>
-                    <h2 className="text-md  text-gray-700">What would you like to do today?</h2>
+                    <h2 className="text-md text-muted-foreground">What would you like to do today?</h2>
                 </div>
                 <div className="grid grid-cols-2 gap-4 p-2 mt-6">
                     <InterviewActionCards
@@ -83,11 +83,11 @@ export default function Home() {
                     </div>
                     <div className="space-y-1.5 mt-6">
                         {isLoading ? (
-                            <p className="text-sm text-gray-500">Loading recent interviews...</p>
+                            <p className="text-sm text-muted-foreground">Loading recent interviews...</p>
                         ) : error ? (
                             <p className="text-sm text-red-500">Failed to load interviews.</p>
                         ) : interviews.length === 0 ? (
-                            <p className="text-sm text-gray-500">No interviews found.</p>
+                            <p className="text-sm text-muted-foreground">No interviews found.</p>
                         ) : (
                             interviews.map((interview: any) => (
                                 <InterviewReportCard

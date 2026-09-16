@@ -245,16 +245,16 @@ export function ApiKeySection({
     return (
         <div>
             <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-lg font-semibold text-zinc-900">AI Model Configuration</h2>
+                <h2 className="text-lg font-semibold text-foreground">AI Model Configuration</h2>
             </div>
-            <p className="text-sm text-zinc-500 mb-2">
+            <p className="text-sm text-muted-foreground mb-2">
                 Bring your own API key (BYOK) to use your preferred AI model for interviews. Leave blank or toggle OFF to use platform default.
             </p>
 
             {/* Info banner — STT/TTS clarification */}
-            <div className="flex items-start gap-2.5 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 mb-6">
+            <div className="flex items-start gap-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-4 py-3 mb-6">
                 <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
-                <p className="text-xs text-blue-700 leading-relaxed">
+                <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
                     This key is used <span className="font-semibold">for AI question generation and answer evaluation</span> (LLM). Platform default key automatically acts as a backup fallback if your key reaches quota.
                 </p>
             </div>
@@ -262,19 +262,19 @@ export function ApiKeySection({
             {/* Current status & Toggle Switch — shown when a key is saved */}
             {hasApiKey && savedProvider && (
                 <div className="space-y-3 mb-6">
-                    <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-xs space-y-4">
+                    <div className="rounded-xl border border-border bg-card p-4 shadow-xs space-y-4">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <p className="text-sm font-semibold text-zinc-900">
+                                        <p className="text-sm font-semibold text-foreground">
                                             {LLM_PROVIDERS.find((p) => p.id === savedProvider)?.name || savedProvider} Key Configured
                                         </p>
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${useCustomKey ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${useCustomKey ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300" : "bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300"}`}>
                                             {useCustomKey ? "● Custom Key Active" : "○ Platform Fallback Active"}
                                         </span>
                                     </div>
-                                    <p className="text-xs text-zinc-500 mt-0.5">
+                                    <p className="text-xs text-muted-foreground mt-0.5">
                                         {useCustomKey
                                             ? "Your custom API key is primary. Platform key acts as fallback."
                                             : "Currently using Platform default API key."}
@@ -284,7 +284,7 @@ export function ApiKeySection({
                             <button
                                 onClick={handleRemoveKey}
                                 disabled={isRemoving}
-                                className="text-xs font-medium text-red-500 hover:text-red-700 bg-red-50/50 hover:bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                                className="text-xs font-medium text-red-500 hover:text-red-700 dark:hover:text-red-400 bg-red-50/50 dark:bg-red-950/30 hover:bg-red-50 dark:hover:bg-red-950/50 border border-red-200 dark:border-red-800 px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                             >
                                 {isRemoving ? (
                                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -296,11 +296,11 @@ export function ApiKeySection({
                         </div>
 
                         {/* Saved API Key Reveal Row */}
-                        <div className="pt-3 border-t border-zinc-100 flex items-center justify-between gap-4">
+                        <div className="pt-3 border-t border-border flex items-center justify-between gap-4">
                             <div className="space-y-1 min-w-0">
-                                <span className="text-xs font-medium text-zinc-500">Saved API Key</span>
+                                <span className="text-xs font-medium text-muted-foreground">Saved API Key</span>
                                 <div className="flex items-center gap-2">
-                                    <code className="text-xs font-mono bg-zinc-100 px-2.5 py-1 rounded text-zinc-800 tracking-wider border border-zinc-200/80 truncate max-w-[200px] sm:max-w-[320px]">
+                                    <code className="text-xs font-mono bg-muted px-2.5 py-1 rounded text-foreground tracking-wider border border-border truncate max-w-[200px] sm:max-w-[320px]">
                                         {isKeyRevealed && revealedKey ? revealedKey : "••••••••••••••••••••••••"}
                                     </code>
                                 </div>
@@ -310,7 +310,7 @@ export function ApiKeySection({
                                     type="button"
                                     onClick={handleToggleRevealKey}
                                     disabled={isFetchingKey}
-                                    className="text-xs font-medium text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200/80 border border-zinc-200/60 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                                    className="text-xs font-medium text-muted-foreground hover:text-foreground bg-muted hover:bg-accent border border-border px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                                     title={isKeyRevealed ? "Hide API key" : "Show API key"}
                                 >
                                     {isFetchingKey ? (
@@ -332,7 +332,7 @@ export function ApiKeySection({
                                     <button
                                         type="button"
                                         onClick={handleCopyKey}
-                                        className="text-xs font-medium text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200/80 border border-zinc-200/60 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                                        className="text-xs font-medium text-muted-foreground hover:text-foreground bg-muted hover:bg-accent border border-border px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
                                         title="Copy API key"
                                     >
                                         {isCopied ? (
@@ -352,12 +352,12 @@ export function ApiKeySection({
                         </div>
 
                         {/* Modern Toggle Switch Row */}
-                        <div className="pt-3 border-t border-zinc-100 flex items-center justify-between">
+                        <div className="pt-3 border-t border-border flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <Label htmlFor="custom-key-toggle" className="text-sm font-medium text-zinc-800 cursor-pointer">
+                                <Label htmlFor="custom-key-toggle" className="text-sm font-medium text-foreground cursor-pointer">
                                     Use Custom API Key
                                 </Label>
-                                <p className="text-xs text-zinc-400">
+                                <p className="text-xs text-muted-foreground">
                                     Toggle between your custom key and platform default key
                                 </p>
                             </div>
@@ -371,7 +371,7 @@ export function ApiKeySection({
                                     disabled={isToggling}
                                     onClick={handleToggleKeyUsage}
                                     className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                                        useCustomKey ? "bg-blue-600" : "bg-zinc-200"
+                                        useCustomKey ? "bg-blue-600" : "bg-muted"
                                     } ${isToggling ? "opacity-60 cursor-wait" : ""}`}
                                 >
                                     <span
@@ -384,7 +384,7 @@ export function ApiKeySection({
                         </div>
 
                         {toggleResult && (
-                            <div className={`text-xs px-3 py-1.5 rounded-md border ${toggleResult.success ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}`}>
+                            <div className={`text-xs px-3 py-1.5 rounded-md border ${toggleResult.success ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800" : "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"}`}>
                                 {toggleResult.message}
                             </div>
                         )}
@@ -402,7 +402,7 @@ export function ApiKeySection({
                             id="llm-provider"
                             type="button"
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                            className="flex items-center justify-between w-full rounded-md border border-zinc-200 bg-white px-3 py-2.5 text-sm transition-colors hover:bg-zinc-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="flex items-center justify-between w-full rounded-md border border-border bg-background px-3 py-2.5 text-sm transition-colors hover:bg-accent cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                             <span className="flex items-center gap-2.5">
                                 {selectedProviderInfo ? (
@@ -410,18 +410,18 @@ export function ApiKeySection({
                                         <span className="flex items-center justify-center h-5 w-5 shrink-0">
                                             {selectedProviderInfo.icon}
                                         </span>
-                                        <span className="text-zinc-900 font-medium">{selectedProviderInfo.name}</span>
+                                        <span className="text-foreground font-medium">{selectedProviderInfo.name}</span>
                                     </>
                                 ) : (
-                                    <span className="text-zinc-400">Select a provider</span>
+                                    <span className="text-muted-foreground">Select a provider</span>
                                 )}
                             </span>
-                            <ChevronDown className={`h-4 w-4 text-zinc-400 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+                            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
                         </button>
 
                         {/* Dropdown menu */}
                         {isDropdownOpen && (
-                            <div className="absolute z-10 mt-1 w-full rounded-md border border-zinc-200 bg-white shadow-lg py-1 animate-in fade-in-0 zoom-in-95 duration-100">
+                            <div className="absolute z-10 mt-1 w-full rounded-md border border-border bg-popover shadow-lg py-1 animate-in fade-in-0 zoom-in-95 duration-100">
                                 {LLM_PROVIDERS.map((provider) => (
                                     <button
                                         key={provider.id}
@@ -434,8 +434,8 @@ export function ApiKeySection({
                                         }}
                                         className={`flex items-center gap-2.5 w-full px-3 py-2.5 text-sm transition-colors cursor-pointer ${
                                             selectedProvider === provider.id
-                                                ? "bg-blue-50 text-blue-700"
-                                                : "text-zinc-700 hover:bg-zinc-50"
+                                                ? "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400"
+                                                : "text-foreground hover:bg-accent"
                                         }`}
                                     >
                                         <span className="flex items-center justify-center h-5 w-5 shrink-0">
@@ -485,12 +485,12 @@ export function ApiKeySection({
                                 <button
                                     type="button"
                                     onClick={() => setShowKey(!showKey)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 cursor-pointer"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                                 >
                                     {showKey ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                                 </button>
                             </div>
-                            <p className="text-xs text-zinc-400">
+                            <p className="text-xs text-muted-foreground">
                                 Your key is encrypted and never shared. Only used server-side for AI calls.
                             </p>
                         </div>
@@ -500,8 +500,8 @@ export function ApiKeySection({
                             <div
                                 className={`rounded-md px-3 py-2 text-sm border ${
                                     testResult.success
-                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                        : "bg-red-50 text-red-700 border-red-200"
+                                        ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                                        : "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"
                                 }`}
                             >
                                 {testResult.message}
@@ -512,8 +512,8 @@ export function ApiKeySection({
                             <div
                                 className={`rounded-md px-3 py-2 text-sm border ${
                                     saveResult.success
-                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                        : "bg-red-50 text-red-700 border-red-200"
+                                        ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                                        : "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"
                                 }`}
                             >
                                 {saveResult.message}

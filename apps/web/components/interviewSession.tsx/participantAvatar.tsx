@@ -13,7 +13,7 @@ export const ParticipantAvatar = ({
     color = "bg-purple-400",
 }: ParticipantAvatarProps) => {
     return (
-        <div className="p-2 py-4 bg-zinc-900 rounded-md flex justify-center items-center">
+        <div className="p-2 py-4 bg-zinc-900 dark:bg-zinc-950 rounded-md flex justify-center items-center">
             <div className="relative flex items-center justify-center">
                 {/* Pulsing rings — only visible when speaking */}
                 {isSpeaking && (
@@ -28,7 +28,7 @@ export const ParticipantAvatar = ({
                     className={cn(
                         "rounded-full h-24 w-24 flex justify-center items-center transition-shadow duration-300",
                         color,
-                        isSpeaking && "ring-3 ring-green-400 ring-offset-2 ring-offset-zinc-900"
+                        isSpeaking && "ring-3 ring-green-400 ring-offset-2 ring-offset-zinc-900 dark:ring-offset-zinc-950"
                     )}
                 >
                     <h1 className="font-bold text-white text-2xl">{label}</h1>

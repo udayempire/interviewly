@@ -94,16 +94,16 @@ function GeneratingReport() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center gap-6 px-4">
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-4">
             <div className="flex flex-col items-center gap-4 text-center">
                 <div className="relative">
-                    <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
+                    <div className="w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-950/30 flex items-center justify-center">
                         <Brain size={36} className="text-blue-600" />
                     </div>
                     <Loader2 size={28} className="text-blue-500 animate-spin absolute -bottom-1 -right-1" />
                 </div>
-                <h1 className="text-2xl font-semibold text-zinc-800">Generating your report</h1>
-                <p className="text-zinc-500 text-sm max-w-xs">
+                <h1 className="text-2xl font-semibold text-foreground">Generating your report</h1>
+                <p className="text-muted-foreground text-sm max-w-xs">
                     Our AI is evaluating your interview. This usually takes under a minute.
                 </p>
                 <p className="text-blue-600 text-sm font-medium animate-pulse min-h-[20px]">
@@ -118,10 +118,10 @@ function GeneratingReport() {
 
 function ReportError() {
     return (
-        <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center gap-4 px-4 text-center">
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4 text-center">
             <AlertCircle size={48} className="text-red-400" />
-            <h1 className="text-xl font-semibold text-zinc-800">Could not load report</h1>
-            <p className="text-zinc-500 text-sm max-w-xs">
+            <h1 className="text-xl font-semibold text-foreground">Could not load report</h1>
+            <p className="text-muted-foreground text-sm max-w-xs">
                 Something went wrong fetching your report. Please try refreshing the page.
             </p>
         </div>
@@ -219,10 +219,10 @@ export default function InterviewReportPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-zinc-50">
+        <div className="min-h-screen bg-background">
             {/* Top bar */}
-            <div className="bg-white border-b px-8 py-3 flex items-center">
-                <Link href="/home" className="font-semibold text-zinc-800">interviewlyy</Link>
+            <div className="bg-card border-b px-8 py-3 flex items-center">
+                <Link href="/home" className="font-semibold text-foreground">interviewlyy</Link>
             </div>
 
             {/* Main content */}
@@ -237,14 +237,14 @@ export default function InterviewReportPage() {
 
                 {/* AI Summary */}
                 {report.aiSummary && (
-                    <Card className="p-6 bg-white">
-                        <p className="text-sm text-zinc-500 font-medium mb-1">AI Summary</p>
-                        <p className="text-zinc-700 leading-relaxed">{report.aiSummary}</p>
+                    <Card className="p-6 bg-card">
+                        <p className="text-sm text-muted-foreground font-medium mb-1">AI Summary</p>
+                        <p className="text-foreground leading-relaxed">{report.aiSummary}</p>
                     </Card>
                 )}
 
                 {/* Score Section */}
-                <Card className="p-6 bg-white">
+                <Card className="p-6 bg-card">
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 items-start">
                         <OverallScoreRing
                             score={report.overallScore}
@@ -265,9 +265,9 @@ export default function InterviewReportPage() {
 
                 {/* Detailed Feedback */}
                 {report.detailedFeedback && (
-                    <Card className="p-6 bg-white">
-                        <p className="text-sm text-zinc-500 font-medium mb-2">Detailed Feedback</p>
-                        <p className="text-zinc-700 leading-relaxed whitespace-pre-line">
+                    <Card className="p-6 bg-card">
+                        <p className="text-sm text-muted-foreground font-medium mb-2">Detailed Feedback</p>
+                        <p className="text-foreground leading-relaxed whitespace-pre-line">
                             {report.detailedFeedback}
                         </p>
                     </Card>

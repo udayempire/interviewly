@@ -50,7 +50,7 @@ export const OverallScoreRing = ({
 
     return (
         <div className="flex flex-col items-center gap-2">
-            <p className="text-sm font-semibold text-zinc-700">Overall Score</p>
+            <p className="text-sm font-semibold text-foreground">Overall Score</p>
             <div className="relative" style={{ width: size, height: size }}>
                 <svg
                     width={size}
@@ -91,12 +91,12 @@ export const OverallScoreRing = ({
                 </svg>
                 {/* Center text */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-4xl font-bold text-zinc-800">{animatedScore}</span>
-                    <span className="text-sm text-zinc-400">/{maxScore}</span>
+                    <span className="text-4xl font-bold text-foreground">{animatedScore}</span>
+                    <span className="text-sm text-muted-foreground">/{maxScore}</span>
                 </div>
             </div>
-            <p className="text-sm font-medium text-zinc-700">{label}</p>
-            <p className="text-xs text-zinc-400 text-center">{sublabel}</p>
+            <p className="text-sm font-medium text-foreground">{label}</p>
+            <p className="text-xs text-muted-foreground text-center">{sublabel}</p>
         </div>
     );
 };

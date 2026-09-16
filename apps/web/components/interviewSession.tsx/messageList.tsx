@@ -9,7 +9,7 @@ export const MessageList = ({ messages }: MessageListProps) => {
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center py-16">
-        <p className="text-sm text-zinc-400">No messages yet</p>
+        <p className="text-sm text-muted-foreground">No messages yet</p>
       </div>
     );
   }

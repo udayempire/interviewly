@@ -35,11 +35,11 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
         {/* Sender + timestamp */}
         <div
           className={cn(
-            "flex items-center gap-2 text-xs text-zinc-400",
+            "flex items-center gap-2 text-xs text-muted-foreground",
             isAi ? "flex-row" : "flex-row-reverse"
           )}
         >
-          <span className="font-medium text-zinc-600">{message.senderName}</span>
+          <span className="font-medium text-foreground">{message.senderName}</span>
           <span>·</span>
           <span>{message.timestamp}</span>
         </div>
@@ -49,7 +49,7 @@ export const MessageBubble = ({ message }: MessageBubbleProps) => {
           className={cn(
             "rounded-2xl px-4 py-3 text-sm leading-relaxed",
             isAi
-              ? "rounded-tl-md bg-zinc-100 text-zinc-800"
+              ? "rounded-tl-md bg-muted text-foreground"
               : "rounded-tr-md bg-blue-600 text-white"
           )}
         >

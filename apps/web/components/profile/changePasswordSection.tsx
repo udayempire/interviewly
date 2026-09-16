@@ -61,10 +61,10 @@ export function ChangePasswordSection({ hasEmailAccount }: ChangePasswordSection
 
     return (
         <div>
-            <h2 className="text-lg font-semibold text-zinc-900 mb-1">
+            <h2 className="text-lg font-semibold text-foreground mb-1">
                 {hasEmailAccount ? "Change Password" : "Set Password"}
             </h2>
-            <p className="text-sm text-zinc-500 mb-6">
+            <p className="text-sm text-muted-foreground mb-6">
                 {hasEmailAccount
                     ? "Update your account password."
                     : "Set a password to enable email + password sign-in alongside your social login."
@@ -88,7 +88,7 @@ export function ChangePasswordSection({ hasEmailAccount }: ChangePasswordSection
                             <button
                                 type="button"
                                 onClick={() => setShowCurrent(!showCurrent)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 cursor-pointer"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                             >
                                 {showCurrent ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                             </button>
@@ -112,7 +112,7 @@ export function ChangePasswordSection({ hasEmailAccount }: ChangePasswordSection
                         <button
                             type="button"
                             onClick={() => setShowNew(!showNew)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 cursor-pointer"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                             {showNew ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                         </button>
@@ -135,14 +135,14 @@ export function ChangePasswordSection({ hasEmailAccount }: ChangePasswordSection
 
                 {/* Errors */}
                 {(validationError || error) && (
-                    <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                    <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md px-3 py-2">
                         {validationError || (error as Error).message}
                     </p>
                 )}
 
                 {/* Success */}
                 {isSuccess && (
-                    <p className="text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
+                    <p className="text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-md px-3 py-2">
                         Password updated successfully.
                     </p>
                 )}

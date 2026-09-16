@@ -65,8 +65,8 @@ function ProfileContent() {
     return (
         <div className="max-w-2xl mx-10 px-6 py-8">
             <div className="mb-8">
-                <h1 className="text-2xl font-bold text-zinc-900">Profile Settings</h1>
-                <p className="text-sm text-zinc-500 mt-1">Manage your account and preferences.</p>
+                <h1 className="text-2xl font-bold text-foreground">Profile Settings</h1>
+                <p className="text-sm text-muted-foreground mt-1">Manage your account and preferences.</p>
             </div>
 
             {/* Personal Information */}

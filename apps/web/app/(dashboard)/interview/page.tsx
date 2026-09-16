@@ -74,7 +74,7 @@ export default function Interview() {
             {/* Page heading */}
             <div className="flex flex-col items-center gap-2 mb-14">
                 <h1 className="text-3xl font-semibold">Create your AI Interview</h1>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                     Practice real conversations, get instant feedback and improve faster
                 </p>
             </div>

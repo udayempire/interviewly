@@ -133,7 +133,7 @@ export default function InterviewPage() {
                 onMicToggle={handleMicToggle}
                 onLeave={handleLeave}
             />
-            <div className="grid grid-cols-[65%_35%] flex-1 min-h-0 bg-zinc-100">
+            <div className="grid grid-cols-[65%_35%] flex-1 min-h-0 bg-muted">
                 <div className="p-4 flex flex-col min-h-0">
                     <Participants
                         isUserSpeaking={isUserRecording}

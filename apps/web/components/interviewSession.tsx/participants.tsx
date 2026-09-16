@@ -12,7 +12,7 @@ export const Participants = ({
     isUserSpeaking = false,
 }: ParticipantsProps) => {
     return (
-        <div className="border rounded-lg bg-white py-4">
+        <div className="border rounded-lg bg-card py-4">
             <div className="grid grid-cols-2 gap-2 px-4 rounded-md">
                 <ParticipantAvatar label="AI" isSpeaking={isAiSpeaking} />
                 <ParticipantAvatar label="U" isSpeaking={isUserSpeaking} />
