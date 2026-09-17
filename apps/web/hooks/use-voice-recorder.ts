@@ -61,9 +61,17 @@ export function useVoiceRecorder({
         return stream;
     }, []);
 
-    const ensureAnalyser = useCallback((stream: MediaStream) => {
-        if (analyserRef.current) return analyserRef.current;
+    const ensureAnalyser = useCallback(async (stream: MediaStream) => {
+        if (analyserRef.current) {
+            if (audioContextRef.current?.state === "suspended") {
+                await audioContextRef.current.resume();
+            }
+            return analyserRef.current;
+        }
         const audioContext = new AudioContext();
+        if (audioContext.state === "suspended") {
+            await audioContext.resume();
+        }
         audioContextRef.current = audioContext;
 
         const source = audioContext.createMediaStreamSource(stream);
@@ -93,8 +101,9 @@ export function useVoiceRecorder({
             console.log("[recorder] no speech in segment, dropped");
             return;
         }
-        const blob = new Blob(chunks, { type: "audio/webm" });
-        console.log("[recorder] Blob size:", blob.size, "bytes");
+        const mimeType = mediaRecorderRef.current?.mimeType || "audio/webm";
+        const blob = new Blob(chunks, { type: mimeType });
+        console.log("[recorder] Blob size:", blob.size, "bytes, mimeType:", mimeType);
         if (blob.size > 0 && !isAiSpeakingRef.current) {
             onSpeechEnd(blob);
         }
@@ -109,7 +118,9 @@ export function useVoiceRecorder({
 
         const loop = () => {
             analyser.getByteFrequencyData(dataArray);
-            const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+            // Measure human voice frequencies (bins 1..60 cover up to ~5.6 kHz)
+            const voiceBins = dataArray.subarray(1, 60);
+            const volume = voiceBins.reduce((a, b) => a + b, 0) / voiceBins.length;
 
             if (!isAiSpeakingRef.current) {
                 if (volume > silenceThreshold) {
@@ -151,6 +162,22 @@ export function useVoiceRecorder({
         }
     }, []);
 
+    // Helper to pick best supported MediaRecorder MIME type
+    const getMimeType = useCallback(() => {
+        if (typeof MediaRecorder === "undefined") return "audio/webm";
+        const types = [
+            "audio/webm;codecs=opus",
+            "audio/webm",
+            "audio/mp4",
+            "audio/aac",
+            "audio/ogg",
+        ];
+        for (const type of types) {
+            if (MediaRecorder.isTypeSupported(type)) return type;
+        }
+        return "audio/webm";
+    }, []);
+
     // =============================================
     // PUSH-TO-TALK: manual start/stop
     // =============================================
@@ -158,12 +185,14 @@ export function useVoiceRecorder({
         if (isRecordingRef.current) return;
 
         const stream = await ensureStream();
-        ensureAnalyser(stream);
+        await ensureAnalyser(stream);
 
-        const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+        const mimeType = getMimeType();
+        const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
         mediaRecorderRef.current = recorder;
         audioChunksRef.current = [];
-        speechDetectedRef.current = false;
+        // In PTT mode, user manually initiates recording — default to true so candidate turn is preserved
+        speechDetectedRef.current = true;
 
         recorder.ondataavailable = handleChunk;
         recorder.onstop = flushSegment;
@@ -174,7 +203,7 @@ export function useVoiceRecorder({
         // monitor runs purely to decide whether anything was actually said.
         startVolumeMonitor(false);
         console.log("[PTT] Recording started");
-    }, [ensureStream, ensureAnalyser, handleChunk, flushSegment, startVolumeMonitor]);
+    }, [ensureStream, ensureAnalyser, getMimeType, handleChunk, flushSegment, startVolumeMonitor]);
 
     const stopRecording = useCallback(() => {
         const recorder = mediaRecorderRef.current;
@@ -193,9 +222,10 @@ export function useVoiceRecorder({
         if (isListeningRef.current) return;
 
         const stream = await ensureStream();
-        ensureAnalyser(stream);
+        await ensureAnalyser(stream);
 
-        const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+        const mimeType = getMimeType();
+        const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
         mediaRecorderRef.current = recorder;
         audioChunksRef.current = [];
         speechDetectedRef.current = false;
@@ -211,7 +241,7 @@ export function useVoiceRecorder({
         recorder.start(CHUNK_MS);
         isListeningRef.current = true;
         startVolumeMonitor(true);
-    }, [ensureStream, ensureAnalyser, handleChunk, flushSegment, startVolumeMonitor]);
+    }, [ensureStream, ensureAnalyser, getMimeType, handleChunk, flushSegment, startVolumeMonitor]);
 
     const stopListening = useCallback(() => {
         isListeningRef.current = false;
