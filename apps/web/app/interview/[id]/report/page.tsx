@@ -100,7 +100,7 @@ function GeneratingReport() {
                     <div className="w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-950/30 flex items-center justify-center">
                         <Brain size={36} className="text-blue-600" />
                     </div>
-                    <Loader2 size={28} className="text-blue-500 animate-spin absolute -bottom-1 -right-1" />
+                    {/* <Loader2 size={28} className="text-blue-500 animate-spin absolute -bottom-1 -right-1" /> */}
                 </div>
                 <h1 className="text-2xl font-semibold text-foreground">Generating your report</h1>
                 <p className="text-muted-foreground text-sm max-w-xs">

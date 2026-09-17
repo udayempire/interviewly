@@ -12,7 +12,6 @@ export default function Interview() {
     // Shared state — lifted so suggestions can fill the textarea
     const [description, setDescription] = useState("");
     const [githubUrl, setGithubUrl] = useState("");
-    const [topic, setTopic] = useState("");
     const [resumeFile, setResumeFile] = useState<File | null>(null);
     const [hasSavedResume, setHasSavedResume] = useState(false);
     const router = useRouter();
@@ -100,7 +99,7 @@ export default function Interview() {
             </div>
 
             {/* Suggestions — clicking fills the topic textarea above */}
-            <InterviewSuggestions onSelect={(title) => setTopic(title)} />
+            <InterviewSuggestions onSelect={(title) => setDescription(title)} />
         </div>
     )
 }
