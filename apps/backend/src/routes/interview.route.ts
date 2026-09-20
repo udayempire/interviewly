@@ -23,21 +23,47 @@ interviewRouter.post("/create", authMiddleware, upload.single("resume"), async (
     };
     const file = req.file as any;
     const { githubUrl, description } = result.data;
+    const useProfileResume = req.body.useProfileResume === "true" || req.body.useProfileResume === true;
     const userId = req.userId as string;
-    //extract github data
+
+    // Fetch user profile to reuse pre-parsed resumeText and pre-fetched githubData from DB
+    const userProfile = await prisma.userProfile.findUnique({
+        where: { userId },
+        select: { resumeText: true, githubUrl: true, githubData: true }
+    });
+
+    // GitHub optimization: reuse pre-fetched githubData from DB if URL matches or if missing
     let githubData = null;
-    if (githubUrl) {
+    const requestedUsername = githubUrl ? extractGithubUsername(githubUrl) : null;
+    const savedUsername = userProfile?.githubUrl ? extractGithubUsername(userProfile.githubUrl) : null;
+
+    if (requestedUsername && savedUsername && requestedUsername === savedUsername && userProfile?.githubData) {
+        console.log("[createInterview] Using pre-fetched GitHub data directly from DB (0 API calls)");
+        githubData = userProfile.githubData;
+    } else if (githubUrl) {
         try {
+            console.log("[createInterview] Fetching new GitHub data for:", githubUrl);
             const githubUsername = extractGithubUsername(githubUrl);
             githubData = await getGithubData(githubUsername);
         } catch (err) {
             console.error("Failed to fetch GitHub data:", err);
         }
+    } else if (userProfile?.githubData) {
+        console.log("[createInterview] Reusing saved profile GitHub data from DB");
+        githubData = userProfile.githubData;
     }
-    //extract resume data
+
+    // Resume optimization: reuse pre-parsed resume JSON directly from DB (0 LLM compute)
     let parsedResumeJson = null;
-    if (file?.buffer) {
+    if ((useProfileResume || !file?.buffer) && userProfile?.resumeText) {
+        console.log("[createInterview] Using pre-parsed resume JSON directly from DB (0 LLM compute)");
+        parsedResumeJson = userProfile.resumeText;
+    } else if (file?.buffer) {
+        console.log("[createInterview] Parsing newly uploaded resume file with LLM...");
         parsedResumeJson = await extractResumeData(file.buffer);
+    } else if (userProfile?.resumeText) {
+        console.log("[createInterview] Fallback to saved profile resume from DB");
+        parsedResumeJson = userProfile.resumeText;
     }
 
     const interview = await prisma.interview.create({

@@ -214,26 +214,46 @@ export function setupInterviewWS(wss: WebSocketServer) {
                 select: {
                     description: true,
                     githubData: true,
-                    resumeText: true
+                    resumeText: true,
+                    userId: true,
                 }
             });
             if (!interview) {
                 ws.close(1008, "Interview not found");
                 return;
             };
+
+            // Fallback: If resumeText or githubData was not stored on the interview,
+            // pull from candidate's userProfile so AI always has context of profile resume
+            let resumeText = interview.resumeText;
+            let githubData = interview.githubData;
+
+            if (!resumeText || !githubData) {
+                const userProfile = await prisma.userProfile.findUnique({
+                    where: { userId: interview.userId || userId },
+                    select: { resumeText: true, githubData: true }
+                });
+                if (!resumeText && userProfile?.resumeText) {
+                    resumeText = userProfile.resumeText;
+                }
+                if (!githubData && userProfile?.githubData) {
+                    githubData = userProfile.githubData;
+                }
+            }
+
             // Session state - scoped per connection
             // Bias transcription toward this candidate's own stack. The same
             // resume/GitHub data already feeds the interviewer prompt; here it
             // doubles as the STT term list so jargon they are about to say is
             // spelled correctly instead of guessed phonetically.
-            const sttVocabulary = buildSTTVocabulary(interview.resumeText, interview.githubData);
+            const sttVocabulary = buildSTTVocabulary(resumeText, githubData);
             const messageHistory: ChatMessage[] = [
                 {
                     role: "system",
                     content: buildSystemPrompt(
                         interview.description as string,
-                        interview.githubData,
-                        interview.resumeText,
+                        githubData,
+                        resumeText,
                     )
                 }
             ];
