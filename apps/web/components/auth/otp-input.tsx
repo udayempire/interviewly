@@ -67,7 +67,7 @@ export function OtpInput({ value, onChange }: OtpInputProps) {
               inputs.current[index - 1]?.focus();
             }
           }}
-          className="h-10 min-w-0 flex-1 border border-[#8d8c85] bg-[#fffdf8] text-center font-mono text-base font-semibold outline-none transition-colors focus:border-[#20201e]"
+          className="h-10 min-w-0 flex-1 border border-[#8d8c85] bg-[#fffdf8] text-[#20201e] text-center font-mono text-base font-semibold outline-none transition-colors focus:border-[#20201e]"
         />
       ))}
     </div>

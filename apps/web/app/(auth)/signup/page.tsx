@@ -89,7 +89,7 @@ function SignupForm() {
               onChange={(event) => setName(event.target.value)}
               placeholder="Full name"
               required
-              className="h-9 w-full border border-[#8d8c85] bg-[#fffdf8] pl-11 pr-4 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-[#20201e]"
+              className="h-9 w-full border border-[#8d8c85] bg-[#fffdf8] pl-11 pr-4 text-sm text-[#20201e] outline-none transition-colors placeholder:text-zinc-400 focus:border-[#20201e]"
             />
           </span>
         </label>
@@ -106,7 +106,7 @@ function SignupForm() {
               onChange={(event) => setEmail(event.target.value)}
               placeholder="you@example.com"
               required
-              className="h-9 w-full border border-[#8d8c85] bg-[#fffdf8] pl-11 pr-4 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-[#20201e]"
+              className="h-9 w-full border border-[#8d8c85] bg-[#fffdf8] pl-11 pr-4 text-sm text-[#20201e] outline-none transition-colors placeholder:text-zinc-400 focus:border-[#20201e]"
             />
           </span>
         </label>
@@ -129,7 +129,7 @@ function SignupForm() {
               placeholder="At least 6 characters"
               required
               minLength={6}
-              className="h-9 w-full border border-[#8d8c85] bg-[#fffdf8] px-4 pr-12 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-[#20201e]"
+              className="h-9 w-full border border-[#8d8c85] bg-[#fffdf8] px-4 pr-12 text-sm text-[#20201e] outline-none transition-colors placeholder:text-zinc-400 focus:border-[#20201e]"
             />
             <button
               type="button"
