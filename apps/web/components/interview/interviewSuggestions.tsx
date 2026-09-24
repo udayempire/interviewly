@@ -1,105 +1,41 @@
-"use client"
+"use client";
 
-import {
-    Code2,
-    Network,
-    Smile,
-    BarChart2,
-    Users,
-    Server,
-} from "lucide-react"
-import { Card } from "@/components/ui/card"
+import { BarChart2, Code2, Network, Server, Smile, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-const suggestions = [
-    {
-        title: "Frontend Developer Interview",
-        subtitle: "React, Next.js, JavaScript",
-        icon: Code2,
-        iconBg: "bg-blue-50 dark:bg-blue-950/30",
-        iconColor: "text-blue-500",
-    },
-    {
-        title: "System Design Interview",
-        subtitle: "Scalability, APIs, Databases",
-        icon: Network,
-        iconBg: "bg-orange-50 dark:bg-orange-950/30",
-        iconColor: "text-orange-500",
-    },
-    {
-        title: "Behavioral Interview",
-        subtitle: "Leadership, Teamwork, Problem Solving",
-        icon: Smile,
-        iconBg: "bg-teal-50 dark:bg-teal-950/30",
-        iconColor: "text-teal-500",
-    },
-    {
-        title: "Data Analyst Interview",
-        subtitle: "SQL, Python, Data Analysis",
-        icon: BarChart2,
-        iconBg: "bg-violet-50 dark:bg-violet-950/30",
-        iconColor: "text-violet-500",
-    },
-    {
-        title: "Product Manager Interview",
-        subtitle: "Product Sense, Metrics, Strategy",
-        icon: Users,
-        iconBg: "bg-purple-50 dark:bg-purple-950/30",
-        iconColor: "text-purple-500",
-    },
-    {
-        title: "DevOps Engineer Interview",
-        subtitle: "CI/CD, Docker, Kubernetes",
-        icon: Server,
-        iconBg: "bg-indigo-50 dark:bg-indigo-950/30",
-        iconColor: "text-indigo-500",
-    },
-]
-
-interface SuggestionCardProps {
-    title: string
-    subtitle: string
-    icon: React.ElementType
-    iconBg: string
-    iconColor: string
-    onClick?: () => void
-}
-
-function SuggestionCard({ title, subtitle, icon: Icon, iconBg, iconColor, onClick }: SuggestionCardProps) {
-    return (
-        <Card
-            onClick={onClick}
-            className="flex justify-start items-center gap-3.5 p-4 rounded-xl border border-border bg-card hover:border-blue-200 dark:hover:border-blue-800 hover:bg-blue-50/30 dark:hover:bg-blue-950/20 transition-all duration-150 cursor-pointer "
-        >
-            <div className={`shrink-0 h-7 w-7 rounded-lg ${iconBg} flex items-center justify-center`}>
-                <Icon className={`h-5 w-5 ${iconColor}`} strokeWidth={1.75} />
-            </div>
-            <div className="">
-                <p className="text-[13.5px] font-semibold text-foreground leading-tight truncate">{title}</p>
-                <p className="text-[12px] text-muted-foreground mt-0.5 leading-tight">{subtitle}</p>
-            </div>
-        </Card>
-    )
-}
+const suggestions: { title: string; subtitle: string; icon: LucideIcon }[] = [
+  { title: "Frontend developer", subtitle: "React, Next.js, JavaScript", icon: Code2 },
+  { title: "System design", subtitle: "Scalability, APIs, databases", icon: Network },
+  { title: "Behavioral", subtitle: "Leadership and teamwork", icon: Smile },
+  { title: "Data analyst", subtitle: "SQL, Python, analysis", icon: BarChart2 },
+  { title: "Product manager", subtitle: "Product sense and metrics", icon: Users },
+  { title: "DevOps engineer", subtitle: "CI/CD, Docker, Kubernetes", icon: Server },
+];
 
 interface InterviewSuggestionsProps {
-    onSelect?: (title: string) => void
+  onSelect?: (title: string) => void;
 }
 
 export function InterviewSuggestions({ onSelect }: InterviewSuggestionsProps) {
-    return (
-        <div className="mt-10 border py-6 px-6 rounded-md">
-            <p className="text-[13.5px] font-semibold text-foreground mb-4">
-                Suggestions to get started
-            </p>
-            <div className="grid grid-cols-3 gap-3">
-                {suggestions.map((s) => (
-                    <SuggestionCard
-                        key={s.title}
-                        {...s}
-                        onClick={() => onSelect?.(`${s.title} focusing on ${s.subtitle}`)}
-                    />
-                ))}
-            </div>
-        </div>
-    )
+  return (
+    <section className="mt-9 border-t border-[#dfddd3] pt-6 dark:border-[#3a3934]" aria-labelledby="suggestions-heading">
+      <h2 id="suggestions-heading" className="text-sm font-semibold text-[#20201e] dark:text-[#f4f1e8]">Start with a template</h2>
+      <div className="mt-4 grid border-l border-t border-[#dfddd3] dark:border-[#3a3934] sm:grid-cols-2 lg:grid-cols-3">
+        {suggestions.map(({ title, subtitle, icon: Icon }) => (
+          <button
+            key={title}
+            type="button"
+            onClick={() => onSelect?.(`${title} interview focusing on ${subtitle}`)}
+            className="group flex cursor-pointer min-h-20 items-center gap-3 border-b border-r border-[#dfddd3] bg-[#fffdf8] px-4 py-3 text-left transition-colors hover:bg-[#fff7d8] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-[#b98815] dark:border-[#3a3934] dark:bg-[#20201e] dark:hover:bg-[#342f1b]"
+          >
+            <Icon className="h-4 w-4 shrink-0 text-[#8b6b14]" strokeWidth={1.7} />
+            <span className="min-w-0">
+              <span className="block text-[13px] font-semibold text-[#20201e] dark:text-[#f4f1e8]">{title}</span>
+              <span className="mt-0.5 block truncate text-xs text-[#77746b] dark:text-[#aaa69b]">{subtitle}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
 }

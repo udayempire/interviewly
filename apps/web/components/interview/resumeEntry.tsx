@@ -1,135 +1,72 @@
-"use client"
+"use client";
 
-import { CloudUpload, FileText, CheckCircle, RefreshCw } from "lucide-react";
+import { Check, FileText, Upload } from "lucide-react";
 import { useRef, useState } from "react";
-import { Button } from "../ui/button";
 
 interface ResumeEntryProps {
-    onFileChange?: (file: File | null) => void
-    hasSavedResume?: boolean
-};
+  onFileChange?: (file: File | null) => void;
+  hasSavedResume?: boolean;
+}
 
 export const ResumeEntry = ({ onFileChange, hasSavedResume = false }: ResumeEntryProps) => {
-    const inputRef = useRef<HTMLInputElement>(null)
-    const [fileName, setFileName] = useState<string | null>(null)
-    const [dragging, setDragging] = useState(false)
-    const [wantsToChange, setWantsToChange] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const [useSavedResume, setUseSavedResume] = useState(true);
+  const isUsingSavedResume = hasSavedResume && useSavedResume && !fileName;
 
-    const handleFile = (file: File | undefined) => {
-        if (!file) {
-            setFileName(null)
-            onFileChange?.(null)
-            return;
-        };
-        setFileName(file.name)
-        onFileChange?.(file)
-    };
+  const handleFile = (file: File | undefined) => {
+    if (!file) return;
+    setFileName(file.name);
+    setUseSavedResume(false);
+    onFileChange?.(file);
+  };
 
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault()
-        setDragging(false)
-        handleFile(e.dataTransfer.files[0])
-    };
+  const useSaved = () => {
+    setFileName(null);
+    setUseSavedResume(true);
+    onFileChange?.(null);
+  };
 
-    // Show the saved resume banner if user has a saved resume, hasn't uploaded a new one, and hasn't clicked "Change"
-    const showSavedResumeBanner = hasSavedResume && !fileName && !wantsToChange
-
-    return (
-        <div className="border border-border p-5 rounded-lg bg-card flex flex-col gap-5">
-            {/* Header */}
-            <div className="flex items-start gap-3">
-                <div className="shrink-0 h-9 w-9 rounded-lg bg-purple-50 dark:bg-purple-950/30 flex items-center justify-center">
-                    <FileText className="h-4.5 w-4.5 text-purple-500" />
-                </div>
-                <div>
-                    <h2 className="font-semibold text-[14px] text-foreground leading-tight">
-                        3. Upload your resume{" "}
-                        <span className="font-normal text-muted-foreground">(optional)</span>
-                    </h2>
-                    <p className="text-[12.5px] text-muted-foreground mt-0.5">
-                        We&apos;ll tailor questions to your experience
-                    </p>
-                </div>
-            </div>
-
-            {showSavedResumeBanner ? (
-                /* Saved resume indicator with change option */
-                <div className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-emerald-200 dark:border-emerald-800 rounded-lg py-10 px-4 bg-emerald-50/50 dark:bg-emerald-950/20">
-                    <div className="h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
-                        <CheckCircle className="h-5 w-5 text-emerald-600" />
-                    </div>
-                    <div className="text-center">
-                        <p className="text-[13px] font-medium text-emerald-800 dark:text-emerald-300">
-                            Resume from your profile will be used
-                        </p>
-                        <p className="text-[12px] text-emerald-600 dark:text-emerald-400 mt-0.5">
-                            Your saved resume data will be sent automatically
-                        </p>
-                    </div>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-1 text-[12px] font-medium border-border bg-background hover:bg-accent text-muted-foreground gap-1.5"
-                        onClick={() => setWantsToChange(true)}
-                    >
-                        <RefreshCw className="h-3.5 w-3.5" />
-                        Upload a different resume
-                    </Button>
-                </div>
-            ) : (
-                /* Drop zone — shown when no saved resume or user wants to change */
-                <div
-                    onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-                    onDragLeave={() => setDragging(false)}
-                    onDrop={handleDrop}
-                    className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-lg py-12 px-4 text-center cursor-pointer transition-colors ${dragging ? "border-blue-400 bg-blue-50 dark:bg-blue-950/20" : "border-border bg-muted hover:border-muted-foreground/30"}`}
-                    onClick={() => inputRef.current?.click()}
-                >
-                    <CloudUpload className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
-                    {fileName ? (
-                        <p className="text-[13px] font-medium text-foreground">{fileName}</p>
-                    ) : (
-                        <>
-                            <p className="text-[13px] text-muted-foreground font-medium leading-tight">
-                                Drag &amp; drop your resume here
-                            </p>
-                            <p className="text-[12px] text-muted-foreground">PDF, DOCX (Max 5MB)</p>
-                        </>
-                    )}
-                    <div className="flex items-center gap-2 mt-1">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-[13px] font-medium border-border bg-background hover:bg-accent text-foreground"
-                            onClick={(e) => { e.stopPropagation(); inputRef.current?.click() }}
-                        >
-                            Choose File
-                        </Button>
-                        {hasSavedResume && wantsToChange && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-[12px] font-medium border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    setWantsToChange(false)
-                                    setFileName(null)
-                                    onFileChange?.(null)
-                                }}
-                            >
-                                Use saved resume
-                            </Button>
-                        )}
-                    </div>
-                    <input
-                        ref={inputRef}
-                        type="file"
-                        accept=".pdf,.docx"
-                        className="hidden"
-                        onChange={(e) => handleFile(e.target.files?.[0])}
-                    />
-                </div>
-            )}
+  return (
+    <section className="bg-[#fffdf8] p-5 dark:bg-[#20201e] md:col-span-2 xl:col-span-1 sm:p-6">
+      <div className="flex items-center gap-2.5">
+        <FileText className="h-4 w-4 text-[#8b6b14]" strokeWidth={1.7} />
+        <div>
+          <h2 className="text-sm font-semibold text-[#20201e] dark:text-[#fffdf8]">Resume <span className="font-normal text-[#77746b] dark:text-[#b8b4a9]">(optional)</span></h2>
+          <p className="mt-0.5 text-xs text-[#77746b] dark:text-[#b8b4a9]">PDF or DOCX, up to 5MB</p>
         </div>
-    )
-}
+      </div>
+
+      {isUsingSavedResume ? (
+        <div className="mt-5 border border-[#d6b458] bg-[#fff7d8] px-4 py-3 dark:border-[#8e721f] dark:bg-[#302d22]">
+          <div className="flex items-start gap-2 text-[13px] text-[#55461a] dark:text-[#f3d46c]">
+            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>Using your saved resume.</span>
+          </div>
+          <button onClick={() => setUseSavedResume(false)} className="mt-2 text-xs font-semibold text-[#55461a] underline decoration-[#d39c13] underline-offset-4 dark:text-[#f3d46c]">
+            Upload a different file
+          </button>
+        </div>
+      ) : (
+        <div
+          onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(event) => { event.preventDefault(); setDragging(false); handleFile(event.dataTransfer.files[0]); }}
+          onClick={() => inputRef.current?.click()}
+          className={`mt-5 flex min-h-25 cursor-pointer flex-col items-center justify-center border border-dashed px-4 text-center transition-colors ${dragging ? "border-[#b98815] bg-[#fff7d8] dark:border-[#d6b458] dark:bg-[#302d22]" : "border-[#cfcbbf] bg-[#fffdf8] hover:border-[#a9a394] dark:border-[#4a4942] dark:bg-[#292925] dark:hover:border-[#807c70]"}`}
+        >
+          <Upload className="h-4 w-4 text-[#77746b] dark:text-[#b8b4a9]" strokeWidth={1.6} />
+          <p className="mt-2 text-[13px] font-medium text-[#3c3a34] dark:text-[#fffdf8]">{fileName || "Choose a resume"}</p>
+          {!fileName && <p className="mt-0.5 text-xs text-[#77746b] dark:text-[#b8b4a9]">or drag and drop</p>}
+          <input ref={inputRef} type="file" accept=".pdf,.docx" className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
+        </div>
+      )}
+      {hasSavedResume && !isUsingSavedResume && (
+        <button onClick={useSaved} className="mt-3 text-xs font-semibold text-[#55461a] underline decoration-[#d39c13] underline-offset-4 dark:text-[#f3d46c]">
+          Use saved resume instead
+        </button>
+      )}
+    </section>
+  );
+};

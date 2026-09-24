@@ -1,48 +1,34 @@
-"use client"
+"use client";
 
-import { MessageSquare } from "lucide-react"
-import { Textarea } from "../ui/textarea"
+import { MessageSquare } from "lucide-react";
+import { Textarea } from "../ui/textarea";
 
-const MAX_CHARS = 300
+const MAX_CHARS = 300;
 
 interface InterviewAboutProps {
-    value: string
-    onChange: (val: string) => void
+  value: string;
+  onChange: (val: string) => void;
 }
 
-export const InterviewAbout = ({ value, onChange }: InterviewAboutProps) => {
-    return (
-        <div className="border border-border p-5 rounded-lg bg-card flex flex-col gap-5">
-            {/* Header */}
-            <div className="flex items-start gap-3">
-                <div className="shrink-0 h-9 w-9 rounded-lg bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center">
-                    <MessageSquare className="h-4.5 w-4.5 text-blue-600" />
-                </div>
-                <div>
-                    <h2 className="font-semibold text-[14px] text-foreground leading-tight">
-                        1. What kind of interview?
-                    </h2>
-                    <p className="text-[12.5px] text-muted-foreground mt-0.5">
-                        Describe the role, skills or scenario
-                    </p>
-                </div>
-            </div>
-
-            {/* Textarea */}
-            <div className="relative">
-                <Textarea
-                    maxLength={MAX_CHARS}
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    placeholder="e.g. Frontend Developer interview focusing on React, JavaScript, and System Design..."
-                    className="resize-none min-h-[200px] text-[13px] text-foreground placeholder:text-muted-foreground border-border rounded-lg bg-muted focus-visible:ring-1 focus-visible:ring-blue-400 focus-visible:border-blue-400 placeholder:text-sm"
-                    rows={5}
-                />
-                {/* Character counter */}
-                <span className="absolute bottom-2.5 right-3 text-[11px] text-muted-foreground select-none">
-                    {value.length}/{MAX_CHARS}
-                </span>
-            </div>
-        </div>
-    )
-}
+export const InterviewAbout = ({ value, onChange }: InterviewAboutProps) => (
+  <section className="border-b border-[#dfddd3] bg-[#fffdf8] p-5 dark:border-[#3b3a34] dark:bg-[#20201e] md:border-r xl:border-b-0 sm:p-6">
+    <div className="flex items-center gap-2.5">
+      <MessageSquare className="h-4 w-4 text-[#8b6b14]" strokeWidth={1.7} />
+      <div>
+        <h2 className="text-sm font-semibold text-[#20201e] dark:text-[#fffdf8]">Interview details</h2>
+        <p className="mt-0.5 text-xs text-[#77746b] dark:text-[#b8b4a9]">Role, skills, or scenario</p>
+      </div>
+    </div>
+    <div className="relative mt-5">
+      <Textarea
+        maxLength={MAX_CHARS}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="e.g. Frontend developer - React, JavaScript, and system design"
+        className="min-h-36 resize-none rounded-none border-[#d8d5ca] bg-[#fffdf8] pr-12 text-[13px] text-[#20201e] placeholder:text-[#97938a] focus-visible:border-[#b98815] focus-visible:ring-0 dark:border-[#4a4942] dark:bg-[#292925] dark:text-zinc-300 dark:placeholder:text-[#9d9a91] dark:focus-visible:border-[#d6b458]"
+        rows={5}
+      />
+      <span className="absolute bottom-2 right-3 text-[11px] text-[#8a867c] dark:text-zinc-300">{value.length}/{MAX_CHARS}</span>
+    </div>
+  </section>
+);

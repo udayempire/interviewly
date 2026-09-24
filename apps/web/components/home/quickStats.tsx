@@ -32,12 +32,12 @@ export const QuickStats = () => {
 
   return (
     <section aria-labelledby="quick-stats-heading">
-      <h2 id="quick-stats-heading" className="mt-1 text-xl font-semibold tracking-[-0.035em] text-[#20201e]">Progress</h2>
+      <h2 id="quick-stats-heading" className="mt-1 text-xl font-semibold tracking-[-0.035em] ">Progress</h2>
       <dl className="mt-6 divide-y divide-[#dfddd3] border-y border-[#dfddd3]">
         {items.map(({ label, value }) => (
           <div key={label} className="flex items-baseline justify-between gap-4 py-4">
-            <dt className="text-sm text-[#625f57]">{label}</dt>
-            <dd className="text-xl font-semibold tracking-[-0.035em] text-[#20201e]">{isLoading ? "–" : value}</dd>
+            <dt className="text-sm text-zinc-700 dark:text-zinc-300">{label}</dt>
+            <dd className="text-xl font-semibold tracking-[-0.035em] ">{isLoading ? "–" : value}</dd>
           </div>
         ))}
       </dl>

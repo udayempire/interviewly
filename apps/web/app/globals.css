@@ -150,6 +150,42 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+:root {
+  --product-canvas: #faf9f5;
+  --product-paper: #fffdf8;
+  --product-ink: #20201e;
+  --product-muted: #77746b;
+  --product-copy: #625f57;
+  --product-border: #dfddd3;
+  --product-control: #fffdf8;
+  --product-panel: #20201e;
+  --product-panel-raised: #292925;
+  --product-panel-border: #3b3a34;
+  --product-panel-ink: #fffdf8;
+  --product-panel-muted: #b8b4a9;
+  --product-gold: #d39c13;
+  --product-gold-ink: #8b6b14;
+  --product-gold-surface: #fff7d8;
+}
+
+.dark {
+  --product-canvas: #171715;
+  --product-paper: #20201e;
+  --product-ink: #f4f1e8;
+  --product-muted: #aaa69b;
+  --product-copy: #c0bdb3;
+  --product-border: #3a3934;
+  --product-control: #292925;
+  --product-panel: #111110;
+  --product-panel-raised: #1b1b19;
+  --product-panel-border: #3e3d38;
+  --product-panel-ink: #f4f1e8;
+  --product-panel-muted: #aaa69b;
+  --product-gold: #e0b63d;
+  --product-gold-ink: #e7c75f;
+  --product-gold-surface: #342f1b;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -176,3 +212,5 @@
     linear-gradient(90deg, rgba(32, 32, 30, 0.35) 1px, transparent 1px);
   background-size: 64px 64px;
 }
+
+
