@@ -1,221 +1,177 @@
-"use client"
+"use client";
 
-import { usePathname } from "next/navigation"
-import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { useEffect, useState } from "react";
+import { LayoutDashboard, LogOut, Mic2, Settings, User } from "lucide-react";
 import {
-    Sidebar,
-    SidebarContent,
-    SidebarFooter,
-    SidebarGroup,
-    SidebarGroupContent,
-    SidebarGroupLabel,
-    SidebarHeader,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-} from "@/components/ui/sidebar"
-import {
-    LayoutDashboard,
-    Mic2,
-    User,
-    Settings,
-    LogOut,
-} from "lucide-react"
-import { useEffect, useState } from "react"
-
-import { useRouter } from "next/navigation"
-import { eraseCookie } from "@/lib/cookies"
-import Image from "next/image"
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
+import { eraseCookie } from "@/lib/cookies";
 
 const mainNav = [
-    { label: "Home", href: "/home", icon: LayoutDashboard },
-    { label: "Interviews", href: "/interview", icon: Mic2 },
-]
-
+  { label: "Home", href: "/home", icon: LayoutDashboard },
+  { label: "Interviews", href: "/interview", icon: Mic2 },
+];
 const accountNav = [
-    { label: "Profile", href: "/profile", icon: User },
-    { label: "Settings", href: "/settings", icon: Settings },
-]
+  { label: "Profile", href: "/profile", icon: User },
+  { label: "Settings", href: "/settings", icon: Settings },
+];
 
 export function AppSidebar() {
-    const pathname = usePathname()
-    const router = useRouter()
-    const [userName, setUserName] = useState("You")
-    const [userProfileImage, setUserProfileImage] = useState("")
-    const [userInitial, setUserInitial] = useState("Y")
+  const pathname = usePathname();
+  const router = useRouter();
+  const [userName, setUserName] = useState("You");
+  const [userProfileImage, setUserProfileImage] = useState("");
+  const [userInitial, setUserInitial] = useState("Y");
 
-    useEffect(() => {
-        async function fetchUser() {
-            try {
-                const res = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/auth/me`,
-                    { credentials: "include" }
-                );
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.user?.name) {
-                        setUserName(data.user.name);
-                        setUserInitial(data.user.name.charAt(0).toUpperCase());
-                        setUserProfileImage(data.user.userProfile.profileImageUrl ?? "");
-                    }
-                }
-            } catch { /* ignore */ }
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/auth/me`,
+          { credentials: "include" },
+        );
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data.user?.name) {
+          setUserName(data.user.name);
+          setUserInitial(data.user.name.charAt(0).toUpperCase());
+          setUserProfileImage(data.user.userProfile?.profileImageUrl ?? "");
         }
-        fetchUser();
-    }, [])
+      } catch {
+        /* User details are non-critical. */
+      }
+    }
+    fetchUser();
+  }, []);
 
-    const handleLogout = async () => {
-        try {
-            await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/auth/logout`,
-                { method: "POST", credentials: "include" }
-            );
-        } catch { /* ignore */ }
-        eraseCookie("token");
-        router.push("/signin");
-    };
+  const handleLogout = async () => {
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/auth/logout`,
+        { method: "POST", credentials: "include" },
+      );
+    } catch {
+      /* Clear local session regardless. */
+    }
+    eraseCookie("token");
+    router.push("/signin");
+  };
 
-    return (
-        <Sidebar collapsible="icon">
+  const navigation = (items: typeof mainNav) =>
+    items.map(({ label, href, icon: Icon }) => {
+      const active = pathname === href;
+      return (
+        <SidebarMenuItem key={href}>
+          <SidebarMenuButton
+            isActive={active}
+            tooltip={label}
+            className={`h-9 rounded-none transition-colors ${active ? "bg-amber-100 text-stone-900 dark:bg-amber-300 dark:text-stone-900" : "text-stone-600 hover:bg-stone-200 hover:text-stone-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"}`}
+          >
+            <Link href={href} className="flex items-center gap-2.5">
+              <Icon className="h-4 w-4 shrink-0" strokeWidth={1.7} />
+              <span className="text-[13px] font-medium">{label}</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      );
+    });
 
-            <SidebarHeader className="px-3 py-4">
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton
-                            size="lg"
-                            className="hover:bg-sidebar-accent"
-                        >
-                            <Link href="/home" className="flex items-center gap-3">
-                                {/* App icon */}
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[#20201e] bg-[#f4cf4b]">
-                                    <span className="text-[12px] font-bold leading-none text-[#20201e]">i.</span>
-                                </div>
-                                <div className="flex flex-col leading-tight">
-                                    <span className="text-[15px] font-bold tracking-[-0.055em] text-sidebar-foreground">
-                                        interviewlyy
-                                    </span>
-                                </div>
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-            </SidebarHeader>
-
-            <hr className="mx-3 border-none h-px bg-sidebar-border" />
-
-            <SidebarContent className="px-2 py-2">
-
-                {/* Main group */}
-                <SidebarGroup>
-                    <SidebarGroupLabel className="text-[11px] font-medium text-sidebar-foreground/40 uppercase tracking-widest px-2 mb-1">
-                        Main
-                    </SidebarGroupLabel>
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            {mainNav.map(({ label, href, icon: Icon }) => (
-                                <SidebarMenuItem key={href}>
-                                    <SidebarMenuButton
-                                        isActive={pathname === href}
-                                        tooltip={label}
-                                        className="rounded-lg"
-                                    >
-                                        <Link href={href} className="flex items-center gap-2.5">
-                                            <Icon className="h-[17px] w-[17px] shrink-0" />
-                                            <span className="text-[13px] font-medium">{label}</span>
-                                        </Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
-
-                {/* Account group */}
-                <SidebarGroup>
-                    <SidebarGroupLabel className="text-[11px] font-medium text-sidebar-foreground/40 uppercase tracking-widest px-2 mb-1">
-                        Account
-                    </SidebarGroupLabel>
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            {accountNav.map(({ label, href, icon: Icon }) => (
-                                <SidebarMenuItem key={href}>
-                                    <SidebarMenuButton
-                                        isActive={pathname === href}
-                                        tooltip={label}
-                                        className="rounded-lg"
-                                    >
-                                        <Link href={href} className="flex items-center gap-2.5">
-                                            <Icon className="h-4.25 w-4.25 shrink-0" />
-                                            <span className="text-[13px] font-medium">{label}</span>
-                                        </Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
-
-            </SidebarContent>
-
-            <hr className="mx-3 border-none h-px bg-sidebar-border" />
-            <SidebarFooter className="px-2 py-3">
-                <SidebarMenu>
-
-                    {/* Logout */}
-                    <SidebarMenuItem>
-                        <SidebarMenuButton
-                            tooltip="Log out"
-                            onClick={handleLogout}
-                            className="rounded-lg text-sidebar-foreground/60 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer"
-                        >
-                            <div className="flex items-center gap-2.5">
-                                <LogOut className="h-4.25 w-4.25 shrink-0" />
-                                <span className="text-[13px] font-medium">Log out</span>
-                            </div>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-
-                    {/* User avatar */}
-                    <SidebarMenuItem>
-                        <SidebarMenuButton
-                            size="lg"
-                            tooltip={userName}
-                            className="rounded-lg"
-                        >
-                            <Link href="/profile" className="flex items-center gap-3">
-                                {/* Gradient avatar with initial */}
-                                {
-                                    userProfileImage ? (
-                                        <Image
-                                            src={userProfileImage}
-                                            alt="Profile"
-                                            width={32}
-                                            height={32}
-                                            className="rounded-full"
-                                        />
-                                    ) : (
-                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#20201e]">
-                                            <span className="text-[12px] font-semibold leading-none text-[#f8d04c]">
-                                                {userInitial}
-                                            </span>
-                                        </div>
-                                    )
-                                }
-                                <div className="flex flex-col leading-tight min-w-0">
-                                    <span className="text-[13px] font-medium text-sidebar-foreground truncate">
-                                        {userName}
-                                    </span>
-                                    {/* <span className="text-[11px] text-sidebar-foreground/50">
-                                        View profile
-                                    </span> */}
-                                </div>
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-
-                </SidebarMenu>
-            </SidebarFooter>
-
-        </Sidebar>
-    )
+  return (
+    <Sidebar
+      collapsible="icon"
+      className="border-r border-stone-200 bg-stone-100 dark:border-zinc-800 dark:bg-zinc-900"
+    >
+      <SidebarHeader className="border-b border-stone-200 px-3 py-4 dark:border-zinc-800">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              size="lg"
+              className="rounded-none hover:bg-transparent"
+            >
+              <Link href="/home" className="flex items-center gap-3">
+                <span className="grid h-7 w-7 place-items-center rounded-full border-2 border-stone-900 bg-amber-300 text-[11px] font-bold text-stone-900 dark:border-zinc-100">
+                  i.
+                </span>
+                <span className="text-[15px] font-bold tracking-[-0.055em] text-stone-900 dark:text-zinc-100">
+                  interviewlyy
+                </span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      <SidebarContent className="px-2 py-4">
+        <SidebarGroup className="p-0">
+          <SidebarGroupLabel className="mb-1 px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-stone-500 dark:text-zinc-500">
+            Main
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>{navigation(mainNav)}</SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup className="mt-6 p-0">
+          <SidebarGroupLabel className="mb-1 px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-stone-500 dark:text-zinc-500">
+            Account
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>{navigation(accountNav)}</SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter className="border-t border-stone-200 px-2 py-3 dark:border-zinc-800">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="Log out"
+              onClick={handleLogout}
+              className="h-9 rounded-none text-stone-500 hover:bg-red-50 hover:text-red-700 dark:text-zinc-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+            >
+              <span className="flex items-center gap-2.5">
+                <LogOut className="h-4 w-4 shrink-0" strokeWidth={1.7} />
+                <span className="text-[13px] font-medium">Log out</span>
+              </span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              size="lg"
+              tooltip={userName}
+              className="mt-1 rounded-none hover:bg-stone-200 dark:hover:bg-zinc-800"
+            >
+              <Link href="/profile" className="flex items-center gap-3">
+                {userProfileImage ? (
+                  <Image
+                    src={userProfileImage}
+                    alt="Profile"
+                    width={28}
+                    height={28}
+                    className="rounded-full"
+                  />
+                ) : (
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-zinc-900 text-[11px] font-semibold text-amber-300 dark:bg-amber-300 dark:text-stone-900">
+                    {userInitial}
+                  </span>
+                )}
+                <span className="min-w-0 truncate text-[13px] font-medium text-stone-900 dark:text-zinc-100">
+                  {userName}
+                </span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
+  );
 }
