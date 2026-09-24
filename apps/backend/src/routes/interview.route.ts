@@ -182,4 +182,61 @@ interviewRouter.delete('/:interviewId', authMiddleware, async (req, res) => {
     }
 });
 
+//GET quick stats for the user
+interviewRouter.get('/stats/quick', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.userId as string;
+
+        // Run all queries in parallel
+        const [totalInterviews, completedInterviews, reports] = await Promise.all([
+            // Total interviews
+            prisma.interview.count({ where: { userId } }),
+
+            // Completed interviews (with times for total duration calc)
+            prisma.interview.findMany({
+                where: { userId, status: "COMPLETED" },
+                select: { startedAt: true, completedAt: true },
+            }),
+
+            // All reports for avg score
+            prisma.interviewReport.findMany({
+                where: { userId },
+                select: { overallScore: true },
+            }),
+        ]);
+
+        // Completed count
+        const completed = completedInterviews.length;
+
+        // Avg score (only reports that have a score)
+        const scoredReports = reports.filter((r) => r.overallScore !== null);
+        const avgScore = scoredReports.length > 0
+            ? Math.round(scoredReports.reduce((sum, r) => sum + r.overallScore!, 0) / scoredReports.length)
+            : 0;
+
+        // Total time in minutes
+        let totalTimeMinutes = 0;
+        for (const interview of completedInterviews) {
+            if (interview.completedAt && interview.startedAt) {
+                const durationMs = new Date(interview.completedAt).getTime() - new Date(interview.startedAt).getTime();
+                totalTimeMinutes += durationMs / (1000 * 60);
+            }
+        }
+        totalTimeMinutes = Math.round(totalTimeMinutes);
+
+        return res.status(200).json({
+            success: true,
+            stats: {
+                totalInterviews,
+                completed,
+                avgScore,
+                totalTimeMinutes,
+            },
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Failed to fetch stats" });
+    }
+});
+
 export default interviewRouter;
