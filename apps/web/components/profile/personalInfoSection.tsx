@@ -61,10 +61,10 @@ export function PersonalInfoSection({
 
     return (
         <div>
-            <h2 className="text-lg font-semibold text-foreground mb-1">Personal Information</h2>
-            <p className="text-sm text-muted-foreground mb-6">Update your name and GitHub profile link.</p>
+            <h2 className="text-lg font-semibold text-stone-900 dark:text-zinc-100">Personal information</h2>
+            <p className="mt-1 text-sm text-stone-600 dark:text-zinc-400">Your name and GitHub profile.</p>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="mt-6 max-w-xl space-y-5">
                 {/* Avatar display */}
                 <div className="flex items-center gap-4">
                     {profileImageUrl ? (
@@ -76,8 +76,8 @@ export function PersonalInfoSection({
                             className="rounded-full ring-2 ring-border"
                         />
                     ) : (
-                        <div className="h-16 w-16 shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
-                            <span className="text-xl font-semibold text-white leading-none">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-zinc-900 dark:bg-amber-300">
+                            <span className="text-lg font-semibold leading-none text-amber-300 dark:text-stone-900">
                                 {userInitial}
                             </span>
                         </div>
@@ -100,34 +100,24 @@ export function PersonalInfoSection({
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Your name"
+                        className="rounded-none"
                     />
                 </div>
 
-                {/* Email (read-only) */}
-                <div className="space-y-1.5">
-                    <Label htmlFor="profile-email">Email Address</Label>
-                    <Input
-                        id="profile-email"
-                        value={email}
-                        disabled
-                        className="bg-muted text-muted-foreground cursor-not-allowed"
-                    />
-                    <p className="text-xs text-muted-foreground">Email cannot be changed.</p>
+                <div className="grid gap-5 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                        <Label htmlFor="profile-email">Email address</Label>
+                        <Input id="profile-email" value={email} disabled className="cursor-not-allowed rounded-none bg-muted text-muted-foreground" />
+                        <p className="text-xs text-muted-foreground">Email cannot be changed.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="profile-github">GitHub profile</Label>
+                        <Input id="profile-github" value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} placeholder="https://github.com/username" className="rounded-none" />
+                    </div>
                 </div>
 
-                {/* GitHub URL */}
-                <div className="space-y-1.5">
-                    <Label htmlFor="profile-github">GitHub Profile URL</Label>
-                    <Input
-                        id="profile-github"
-                        value={githubUrl}
-                        onChange={(e) => setGithubUrl(e.target.value)}
-                        placeholder="https://github.com/username"
-                    />
-                </div>
-
-                {/* Save */}
-                <Button type="submit" disabled={isPending} className="w-full sm:w-auto bg-blue-600">
+                <div className="flex justify-start">
+                <Button type="submit" disabled={isPending} className="w-full rounded-none bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-amber-300 dark:text-stone-900 dark:hover:bg-amber-200 sm:w-auto">
                     {isPending ? (
                         <>
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -142,6 +132,7 @@ export function PersonalInfoSection({
                         "Save Changes"
                     )}
                 </Button>
+                </div>
             </form>
         </div>
     )

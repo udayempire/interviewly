@@ -84,6 +84,7 @@ export function ChangePasswordSection({ hasEmailAccount }: ChangePasswordSection
                                 onChange={(e) => setCurrentPassword(e.target.value)}
                                 placeholder="Enter current password"
                                 required
+                                className="rounded-none"
                             />
                             <button
                                 type="button"
@@ -96,41 +97,18 @@ export function ChangePasswordSection({ hasEmailAccount }: ChangePasswordSection
                     </div>
                 )}
 
-                {/* New password */}
-                <div className="space-y-1.5">
-                    <Label htmlFor="new-password">New Password</Label>
-                    <div className="relative">
-                        <Input
-                            id="new-password"
-                            type={showNew ? "text" : "password"}
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="At least 6 characters"
-                            required
-                            minLength={6}
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowNew(!showNew)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                        >
-                            {showNew ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                        </button>
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                        <Label htmlFor="new-password">New password</Label>
+                        <div className="relative">
+                            <Input id="new-password" type={showNew ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="At least 6 characters" required minLength={6} className="rounded-none" />
+                            <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground">{showNew ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</button>
+                        </div>
                     </div>
-                </div>
-
-                {/* Confirm password */}
-                <div className="space-y-1.5">
-                    <Label htmlFor="confirm-password">Confirm New Password</Label>
-                    <Input
-                        id="confirm-password"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Repeat new password"
-                        required
-                        minLength={6}
-                    />
+                    <div className="space-y-1.5">
+                        <Label htmlFor="confirm-password">Confirm password</Label>
+                        <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repeat new password" required minLength={6} className="rounded-none" />
+                    </div>
                 </div>
 
                 {/* Errors */}
@@ -147,7 +125,8 @@ export function ChangePasswordSection({ hasEmailAccount }: ChangePasswordSection
                     </p>
                 )}
 
-                <Button type="submit" disabled={isPending} className="w-full sm:w-auto bg-blue-600">
+                <div className="flex justify-start">
+                <Button type="submit" disabled={isPending} className="w-full rounded-none bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-amber-300 dark:text-stone-900 dark:hover:bg-amber-200 sm:w-auto">
                     {isPending ? (
                         <>
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -162,6 +141,7 @@ export function ChangePasswordSection({ hasEmailAccount }: ChangePasswordSection
                         hasEmailAccount ? "Change Password" : "Set Password"
                     )}
                 </Button>
+                </div>
             </form>
         </div>
     )

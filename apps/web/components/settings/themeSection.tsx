@@ -1,82 +1,11 @@
-"use client"
+"use client";
 
-import { useTheme } from "@/context/ThemeProvider"
-import { Sun, Moon, Monitor } from "lucide-react"
+import { useTheme } from "@/context/ThemeProvider";
+import { Monitor, Moon, Sun } from "lucide-react";
 
-const themes = [
-    {
-        id: "light" as const,
-        label: "Light",
-        icon: Sun,
-        description: "Classic light appearance",
-    },
-    {
-        id: "dark" as const,
-        label: "Dark",
-        icon: Moon,
-        description: "Easy on the eyes",
-    },
-    {
-        id: "system" as const,
-        label: "System",
-        icon: Monitor,
-        description: "Follows your OS setting",
-    },
-]
+const themes = [{ id: "light" as const, label: "Light", icon: Sun }, { id: "dark" as const, label: "Dark", icon: Moon }, { id: "system" as const, label: "System", icon: Monitor }];
 
 export function ThemeSection() {
-    const { theme, setTheme } = useTheme()
-
-    return (
-        <div>
-            <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-lg font-semibold text-foreground">Appearance</h2>
-            </div>
-            <p className="text-sm text-muted-foreground mb-5">
-                Choose how Interviewlyy looks to you. Select a single theme, or sync with your system.
-            </p>
-
-            <div className="grid grid-cols-3 gap-3 max-w-md">
-                {themes.map(({ id, label, icon: Icon, description }) => {
-                    const isActive = theme === id
-                    return (
-                        <button
-                            key={id}
-                            type="button"
-                            onClick={() => setTheme(id)}
-                            className={`group relative flex flex-col items-center gap-2.5 rounded-xl border-2 px-4 py-5 transition-all duration-200 cursor-pointer
-                                ${isActive
-                                    ? "border-blue-500 bg-blue-50/60 dark:bg-blue-950/30 shadow-sm ring-1 ring-blue-500/20"
-                                    : "border-border bg-card hover:border-muted-foreground/30 hover:bg-accent"
-                                }
-                            `}
-                        >
-                            <div
-                                className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors
-                                    ${isActive
-                                        ? "bg-blue-500 text-white shadow-md"
-                                        : "bg-muted text-muted-foreground group-hover:bg-muted-foreground/10 group-hover:text-foreground"
-                                    }
-                                `}
-                            >
-                                <Icon className="h-5 w-5" />
-                            </div>
-                            <div className="text-center">
-                                <p className={`text-sm font-semibold ${isActive ? "text-blue-700 dark:text-blue-400" : "text-foreground"}`}>
-                                    {label}
-                                </p>
-                                <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">
-                                    {description}
-                                </p>
-                            </div>
-                            {/* Active indicator dot */}
-                            {isActive && (
-                                <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-blue-500 border-2 border-background shadow-sm" />
-                            )}
-                        </button>
-                    )
-                })}
-            </div>
-        </div>
-    )
+  const { theme, setTheme } = useTheme();
+  return <div><h2 className="text-lg font-semibold text-stone-900 dark:text-zinc-100">Appearance</h2><p className="mt-1 text-sm text-stone-600 dark:text-zinc-400">Choose the theme for this device.</p><div className="mt-5 grid max-w-md grid-cols-3 border border-stone-200 dark:border-zinc-800">{themes.map(({ id, label, icon: Icon }) => { const active = theme === id; return <button key={id} type="button" onClick={() => setTheme(id)} className={`flex flex-col items-center gap-2 border-l border-stone-200 px-3 py-4 text-sm font-medium transition-colors first:border-l-0 dark:border-zinc-800 ${active ? "bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300" : "bg-white text-stone-600 hover:bg-stone-50 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800"}`}><Icon className="h-4 w-4" />{label}</button>; })}</div></div>;
 }

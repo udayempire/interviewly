@@ -5,8 +5,14 @@ import { Button } from "@/components/ui/button"
 import { useMutation } from "@tanstack/react-query"
 import { Upload, FileText, Loader2, Check, X, ExternalLink } from "lucide-react"
 
+type ResumeData = {
+    skills?: string[]
+    name?: string
+    currentRole?: string
+}
+
 interface ResumeSectionProps {
-    resumeData: any | null
+    resumeData: ResumeData | null
     hasResumePdf: boolean
     onUpdated: () => void
 }
@@ -81,7 +87,7 @@ export function ResumeSection({ resumeData, hasResumePdf, onUpdated }: ResumeSec
 
             {/* Current resume preview */}
             {resumeData && (
-                <div className="mb-5 rounded-lg border border-border bg-muted/50 p-4">
+                <div className="mb-5 border border-border bg-muted/50 p-4">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-muted-foreground" />
@@ -90,7 +96,7 @@ export function ResumeSection({ resumeData, hasResumePdf, onUpdated }: ResumeSec
                         {hasResumePdf && (
                             <button
                                 onClick={handleViewResume}
-                                className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors cursor-pointer"
+                                className="flex items-center gap-1.5 text-xs font-medium text-amber-700 hover:text-amber-800 transition-colors cursor-pointer"
                             >
                                 <ExternalLink className="h-3.5 w-3.5" />
                                 View PDF
@@ -128,9 +134,9 @@ export function ResumeSection({ resumeData, hasResumePdf, onUpdated }: ResumeSec
                 onDragOver={(e) => { e.preventDefault(); setDragActive(true) }}
                 onDragLeave={() => setDragActive(false)}
                 onDrop={handleDrop}
-                className={`relative rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+                className={`relative rounded-none border-2 border-dashed p-8 text-center transition-colors ${
                     dragActive
-                        ? "border-blue-400 bg-blue-50/50 dark:bg-blue-950/20"
+                        ? "border-amber-500 bg-amber-50/50 dark:bg-blue-950/20"
                         : "border-border bg-background hover:border-muted-foreground/30"
                 }`}
             >
@@ -141,7 +147,7 @@ export function ResumeSection({ resumeData, hasResumePdf, onUpdated }: ResumeSec
                     ) : (
                         <>
                             Drag and drop your resume PDF here, or{" "}
-                            <label className="text-blue-600 hover:text-blue-700 cursor-pointer font-medium">
+                            <label className="text-amber-700 hover:text-amber-800 cursor-pointer font-medium">
                                 browse
                                 <input
                                     type="file"
@@ -158,8 +164,8 @@ export function ResumeSection({ resumeData, hasResumePdf, onUpdated }: ResumeSec
 
             {/* Upload button */}
             {selectedFile && (
-                <div className="flex items-center gap-2 mt-3">
-                    <Button onClick={handleUpload} disabled={isPending} className="w-full sm:w-auto">
+                <div className="mt-3 flex justify-start gap-2">
+                    <Button onClick={handleUpload} disabled={isPending} className="w-full rounded-none sm:w-auto">
                         {isPending ? (
                             <>
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -178,7 +184,7 @@ export function ResumeSection({ resumeData, hasResumePdf, onUpdated }: ResumeSec
                         variant="ghost"
                         size="icon"
                         onClick={() => setSelectedFile(null)}
-                        className="shrink-0"
+                        className="shrink-0 rounded-none"
                     >
                         <X className="h-4 w-4" />
                     </Button>

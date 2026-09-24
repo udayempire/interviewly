@@ -63,9 +63,9 @@ export function ConnectedAccountsSection({
                 </div>
             )}
 
-            <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
                 {/* Google */}
-                <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3.5 bg-card">
+                <div className="flex items-center justify-between border border-stone-200 bg-white px-4 py-3.5 dark:border-zinc-800 dark:bg-zinc-900">
                     <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-full bg-background border border-border flex items-center justify-center">
                             <svg width="18" height="18" viewBox="0 0 24 24">
@@ -94,7 +94,7 @@ export function ConnectedAccountsSection({
                     ) : (
                         <button
                             onClick={handleLinkGoogle}
-                            className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 px-3 py-1.5 rounded-full transition-colors cursor-pointer"
+                            className="cursor-pointer bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 hover:text-amber-800 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/50 dark:hover:text-amber-200"
                         >
                             Connect
                         </button>
@@ -102,7 +102,7 @@ export function ConnectedAccountsSection({
                 </div>
 
                 {/* GitHub */}
-                <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3.5 bg-card">
+                <div className="flex items-center justify-between border border-stone-200 bg-white px-4 py-3.5 dark:border-zinc-800 dark:bg-zinc-900">
                     <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-full bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center">
                             <svg className="h-4.5 w-4.5 text-white dark:text-zinc-900" fill="currentColor" viewBox="0 0 24 24">
@@ -128,7 +128,7 @@ export function ConnectedAccountsSection({
                     ) : (
                         <button
                             onClick={handleLinkGithub}
-                            className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 px-3 py-1.5 rounded-full transition-colors cursor-pointer"
+                            className="cursor-pointer bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 hover:text-amber-800 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/50 dark:hover:text-amber-200"
                         >
                             Connect
                         </button>
