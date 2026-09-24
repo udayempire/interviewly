@@ -56,6 +56,17 @@ model UserProfile {
   user            User        @relation(fields: [userId], references: [id])
 }
 
+model OtpVerification {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
 model Template {
   id             String         @id @default(cuid())
   name           String

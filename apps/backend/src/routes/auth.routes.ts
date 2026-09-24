@@ -7,6 +7,7 @@ import { signupSchema, signinSchema } from "@repo/types";
 import { OAuth2Client } from "google-auth-library";
 import { URLSearchParams } from "url";
 import { authMiddleware } from "../middleware/auth";
+import { requestOtp, verifyOtp } from "../services/otp.service";
 
 interface AuthPayload extends JwtPayload {
     userId: string
@@ -433,5 +434,79 @@ authRouter.get("/me", authMiddleware, async (req, res) => {
 
 // Account linking is now handled via ?action=link on the /google and /github OAuth flows.
 // The old POST /link/* endpoints are no longer needed.
+
+// ─── OTP-based Email Login ─────────────────────────────────────────
+
+// POST /otp/send — sends a one-time code to the given email
+authRouter.post("/otp/send", async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email || typeof email !== "string") {
+            return res.status(400).json({ error: "Email is required." });
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const result = await requestOtp(normalizedEmail);
+
+        if (!result.success) {
+            return res.status(429).json({
+                error: result.message,
+                retryAfterSeconds: result.retryAfterSeconds,
+            });
+        }
+
+        return res.json({ message: result.message });
+    } catch (error) {
+        console.error("Error in POST /otp/send:", error);
+        return res.status(500).json({ error: "Failed to send OTP. Please try again." });
+    }
+});
+
+// POST /otp/verify — verifies the code and logs the user in (or signs them up)
+authRouter.post("/otp/verify", async (req, res) => {
+    try {
+        const { email, code } = req.body;
+        if (!email || typeof email !== "string" || !code || typeof code !== "string") {
+            return res.status(400).json({ error: "Email and code are required." });
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const result = await verifyOtp(normalizedEmail, code.trim());
+
+        if (!result.success) {
+            return res.status(400).json({ error: result.message });
+        }
+
+        // OTP is valid — find or create the user
+        let user = await prisma.user.findUnique({
+            where: { email: normalizedEmail },
+            include: { accounts: true },
+        });
+
+        if (!user) {
+            // New user — auto-register via OTP (no password)
+            user = await prisma.user.create({
+                data: {
+                    email: normalizedEmail,
+                    authProvider: "EMAIL",
+                    accounts: {
+                        create: { provider: "EMAIL" }, // no passwordHash — OTP-only
+                    },
+                },
+                include: { accounts: true },
+            });
+        }
+
+        const token = issueJwt(user.id);
+        res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "lax" });
+        return res.json({
+            token,
+            user: { id: user.id, email: user.email, name: user.name },
+        });
+    } catch (error) {
+        console.error("Error in POST /otp/verify:", error);
+        return res.status(500).json({ error: "Verification failed. Please try again." });
+    }
+});
 
 export default authRouter;

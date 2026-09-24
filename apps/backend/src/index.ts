@@ -31,9 +31,12 @@ app.get('/test-llm', async (req, res) => {
     res.json({ response })
 });
 
+import { startOtpCleanupScheduler } from "./services/otp.service";
+
 app.use('/api/v1', router );
 
 setupInterviewWS(wss);
 server.listen(port, () => {
     console.log(`Example app listening on port ${port}`);
+    startOtpCleanupScheduler();
 });
