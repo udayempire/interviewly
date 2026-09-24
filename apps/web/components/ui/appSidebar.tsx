@@ -87,12 +87,12 @@ export function AppSidebar() {
                         >
                             <Link href="/home" className="flex items-center gap-3">
                                 {/* App icon */}
-                                <div className="h-8 w-8 shrink-0 rounded-[8px] bg-linear-to-br from-blue-600 to-indigo-500 flex items-center justify-center shadow-sm">
-                                    <span className="text-[12px] font-bold text-white leading-none">I</span>
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[#20201e] bg-[#f4cf4b]">
+                                    <span className="text-[12px] font-bold leading-none text-[#20201e]">i.</span>
                                 </div>
                                 <div className="flex flex-col leading-tight">
-                                    <span className="text-[14px] font-semibold text-sidebar-foreground tracking-tight">
-                                        Interviewlyy
+                                    <span className="text-[15px] font-bold tracking-[-0.055em] text-sidebar-foreground">
+                                        interviewlyy
                                     </span>
                                 </div>
                             </Link>
@@ -194,8 +194,8 @@ export function AppSidebar() {
                                             className="rounded-full"
                                         />
                                     ) : (
-                                        <div className="h-8 w-8 shrink-0 rounded-full bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
-                                            <span className="text-[12px] font-semibold text-white leading-none">
+                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#20201e]">
+                                            <span className="text-[12px] font-semibold leading-none text-[#f8d04c]">
                                                 {userInitial}
                                             </span>
                                         </div>

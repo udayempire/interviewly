@@ -1,85 +1,46 @@
-"use client"
+"use client";
 
-import { Calendar, ChartNoAxesCombined, CheckCircle, Clock } from "lucide-react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query";
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}`;
 
 async function fetchQuickStats() {
-    const response = await fetch(`${API_BASE}/interview/stats/quick`, {
-        credentials: "include",
-        method: "GET",
-    });
-    if (!response.ok) {
-        throw new Error("Failed to fetch stats");
-    }
-    return response.json();
+  const response = await fetch(`${API_BASE}/interview/stats/quick`, {
+    credentials: "include",
+    method: "GET",
+  });
+  if (!response.ok) throw new Error("Failed to fetch stats");
+  return response.json();
 }
 
 function formatTime(minutes: number): string {
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
 export const QuickStats = () => {
-    const { data, isLoading } = useQuery({
-        queryKey: ["quick-stats"],
-        queryFn: fetchQuickStats,
-    });
+  const { data, isLoading } = useQuery({ queryKey: ["quick-stats"], queryFn: fetchQuickStats });
+  const stats = data?.stats;
+  const items = [
+    { label: "Interviews", value: stats?.totalInterviews ?? 0 },
+    { label: "Completed", value: stats?.completed ?? 0 },
+    { label: "Average score", value: stats?.avgScore ?? 0 },
+    { label: "Practice time", value: formatTime(stats?.totalTimeMinutes ?? 0) },
+  ];
 
-    const stats = data?.stats;
-
-    return (
-        <div className="p-3 px-3 border border-border rounded-md">
-            <h1 className="font-bold text-[18px]"> Quick Stats </h1>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3 w-full max-w-md mt-4">
-                <div className="border p-2 px-4 rounded-md py-3">
-                    <div className="flex justify-between items-start">
-                        <div className=" space-y-2">
-                            <h1 className="font-bold">{isLoading ? "–" : stats?.totalInterviews ?? 0}</h1>
-                            <p className="text-muted-foreground text-md">Interviews</p>
-                        </div>
-                        <div>
-                            <Calendar />
-                        </div>
-                    </div>
-                </div>
-                <div className="border p-2 px-4 rounded-md py-3">
-                    <div className="flex justify-between items-start">
-                        <div className="space-y-2">
-                            <h1 className="font-bold">{isLoading ? "–" : stats?.completed ?? 0}</h1>
-                            <p className="text-muted-foreground text-md">Completed</p>
-                        </div>
-                        <div className="text-green-600">
-                            <CheckCircle />
-                        </div>
-                    </div>
-                </div>
-                <div className="border p-2 px-4 rounded-md py-3">
-                    <div className="flex justify-between items-start">
-                        <div className="space-y-2">
-                            <h1 className="font-bold">{isLoading ? "–" : stats?.avgScore ?? 0}</h1>
-                            <p className="text-muted-foreground text-md">Avg. Score</p>
-                        </div>
-                        <div className="text-purple-600">
-                            <ChartNoAxesCombined />
-                        </div>
-                    </div>
-                </div>
-                <div className="border p-2 px-4 rounded-md py-3">
-                    <div className="flex justify-between items-start">
-                        <div className="space-y-2">
-                            <h1 className="font-bold">{isLoading ? "–" : formatTime(stats?.totalTimeMinutes ?? 0)}</h1>
-                            <p className="text-muted-foreground text-md">Total Time</p>
-                        </div>
-                        <div className="text-orange-400">
-                            <Clock />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
-}
+  return (
+    <section aria-labelledby="quick-stats-heading">
+      <h2 id="quick-stats-heading" className="mt-1 text-xl font-semibold tracking-[-0.035em] text-[#20201e]">Progress</h2>
+      <dl className="mt-6 divide-y divide-[#dfddd3] border-y border-[#dfddd3]">
+        {items.map(({ label, value }) => (
+          <div key={label} className="flex items-baseline justify-between gap-4 py-4">
+            <dt className="text-sm text-[#625f57]">{label}</dt>
+            <dd className="text-xl font-semibold tracking-[-0.035em] text-[#20201e]">{isLoading ? "–" : value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+};

@@ -1,123 +1,137 @@
-'use client'
-import { useEffect, useState } from "react";
-import { InterviewActionCards } from "@/components/home/interviewActionCards";
-import { InterviewReportCard } from "@/components/home/interviewReportCard";
-import { QuickStats } from "@/components/home/quickStats";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+"use client";
+
+import { useState } from "react";
+import { ArrowRight, ChevronRight, Mic, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { InterviewActionCards } from "@/components/home/interviewActionCards";
+import { InterviewReportCard } from "@/components/home/interviewReportCard";
+import { QuickStats } from "@/components/home/quickStats";
+
+type RecentInterview = {
+  id: string;
+  description?: string | null;
+  status: string;
+  createdAt: string;
+};
 
 async function fetchRecentInterviews() {
-    const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/interview?limit=5`,
-        {
-            credentials: "include",
-            method: "GET"
-        }
-    )
-    if (!response.ok) {
-        throw new Error("Failed to fetch recent interviews");
-    }
-    return response.json();
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/interview?limit=5`,
+    { credentials: "include", method: "GET" },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch recent interviews");
+  }
+
+  return response.json();
 }
 
 export default function Home() {
-    const router = useRouter();
-    const [joinDialogOpen, setJoinDialogOpen] = useState(false);
-    const { data, isLoading, error } = useQuery({
-        queryKey: ["interviews", { limit: 5 }],
-        queryFn: fetchRecentInterviews,
-    });
-    const interviews = data?.interviews || [];
+  const router = useRouter();
+  const [joinDialogOpen, setJoinDialogOpen] = useState(false);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["interviews", { limit: 5 }],
+    queryFn: fetchRecentInterviews,
+  });
+  const interviews = data?.interviews || [];
 
-    useEffect(() => {
-        const fetchRecentInterviews = async () => {
-            try {
-                const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/interview?limit=5`,
-                    {
-                        credentials: "include",
-                        method: "GET",
-                    }
-                );
+  return (
+    <div className="min-h-full bg-[#faf9f5] text-[#20201e]">
+      <div className="mx-auto w-full max-w-7xl px-5 py-5 sm:px-8 sm:py-7 lg:px-10 lg:py-8">
 
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log(data);
-                } else {
-                    console.error("Failed to fetch recent interviews");
-                }
-            } catch (error) {
-                console.error("Failed to fetch recent interviews", error);
-            }
-        };
-        fetchRecentInterviews();
-    }, []);
+        <section className="grid gap-10 py-5 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-end lg:py-0">
+          <div className="max-w-2xl">
+            {/*<p className="mb-4 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-[#77746b]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#e5ae20]" />
+              Ready when you are
+            </p>*/}
+            <h1 className="text-2xl font-semibold leading-[1.02] tracking-[-0.045em] text-[#20201e] sm:text-4xl lg:text-5xl pb-6">
+              Prepare for your next interview.
+            </h1>
+          </div>
+        </section>
 
-    return (
-        <div className="grid grid-cols-[70%_30%] min-h-screen">
-            <div className="p-6">
-                <div className="space-y-2">
-                    <h1 className="text-2xl font-bold">Welcome back, Uday ! 👋</h1>
-                    <h2 className="text-md text-muted-foreground">What would you like to do today?</h2>
-                </div>
-                <div className="grid grid-cols-2 gap-4 p-2 mt-6">
-                    <InterviewActionCards
-                        title={"Join an Interview"}
-                        description={"Enter an Interview code provided by your company/recruiter to join."}
-                        buttonDescription={"Join Interview"}
-                        onClick={() => setJoinDialogOpen(true)}
-                    />
-                    <InterviewActionCards
-                        title={"Create Instant Interview"}
-                        description={"Start a practice Interview instantly with your resume and Github."}
-                        buttonDescription={"Create Interview"}
-                        onClick={() => router.push("/interview")}
-                    />
-                </div>
-                <div className="mt-8">
-                    <div className="flex justify-between">
-                        <h1 className="font-bold text-[18px]"> Your Recent Interviews</h1>
-                        <Link href="/all-interviews" className="text-blue-600 font-semibold">View All</Link>
-                    </div>
-                    <div className="space-y-1.5 mt-6">
-                        {isLoading ? (
-                            <p className="text-sm text-muted-foreground">Loading recent interviews...</p>
-                        ) : error ? (
-                            <p className="text-sm text-red-500">Failed to load interviews.</p>
-                        ) : interviews.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No interviews found.</p>
-                        ) : (
-                            interviews.map((interview: any) => (
-                                <InterviewReportCard
-                                    key={interview.id}
-                                    title={interview.description || "Interview Session"}
-                                    status={interview.status}
-                                    timeAgo={new Date(interview.createdAt).toLocaleDateString()}
-                                />
-                            ))
-                        )}
-                    </div>
-                </div>
+        <section className="border-y border-[#dfddd3] py-6" aria-labelledby="practice-heading">
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#77746b]">Practice</p>
+              <h2 id="practice-heading" className="mt-1 text-xl font-semibold tracking-[-0.035em]">Choose your next step</h2>
+            </div>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <InterviewActionCards
+              title="Start an interview"
+              description="Build a fresh practice session around your experience, resume, and work."
+              buttonDescription="Create interview"
+              icon={Plus}
+              onClick={() => router.push("/interview")}
+              featured
+            />
+            <InterviewActionCards
+              title="Join an interview"
+              description="Enter the interview code shared by your recruiter or company to begin."
+              buttonDescription="Join with a code"
+              icon={Mic}
+              onClick={() => setJoinDialogOpen(true)}
+            />
+          </div>
+        </section>
 
+        <section className="grid gap-7 py-8 lg:grid-cols-[minmax(0,1fr)_17rem] lg:py-9">
+          <div>
+            <div className="flex items-end justify-between gap-4 border-b border-[#dfddd3] pb-4">
+              <div>
+                <h2 className="mt-1 text-xl font-semibold tracking-[-0.035em]">Recent interviews</h2>
+              </div>
+              <Link href="/all-interviews" className="group inline-flex items-center gap-1 text-sm font-semibold text-[#51451f] transition-colors hover:text-[#20201e]">
+                View all
+                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
             </div>
 
-            <div className="px-2">
-                <QuickStats />
+            <div className="divide-y divide-[#e5e3da]">
+              {isLoading ? (
+                <p className="py-8 text-sm text-[#77746b]">Loading your recent interviews…</p>
+              ) : error ? (
+                <p className="py-8 text-sm text-[#a53b31]">We couldn&apos;t load your recent interviews. Please try again.</p>
+              ) : interviews.length === 0 ? (
+                <div className="py-10">
+                  <p className="text-base font-medium">Your practice history will appear here.</p>
+                  <p className="mt-1 text-sm leading-6 text-[#77746b]">Start with one focused conversation and build from there.</p>
+                </div>
+              ) : (
+                interviews.map((interview: RecentInterview) => (
+                  <InterviewReportCard
+                    key={interview.id}
+                    title={interview.description || "Interview session"}
+                    status={interview.status}
+                    timeAgo={new Date(interview.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                  />
+                ))
+              )}
             </div>
+          </div>
 
-            {/* Join Interview Dialog */}
-            <Dialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl font-bold">Join an Interview</DialogTitle>
-                        <DialogDescription>
-                            This feature is currently in progress. Stay tuned!
-                        </DialogDescription>
-                    </DialogHeader>
-                </DialogContent>
-            </Dialog>
-        </div>
-    );
+          <aside className="border-t border-[#dfddd3] pt-6 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0">
+            <QuickStats />
+          </aside>
+        </section>
+      </div>
+
+      <Dialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen}>
+        <DialogContent className="border-[#d5d2c8] bg-[#fffdf8] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold tracking-[-0.035em] text-[#20201e]">Join an interview</DialogTitle>
+            <DialogDescription className="leading-6 text-[#625f57]">
+              This feature is currently in progress. Stay tuned!
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }

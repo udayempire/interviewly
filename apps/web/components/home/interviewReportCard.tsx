@@ -1,28 +1,32 @@
-import { Button } from "../ui/button"
+import { ArrowUpRight } from "lucide-react";
 
 interface InterviewReportCardProps {
-    title: string
-    status: string
-    timeAgo: string
+  title: string;
+  status: string;
+  timeAgo: string;
 }
 
 export const InterviewReportCard = ({ title, status, timeAgo }: InterviewReportCardProps) => {
-    return (
-        <div className="flex justify-between w-full gap-2 border rounded-sm py-2.5 px-4 items-center bg-card transition-all duration-500 ease-out hover:scale-[1.03] hover:shadow-sm ">
-            <div>
-                <h1 className="font-medium text-card-foreground">{title}</h1>
-                <div className="flex gap-2 items-center mt-1">
-                    <p className={`text-sm font-semibold ${status === "COMPLETED" ? "text-green-600" : "text-red-400"}`}>{status}</p>
-                    <div className="bg-muted-foreground rounded-full p-0.5">
-                    </div>
-                    <p className="text-muted-foreground text-sm">{timeAgo}</p>
-                </div>
-            </div>
-            <div>
-                <Button className="bg-background cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30 text-foreground border-border border-2">
-                    View Report
-                </Button>
-            </div>
+  const isCompleted = status === "COMPLETED";
+
+  return (
+    <article className="group flex items-center justify-between gap-4 py-5 first:pt-5">
+      <div className="min-w-0">
+        <h3 className="truncate text-[15px] font-medium tracking-[-0.015em] text-[#20201e]">{title}</h3>
+        <div className="mt-2 flex items-center gap-2 text-xs text-[#77746b]">
+          <span className={`h-1.5 w-1.5 rounded-full ${isCompleted ? "bg-[#c79612]" : "bg-[#a9a59a]"}`} />
+          <span>{isCompleted ? "Completed" : status}</span>
+          <span aria-hidden="true">·</span>
+          <span>{timeAgo}</span>
         </div>
-    )
-}
+      </div>
+      <button
+        type="button"
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#51451f]  transition-all hover:text-[#20201e]  focus:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#d39c13] cursor-pointer"
+      >
+        View report
+        <ArrowUpRight className="h-3.5 w-3.5" />
+      </button>
+    </article>
+  );
+};

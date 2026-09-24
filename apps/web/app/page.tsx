@@ -35,7 +35,7 @@ export default function Home() {
                 <span className="grid h-8 w-8 place-items-center rounded-full border-2 border-[#20201e] text-[13px] leading-none">i.</span>
                 <span className="text-xl">interviewlyy</span>
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#62552b]">Launching soon</p>
+              // <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#62552b]">Launching soon</p>
             </div>
             <div className="relative py-16 sm:py-24">
               <p className="mb-6 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#62552b]"><span className="h-1.5 w-1.5 rounded-full bg-[#20201e]" />Preparing the first conversation</p>
