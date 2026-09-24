@@ -3,118 +3,15 @@
 import { useState } from "react";
 import Editor from "@monaco-editor/react";
 import { ChevronDown } from "lucide-react";
+import { useTheme } from "@/context/ThemeProvider";
 
-/** Languages available in the dropdown */
-const LANGUAGES = [
-    { value: "javascript", label: "JavaScript" },
-    { value: "typescript", label: "TypeScript" },
-    { value: "python", label: "Python" },
-    { value: "java", label: "Java" },
-    { value: "cpp", label: "C++" },
-    { value: "c", label: "C" },
-    { value: "go", label: "Go" },
-    { value: "rust", label: "Rust" },
-    { value: "ruby", label: "Ruby" },
-    { value: "sql", label: "SQL" },
-] as const;
+const LANGUAGES = ["javascript", "typescript", "python", "java", "cpp", "c", "go", "rust", "ruby", "sql"] as const;
+type SupportedLanguage = (typeof LANGUAGES)[number];
+const DEFAULT_CODE: Record<SupportedLanguage, string> = { javascript: "// Start coding here\nconsole.log(\"Hello, world!\");\n", typescript: "// Start coding here\nconst greeting: string = \"Hello, world!\";\nconsole.log(greeting);\n", python: "# Start coding here\nprint(\"Hello, world!\")\n", java: "public class Main {\n}\n", cpp: "#include <iostream>\n\nint main() {}\n", c: "#include <stdio.h>\n\nint main() {}\n", go: "package main\n", rust: "fn main() {}\n", ruby: "puts \"Hello, world!\"\n", sql: "SELECT * FROM users;\n" };
 
-type SupportedLanguage = (typeof LANGUAGES)[number]["value"];
-
-/** Default starter code per language */
-const DEFAULT_CODE: Record<SupportedLanguage, string> = {
-    javascript: '// Start coding here\nconsole.log("Hello, world!");\n',
-    typescript: '// Start coding here\nconst greeting: string = "Hello, world!";\nconsole.log(greeting);\n',
-    python: '# Start coding here\nprint("Hello, world!")\n',
-    java: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, world!");\n    }\n}\n',
-    cpp: '#include <iostream>\n\nint main() {\n    std::cout << "Hello, world!" << std::endl;\n    return 0;\n}\n',
-    c: '#include <stdio.h>\n\nint main() {\n    printf("Hello, world!\\n");\n    return 0;\n}\n',
-    go: 'package main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Hello, world!")\n}\n',
-    rust: 'fn main() {\n    println!("Hello, world!");\n}\n',
-    ruby: '# Start coding here\nputs "Hello, world!"\n',
-    sql: '-- Start coding here\nSELECT * FROM users;\n',
-};
-
-interface CodeEditorProps {
-    /** Callback when code changes — hook into this for backend sync later */
-    onCodeChange?: (code: string, language: SupportedLanguage) => void;
-}
-
-export const CodeEditor = ({ onCodeChange }: CodeEditorProps) => {
-    const [language, setLanguage] = useState<SupportedLanguage>("javascript");
-    const [code, setCode] = useState(DEFAULT_CODE.javascript);
-
-    const handleLanguageChange = (newLang: SupportedLanguage) => {
-        setLanguage(newLang);
-        const newCode = DEFAULT_CODE[newLang];
-        setCode(newCode);
-        onCodeChange?.(newCode, newLang);
-    };
-
-    const handleCodeChange = (value: string | undefined) => {
-        const updated = value ?? "";
-        setCode(updated);
-        onCodeChange?.(updated, language);
-    };
-
-    return (
-        <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card">
-            {/* Toolbar with language selector */}
-            <div className="flex items-center justify-between border-b border-border px-4 py-2">
-                <p className="text-sm font-semibold text-foreground">Code Editor</p>
-
-                <div className="relative">
-                    <select
-                        value={language}
-                        onChange={(e) =>
-                            handleLanguageChange(e.target.value as SupportedLanguage)
-                        }
-                        className="appearance-none rounded-md border border-border bg-muted py-1.5 pl-3 pr-8 text-sm font-medium text-foreground outline-none transition-colors hover:bg-accent focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
-                    >
-                        {LANGUAGES.map((lang) => (
-                            <option key={lang.value} value={lang.value}>
-                                {lang.label}
-                            </option>
-                        ))}
-                    </select>
-                    <ChevronDown
-                        size={14}
-                        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
-                    />
-                </div>
-            </div>
-
-            {/* Monaco editor */}
-            <div className="flex-1 min-h-0">
-                <Editor
-                    height="100%"
-                    language={language}
-                    theme="vs-dark"
-                    value={code}
-                    onChange={handleCodeChange}
-                    options={{
-                        minimap: { enabled: false },
-                        automaticLayout: true,
-                        scrollBeyondLastLine: false,
-                        fontSize: 15,
-                        tabSize: 4,
-                        wordWrap: "on",
-                        lineNumbers: "on",
-                        glyphMargin: false,
-                        folding: false,
-                        renderLineHighlight: "none",
-                        contextmenu: false,
-                        quickSuggestions: true,
-                        suggestOnTriggerCharacters: true,
-                        parameterHints: { enabled: false },
-                        hover: { enabled: false },
-                    }}
-                    loading={
-                        <div className="flex h-full items-center justify-center">
-                            <p className="text-sm text-muted-foreground">Loading editor...</p>
-                        </div>
-                    }
-                />
-            </div>
-        </div>
-    );
+export const CodeEditor = () => {
+  const [language, setLanguage] = useState<SupportedLanguage>("javascript");
+  const [code, setCode] = useState(DEFAULT_CODE.javascript);
+  const { resolvedTheme } = useTheme();
+  return <section className="flex h-full min-h-80 flex-col overflow-hidden border border-stone-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"><header className="flex items-center justify-between border-b border-stone-200 px-4 py-3 dark:border-zinc-800"><h2 className="text-sm font-semibold text-stone-900 dark:text-zinc-100">Code editor</h2><div className="relative"><select value={language} onChange={(event) => { const next = event.target.value as SupportedLanguage; setLanguage(next); setCode(DEFAULT_CODE[next]); }} className="appearance-none border border-stone-300 bg-stone-50 py-1.5 pl-3 pr-8 text-xs font-medium text-stone-700 outline-none focus:border-amber-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"><option value={language}>{language}</option>{LANGUAGES.filter((item) => item !== language).map((item) => <option key={item} value={item}>{item}</option>)}</select><ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-500" /></div></header><div className="min-h-0 flex-1"><Editor height="100%" language={language} theme={resolvedTheme === "dark" ? "vs-dark" : "light"} value={code} onChange={(value) => setCode(value ?? "")} options={{ minimap: { enabled: false }, automaticLayout: true, scrollBeyondLastLine: false, fontSize: 14, tabSize: 4, wordWrap: "on", glyphMargin: false, folding: false, renderLineHighlight: "none", contextmenu: false }} /></div></section>;
 };

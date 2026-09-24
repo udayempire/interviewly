@@ -1,39 +1,12 @@
 import { cn } from "@/lib/utils";
 
-interface ParticipantAvatarProps {
-    label: string;
-    isSpeaking: boolean;
-    /** Customize the avatar color , defaults to purple-400 */
-    color?: string;
-}
+interface ParticipantAvatarProps { label: string; isSpeaking: boolean; }
 
-export const ParticipantAvatar = ({
-    label,
-    isSpeaking,
-    color = "bg-purple-400",
-}: ParticipantAvatarProps) => {
-    return (
-        <div className="p-2 py-4 bg-zinc-900 dark:bg-zinc-950 rounded-md flex justify-center items-center">
-            <div className="relative flex items-center justify-center">
-                {/* Pulsing rings — only visible when speaking */}
-                {isSpeaking && (
-                    <>
-                        <span className="absolute h-24 w-24 rounded-full border-2 border-green-400 animate-ping opacity-40" />
-                        <span className="absolute h-28 w-28 rounded-full border border-green-400 animate-pulse opacity-25" />
-                    </>
-                )}
-
-                {/* Static ring that shows green when speaking */}
-                <div
-                    className={cn(
-                        "rounded-full h-24 w-24 flex justify-center items-center transition-shadow duration-300",
-                        color,
-                        isSpeaking && "ring-3 ring-green-400 ring-offset-2 ring-offset-zinc-900 dark:ring-offset-zinc-950"
-                    )}
-                >
-                    <h1 className="font-bold text-white text-2xl">{label}</h1>
-                </div>
-            </div>
-        </div>
-    );
-};
+export const ParticipantAvatar = ({ label, isSpeaking }: ParticipantAvatarProps) => (
+  <div className="flex min-h-32 items-center justify-center border border-stone-200 bg-stone-50 dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="relative grid place-items-center">
+      {isSpeaking && <span className="absolute h-20 w-20 rounded-full border border-amber-600 opacity-60 animate-ping" />}
+      <div className={cn("grid h-16 w-16 place-items-center rounded-full text-lg font-semibold", label === "AI" ? "bg-zinc-900 text-amber-300 dark:bg-amber-300 dark:text-stone-900" : "bg-stone-200 text-stone-900 dark:bg-zinc-800 dark:text-zinc-100", isSpeaking && "ring-2 ring-amber-600 ring-offset-4 ring-offset-stone-50 dark:ring-offset-zinc-900")}>{label}</div>
+    </div>
+  </div>
+);

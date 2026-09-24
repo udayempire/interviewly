@@ -13,140 +13,100 @@ import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 import { getCookie } from "@/lib/cookies";
 
 export default function InterviewPage() {
-    const params = useParams<{ id: string }>();
-    const interviewId = params?.id;
-    const router = useRouter();
+  const params = useParams<{ id: string }>();
+  const interviewId = params?.id;
+  const router = useRouter();
+  const [sessionState, setSessionState] = useState<"preparing" | "live" | "error">("preparing");
+  const [messages, setMessages] = useState<ConversationMessage[]>([]);
+  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+  const [isUserRecording, setIsUserRecording] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
 
-    // Session state machine
-    const [sessionState, setSessionState] = useState<"preparing" | "live" | "error">("preparing");
-    const [messages, setMessages] = useState<ConversationMessage[]>([]);
-    const [isAiSpeaking, setIsAiSpeaking] = useState(false);
-    const [isUserRecording, setIsUserRecording] = useState(false);
-    const wsRef = useRef<WebSocket | null>(null);
+  const { startRecording, stopRecording, setAiSpeaking } = useVoiceRecorder({
+    onSpeechEnd: (audioBlob) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) wsRef.current.send(audioBlob);
+    },
+  });
 
-    const { startRecording, stopRecording, setAiSpeaking } = useVoiceRecorder({
-        onSpeechEnd: (audioBlob) => {
-            console.log("[PTT] Sending blob, size:", audioBlob.size);
-            if (wsRef.current?.readyState === WebSocket.OPEN) {
-                wsRef.current.send(audioBlob);
-            }
-        },
-    });
+  useEffect(() => {
+    if (!interviewId) return;
+    const token = getCookie("token");
+    if (!token) {
+      setSessionState("error");
+      return;
+    }
 
-    // WebSocket connection
-    useEffect(() => {
-        if (!interviewId) return;
-        const token = getCookie("token");
-        if (!token) {
-            setSessionState("error");
-            return;
+    const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:4000"}/ws/interview?token=${token}&interviewId=${interviewId}`;
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onmessage = async (event) => {
+      if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
+        const blob = event.data instanceof Blob ? event.data : new Blob([event.data]);
+        const audio = new Audio(URL.createObjectURL(blob));
+        setIsAiSpeaking(true);
+        setAiSpeaking(true);
+        audio.onended = () => {
+          setIsAiSpeaking(false);
+          setAiSpeaking(false);
+        };
+        audio.play().catch((audioError) => console.error("[Audio] Play error:", audioError));
+        return;
+      }
+
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.error) return;
+        if (payload.type === "message" || payload.role) {
+          const isAi = payload.role === "assistant" || payload.role === "ai";
+          setSessionState("live");
+          setMessages((previous) => [...previous, {
+            id: Date.now().toString(),
+            role: isAi ? "ai" : "user",
+            senderName: isAi ? "AI Interviewer" : "You",
+            content: payload.content,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            avatarInitial: isAi ? "AI" : "U",
+          }]);
         }
-
-        const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:4000"}/ws/interview?token=${token}&interviewId=${interviewId}`;
-        const ws = new WebSocket(wsUrl);
-        wsRef.current = ws;
-
-        ws.onopen = () => {
-            console.log("[WS] Connected to interview session:", interviewId);
-        };
-
-        ws.onmessage = async (event) => {
-            // Binary = AI voice audio
-            if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
-                const blob = event.data instanceof Blob ? event.data : new Blob([event.data]);
-                const audioUrl = URL.createObjectURL(blob);
-                const audio = new Audio(audioUrl);
-
-                setIsAiSpeaking(true);
-                setAiSpeaking(true);
-                audio.onended = () => {
-                    setIsAiSpeaking(false);
-                    setAiSpeaking(false);
-                };
-                audio.play().catch(err => console.error("[Audio] Play error:", err));
-                return;
-            }
-
-            // JSON = text message / transcript
-            try {
-                const payload = JSON.parse(event.data);
-                if (payload.error) {
-                    console.error("[WS] Server error:", payload.error);
-                    return;
-                }
-                if (payload.type === "message" || payload.role) {
-                    setSessionState("live");
-                    setMessages(prev => [...prev, {
-                        id: Date.now().toString(),
-                        role: payload.role === "assistant" || payload.role === "ai" ? "ai" : "user",
-                        senderName: payload.role === "assistant" || payload.role === "ai" ? "AI Interviewer" : "You",
-                        content: payload.content,
-                        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                        avatarInitial: payload.role === "assistant" || payload.role === "ai" ? "AI" : "U",
-                    }]);
-                }
-            } catch {
-                console.log("[WS] Non-JSON message:", event.data);
-            }
-        };
-
-        ws.onerror = (err) => {
-            console.error("[WS] Error:", err);
-            setSessionState("error");
-        };
-
-        ws.onclose = () => console.log("[WS] Closed");
-
-        return () => ws.close();
-    }, [interviewId]);
-
-    // Tap-to-toggle mic handler
-    const handleMicToggle = async () => {
-        if (isAiSpeaking) return; // don't record while AI is talking
-
-        if (isUserRecording) {
-            // Second tap → stop, blob is sent to AI via onSpeechEnd
-            setIsUserRecording(false);
-            stopRecording();
-        } else {
-            // First tap → start recording
-            setIsUserRecording(true);
-            await startRecording();
-        }
+      } catch {
+        console.log("[WS] Non-JSON message:", event.data);
+      }
     };
+    ws.onerror = () => setSessionState("error");
+    return () => ws.close();
+  }, [interviewId, setAiSpeaking]);
 
-    // Leave interview: close WS (triggers backend evaluation) then go to report
-    const handleLeave = () => {
-        if (isUserRecording) stopRecording();
-        wsRef.current?.close();
-        router.push(`/interview/${interviewId}/report`);
-    };
+  const handleMicToggle = async () => {
+    if (isAiSpeaking) return;
+    if (isUserRecording) {
+      setIsUserRecording(false);
+      stopRecording();
+    } else {
+      setIsUserRecording(true);
+      await startRecording();
+    }
+  };
 
-    if (sessionState === "preparing") return <Preparation />;
-    if (sessionState === "error") return <ErrorLoading />;
+  const handleLeave = () => {
+    if (isUserRecording) stopRecording();
+    wsRef.current?.close();
+    router.push(`/interview/${interviewId}/report`);
+  };
 
-    return (
-        <div className="flex flex-col h-screen overflow-hidden">
-            <AppbarInterviewSession
-                isAiSpeaking={isAiSpeaking}
-                isUserRecording={isUserRecording}
-                onMicToggle={handleMicToggle}
-                onLeave={handleLeave}
-            />
-            <div className="grid grid-cols-[65%_35%] flex-1 min-h-0 bg-muted">
-                <div className="p-4 flex flex-col min-h-0">
-                    <Participants
-                        isUserSpeaking={isUserRecording}
-                        isAiSpeaking={isAiSpeaking}
-                    />
-                    <div className="mt-4 flex-1 min-h-0">
-                        <Conversations messages={messages.length > 0 ? messages : undefined} />
-                    </div>
-                </div>
-                <div className="p-4 flex flex-col min-h-0">
-                    <CodeEditor />
-                </div>
-            </div>
-        </div>
-    );
+  if (sessionState === "preparing") return <Preparation />;
+  if (sessionState === "error") return <ErrorLoading />;
+
+  return (
+    <div className="flex h-screen flex-col overflow-hidden bg-stone-50 text-stone-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <AppbarInterviewSession isAiSpeaking={isAiSpeaking} isUserRecording={isUserRecording} onMicToggle={handleMicToggle} onLeave={handleLeave} />
+      <main className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1.7fr)_minmax(22rem,1fr)]">
+        <section className="flex min-h-0 flex-col border-b border-stone-200 p-4 dark:border-zinc-800 lg:border-r lg:border-b-0 lg:p-5">
+          <Participants isUserSpeaking={isUserRecording} isAiSpeaking={isAiSpeaking} />
+          <div className="mt-4 min-h-0 flex-1"><Conversations messages={messages.length > 0 ? messages : undefined} /></div>
+        </section>
+        <aside className="min-h-0 p-4 lg:p-5"><CodeEditor /></aside>
+      </main>
+    </div>
+  );
 }

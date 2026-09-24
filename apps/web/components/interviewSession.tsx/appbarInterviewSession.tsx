@@ -1,71 +1,40 @@
-"use client"
+"use client";
 
-import { Clock, Mic, MicOff } from "lucide-react"
-import { Button } from "../ui/button";
+import { Clock, Mic, MicOff } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface AppbarInterviewSessionProps {
-    isAiSpeaking: boolean;
-    isUserRecording: boolean;
-    onMicToggle: () => void;
-    onLeave: () => void;
+  isAiSpeaking: boolean;
+  isUserRecording: boolean;
+  onMicToggle: () => void;
+  onLeave: () => void;
 }
 
-export const AppbarInterviewSession = ({
-    isAiSpeaking,
-    isUserRecording,
-    onMicToggle,
-    onLeave,
-}: AppbarInterviewSessionProps) => {
-    const [seconds, setSeconds] = useState<number>(0);
-    useEffect(()=>{
-        const interval = setInterval(()=>{
-            setSeconds((prev)=> prev+1);
-        },1000);
-        return() => clearInterval(interval);
-    },[]);
-    const minutes = Math.floor(seconds/60);
-    const secs= seconds % 60;
-    return (
-        <div className="flex justify-between p-2 px-6 border-b items-center select-none">
-            <div className="flex">
-                <h1 className="font-semibold">Interviewlyy</h1>
-            </div>
-            <div className="flex gap-4 ml-24 font-medium">
-                {/* <h1>Frontend Developer Interview</h1> */}
-            </div>
-            <div className="flex items-center gap-5">
-                <div className="flex items-center gap-2">
-                    <span><Clock size={20} /></span>
-                    <p className="font-medium">{minutes}:{secs < 10 ? `0${secs}`: secs}</p>
-                </div>
+export const AppbarInterviewSession = ({ isAiSpeaking, isUserRecording, onMicToggle, onLeave }: AppbarInterviewSessionProps) => {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setSeconds((current) => current + 1), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
-                {/* Tap-to-toggle mic button */}
-                <div className="flex flex-col items-center gap-1">
-                    <button
-                        onClick={onMicToggle}
-                        disabled={isAiSpeaking}
-                        className={`p-3 rounded-full cursor-pointer transition-all duration-150 select-none ${isAiSpeaking
-                                ? "bg-muted text-muted-foreground/40 cursor-not-allowed"
-                                : isUserRecording
-                                    ? "bg-red-500 text-white scale-110 shadow-lg shadow-red-200 dark:shadow-red-900/30 ring-4 ring-red-200 dark:ring-red-800 animate-pulse"
-                                    : "bg-muted hover:bg-blue-50 dark:hover:bg-blue-950/30 text-muted-foreground hover:text-blue-600"
-                            }`}
-                        title={isAiSpeaking ? "Wait for AI to finish" : isUserRecording ? "Tap to stop" : "Tap to speak"}
-                    >
-                        {isUserRecording ? (
-                            <Mic size={18} className="text-white" />
-                        ) : (
-                            <MicOff size={18} />
-                        )}
-                    </button>
-                    <span className="text-[10px] text-muted-foreground font-medium">
-                        {isAiSpeaking ? "AI speaking..." : isUserRecording ? "Tap to stop" : "Tap to speak"}
-                    </span>
-                </div>
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  const micLabel = isAiSpeaking ? "Interviewer speaking" : isUserRecording ? "Recording" : "Tap to speak";
 
-                <Button variant="destructive" onClick={onLeave}>Leave Interview</Button>
-            </div>
-        </div>
-    )
-}
+  return (
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-stone-200 bg-white px-4 dark:border-zinc-800 dark:bg-zinc-900 sm:px-6">
+      <div className="flex items-center gap-2.5">
+        <span className="grid h-7 w-7 place-items-center rounded-full border-2 border-stone-900 bg-amber-300 text-[11px] font-bold text-stone-900 dark:border-zinc-100">i.</span>
+        <span className="text-sm font-bold tracking-[-0.045em] text-stone-900 dark:text-zinc-100">interviewlyy</span>
+      </div>
+      <div className="flex items-center gap-3 sm:gap-5">
+        <div className="hidden items-center gap-2 text-sm tabular-nums text-stone-600 dark:text-zinc-300 sm:flex"><Clock className="h-4 w-4" />{minutes}:{remainingSeconds < 10 ? `0${remainingSeconds}` : remainingSeconds}</div>
+        <button onClick={onMicToggle} disabled={isAiSpeaking} title={micLabel} className={`grid h-9 w-9 place-items-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 disabled:cursor-not-allowed ${isUserRecording ? "bg-red-600 text-white" : "bg-stone-100 text-stone-600 hover:bg-amber-100 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-amber-950"}`}>
+          {isUserRecording ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+        </button>
+        <span className="hidden text-xs text-stone-500 dark:text-zinc-400 md:block">{micLabel}</span>
+        <button onClick={onLeave} className="text-sm font-semibold text-red-700 transition-colors hover:text-red-800 dark:text-red-300 dark:hover:text-red-200">Leave</button>
+      </div>
+    </header>
+  );
+};

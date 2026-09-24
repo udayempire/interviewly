@@ -1,61 +1,17 @@
 import { cn } from "@/lib/utils";
 import type { ConversationMessage } from "./types";
 
-interface MessageBubbleProps {
-  message: ConversationMessage;
-}
+interface MessageBubbleProps { message: ConversationMessage; }
 
 export const MessageBubble = ({ message }: MessageBubbleProps) => {
   const isAi = message.role === "ai";
-
   return (
-    <div
-      className={cn(
-        "flex items-start gap-3",
-        isAi ? "flex-row" : "flex-row-reverse"
-      )}
-    >
-      {/* Avatar */}
-      <div
-        className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white",
-          isAi ? "bg-green-500" : "bg-blue-600"
-        )}
-      >
-        {message.avatarInitial ?? (isAi ? "AI" : "U")}
+    <article className={cn("flex items-start gap-3", isAi ? "flex-row" : "flex-row-reverse")}>
+      <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-full text-[11px] font-bold", isAi ? "bg-zinc-900 text-amber-300 dark:bg-amber-300 dark:text-stone-900" : "bg-stone-200 text-stone-900 dark:bg-zinc-800 dark:text-zinc-100")}>{message.avatarInitial ?? (isAi ? "AI" : "U")}</span>
+      <div className={cn("flex max-w-[78%] flex-col gap-1.5", isAi ? "items-start" : "items-end")}>
+        <div className={cn("flex items-center gap-2 text-[11px] text-stone-500 dark:text-zinc-400", isAi ? "flex-row" : "flex-row-reverse")}><span className="font-medium text-stone-700 dark:text-zinc-200">{message.senderName}</span><span>{message.timestamp}</span></div>
+        <p className={cn("px-3.5 py-2.5 text-sm leading-6", isAi ? "bg-stone-100 text-stone-900 dark:bg-zinc-800 dark:text-zinc-200" : "bg-zinc-900 text-white dark:bg-amber-300 dark:text-stone-900")}>{message.content}</p>
       </div>
-
-      {/* Bubble content */}
-      <div
-        className={cn(
-          "flex max-w-[75%] flex-col gap-1",
-          isAi ? "items-start" : "items-end"
-        )}
-      >
-        {/* Sender + timestamp */}
-        <div
-          className={cn(
-            "flex items-center gap-2 text-xs text-muted-foreground",
-            isAi ? "flex-row" : "flex-row-reverse"
-          )}
-        >
-          <span className="font-medium text-foreground">{message.senderName}</span>
-          <span>·</span>
-          <span>{message.timestamp}</span>
-        </div>
-
-        {/* Message text */}
-        <div
-          className={cn(
-            "rounded-2xl px-4 py-3 text-sm leading-relaxed",
-            isAi
-              ? "rounded-tl-md bg-muted text-foreground"
-              : "rounded-tr-md bg-blue-600 text-white"
-          )}
-        >
-          {message.content}
-        </div>
-      </div>
-    </div>
+    </article>
   );
 };
