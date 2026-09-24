@@ -435,7 +435,7 @@ authRouter.get("/me", authMiddleware, async (req, res) => {
 // Account linking is now handled via ?action=link on the /google and /github OAuth flows.
 // The old POST /link/* endpoints are no longer needed.
 
-// ─── OTP-based Email Login ─────────────────────────────────────────
+// OTP-based Email Login 
 
 // POST /otp/send — sends a one-time code to the given email
 authRouter.post("/otp/send", async (req, res) => {
@@ -465,7 +465,7 @@ authRouter.post("/otp/send", async (req, res) => {
 // POST /otp/verify — verifies the code and logs the user in (or signs them up)
 authRouter.post("/otp/verify", async (req, res) => {
     try {
-        const { email, code } = req.body;
+        const { email, code, name, password } = req.body;
         if (!email || typeof email !== "string" || !code || typeof code !== "string") {
             return res.status(400).json({ error: "Email and code are required." });
         }
@@ -484,13 +484,19 @@ authRouter.post("/otp/verify", async (req, res) => {
         });
 
         if (!user) {
-            // New user — auto-register via OTP (no password)
+            // New user via signup — hash password if provided
+            const passwordHash = password ? await bcrypt.hash(password, 10) : undefined;
+
             user = await prisma.user.create({
                 data: {
                     email: normalizedEmail,
+                    name: name || undefined,
                     authProvider: "EMAIL",
                     accounts: {
-                        create: { provider: "EMAIL" }, // no passwordHash — OTP-only
+                        create: {
+                            provider: "EMAIL",
+                            passwordHash,
+                        },
                     },
                 },
                 include: { accounts: true },

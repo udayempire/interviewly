@@ -2,7 +2,7 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = process.env.FROM_EMAIL || "Interviewly <onboarding@resend.dev>";
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "Interviewly <onboarding@resend.dev>";
 
 /**
  * Send an OTP code to the given email address.
