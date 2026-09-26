@@ -28,7 +28,6 @@ export function createLLMProvider(provider?: string, apiKey?: string): LLMProvid
     };
     return new Provider(apiKey);
 };
-
 export function createSTTProvider(provider?: string): STTProvider {
     const providerName = (provider ?? process.env.DEFAULT_STT_PROVIDER ?? "groq").toLowerCase();
     const sttProvider = sttProviders.get(providerName);
