@@ -22,9 +22,7 @@ export function CompaniesSection() {
               A more structured first conversation.
             </h2>
             <p className="mt-8 max-w-xl text-lg leading-relaxed text-[#c6c5bc]">
-              Interviewlyy is building a calmer front door for hiring:
-              consistent early interviews, grounded in the role, with useful
-              evidence for the humans making the decision.
+              Conduct personalized AI interviews, evaluate candidates consistently, and give your hiring team the insights they need to make confident decisions.
             </p>
           </div>
           <div className="border-l border-[#62625c] pl-6 sm:pl-10 lg:pt-4">

@@ -45,7 +45,7 @@ export function FeedbackSection() {
           </h2>
           <p className="mt-7 max-w-lg text-lg leading-relaxed text-zinc-600">
             A score alone tells you almost nothing. Your report connects what
-            you said to how it landed—from clarity and confidence to technical
+            you said to how it landed from clarity and confidence to technical
             depth and problem solving.
           </p>
           <p className="mt-6 font-serif text-xl italic text-zinc-600">
