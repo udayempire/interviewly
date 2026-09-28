@@ -19,9 +19,79 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Interviewlyy",
-  description: "",
+  metadataBase: new URL("https://interviewlyy.xyz"),
+  title: {
+    default: "Interviewlyy - AI Voice Interviews for Candidates & Hiring Teams",
+    template: "%s | Interviewlyy",
+  },
+  description:
+    "AI-powered voice interview platform. Candidates: practice with personalized questions from your resume & GitHub. Hiring teams: screen candidates with structured AI interviews, get detailed reports, and make better hiring decisions.",
+  keywords: [
+    // Candidate-focused
+    "AI interview practice",
+    "voice interview",
+    "mock interview",
+    "interview preparation",
+    "AI interviewer",
+    "technical interview practice",
+    "behavioral interview",
+    "resume-based interview",
+    // Hiring/B2B-focused
+    "candidate screening tool",
+    "AI hiring tool",
+    "automated interview platform",
+    "interview assessment software",
+    "AI candidate screening",
+    "structured interview tool",
+    "hiring interview automation",
+    "technical screening platform",
+    "pre-screening interview",
+    "recruitment AI tool",
+    "interview report",
+    "interviewlyy",
+  ],
+  authors: [{ name: "Interviewlyy" }],
+  creator: "Interviewlyy",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://interviewlyy.xyz",
+    siteName: "Interviewlyy",
+    title: "Interviewlyy — AI Voice Interviews for Candidates & Hiring Teams",
+    description:
+      "Practice interviews or screen candidates with AI-powered voice conversations. Personalized questions from resumes, projects & GitHub. Structured reports for better hiring decisions.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Interviewlyy — AI-Powered Voice Interview Platform",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Interviewlyy — AI Voice Interviews for Candidates & Hiring Teams",
+    description:
+      "Practice interviews or screen candidates with AI voice conversations. Personalized questions, structured reports, better hiring decisions.",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  alternates: {
+    canonical: "https://interviewlyy.xyz",
+  },
 };
+
 
 export default function RootLayout({
   children,
