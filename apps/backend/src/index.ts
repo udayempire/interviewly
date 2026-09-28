@@ -20,7 +20,15 @@ app.use(
 );
 
 const server = http.createServer(app);
-const wss = new WebSocketServer({server,path:"/ws/interview"})
+const wss = new WebSocketServer({ server, path: "/ws/interview" })
+
+app.get('/health', async (req, res) => {
+    res.status(200).json({
+        status: "ok",
+        service: "interviewlyy",
+        timestamp: new Date().toISOString(),
+    });
+});
 
 app.get('/test-llm', async (req, res) => {
     const llm = createLLMProvider("groq");
@@ -33,7 +41,7 @@ app.get('/test-llm', async (req, res) => {
 
 import { startOtpCleanupScheduler } from "./services/otp.service";
 
-app.use('/api/v1', router );
+app.use('/api/v1', router);
 
 setupInterviewWS(wss);
 server.listen(port, () => {
