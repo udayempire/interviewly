@@ -60,21 +60,13 @@ export const metadata: Metadata = {
     title: "Interviewlyy — AI Voice Interviews for Candidates & Hiring Teams",
     description:
       "Practice interviews or screen candidates with AI-powered voice conversations. Personalized questions from resumes, projects & GitHub. Structured reports for better hiring decisions.",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Interviewlyy — AI-Powered Voice Interview Platform",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Interviewlyy — AI Voice Interviews for Candidates & Hiring Teams",
     description:
       "Practice interviews or screen candidates with AI voice conversations. Personalized questions, structured reports, better hiring decisions.",
-    images: ["/og-image.png"],
+
   },
   robots: {
     index: true,
