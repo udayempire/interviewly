@@ -151,9 +151,9 @@ Be fair but honest. Do not inflate scores. Base everything strictly on what was 
 
 
 export function setupInterviewWS(wss: WebSocketServer) {
-    const stt = createSTTProvider("groq");
-    const tts = createTTSProvider("groq");
-    const llm = createLLMProvider("groq");
+    const stt = createSTTProvider();
+    const tts = createTTSProvider();
+    const llm = createLLMProvider();
 
     async function sendSpeechIfAvailable(ws: WebSocket, text: string) {
         try {
