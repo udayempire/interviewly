@@ -14,8 +14,11 @@
   },
   "scripts": {
     "dev": "bun --watch src/index.ts",
+    "dev:pretty": "bun --watch src/index.ts | pino-pretty",
     "start": "bun index.ts",
-    "build": "bun build src/index.ts --outdir dist --target bun"
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "logs": "pm2 logs | pino-pretty",
+    "logs:err": "pm2 logs --err | pino-pretty"
   },
   "peerDependencies": {
     "typescript": "^5"
