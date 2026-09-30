@@ -1,4 +1,4 @@
-import type { LLMProvider, STTProvider, TTSProvider, LLMExecutionOptions, LLMExecutionResult } from "./types";
+import type { LLMProvider, STTProvider, TTSProvider, LLMExecutionOptions, LLMExecutionResult, LLMResponse } from "./types";
 import { GeminiProvider } from "./providers/gemini";
 import { GroqProvider, GroqSTTProvider, GroqTTSProvider } from "./providers/groq";
 import { DeepgramProvider, DeepgramSTTProvider } from "./providers/deepgram";
@@ -80,28 +80,22 @@ export async function executeLLMWithFallback(options: LLMExecutionOptions): Prom
         const customProvider = userProfile.llmProvider || defaultProvider || process.env.DEFAULT_LLM_PROVIDER || "gemini";
         try {
             const llm = createLLMProvider(customProvider, userProfile.llmApiKey);
-            const content = await llm.chat(messages);
+            const response = await llm.chat(messages);
             return {
-                content,
-                fallbackNotice: {
-                    occurred: false,
-                },
+                response,
+                fallbackNotice: { occurred: false },
             };
         } catch (error) {
             const reason = classifyLLMError(error);
-            console.warn(`Custom LLM key execution failed (${reason}). Retrying immediately with platform default credentials...`);
+            console.warn(`Custom LLM key execution failed (${reason}). Retrying with platform default...`);
 
             try {
                 const platformProvider = defaultProvider || process.env.DEFAULT_LLM_PROVIDER || "gemini";
                 const fallbackLLM = createLLMProvider(platformProvider);
-                const content = await fallbackLLM.chat(messages);
-
+                const response = await fallbackLLM.chat(messages);
                 return {
-                    content,
-                    fallbackNotice: {
-                        occurred: true,
-                        reason,
-                    },
+                    response,
+                    fallbackNotice: { occurred: true, reason },
                 };
             } catch (fallbackError) {
                 console.error("Platform default LLM execution also failed:", fallbackError);
@@ -112,13 +106,11 @@ export async function executeLLMWithFallback(options: LLMExecutionOptions): Prom
 
     const platformProvider = defaultProvider || process.env.DEFAULT_LLM_PROVIDER || "gemini";
     const llm = createLLMProvider(platformProvider);
-    const content = await llm.chat(messages);
+    const response = await llm.chat(messages);
 
     return {
-        content,
-        fallbackNotice: {
-            occurred: false,
-        },
+        response,
+        fallbackNotice: { occurred: false },
     };
 }
 
@@ -139,6 +131,7 @@ export async function validateApiKey(provider: string, apiKey: string): Promise<
 //Re-export types so consumers don't need separate imports like @repo/llm/types and can use @repo/llm
 export type {
     LLMProvider,
+    LLMResponse,
     ChatMessage,
     STTProvider,
     TTSProvider,

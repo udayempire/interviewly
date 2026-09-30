@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import type { LLMProvider, ChatMessage } from "../types.js";
+import type { LLMProvider, ChatMessage, LLMResponse } from "../types.js";
 
 export class GeminiProvider implements LLMProvider {
   private ai: GoogleGenAI;
@@ -12,7 +12,8 @@ export class GeminiProvider implements LLMProvider {
     this.ai = new GoogleGenAI({ apiKey: key });
   }
 
-  async chat(messages: ChatMessage[]): Promise<string> {
+  async chat(messages: ChatMessage[]): Promise<LLMResponse> {
+    const model = "gemini-2.5-flash";
     const systemMsg = messages.find((m) => m.role === "system");
     // joining all userInput as gemini works within single line and not in array
     const userInput = messages
@@ -21,12 +22,21 @@ export class GeminiProvider implements LLMProvider {
       .join("\n");
 
     const interaction = await this.ai.interactions.create({
-      model: "gemini-3.5-flash",
+      model,
       system_instruction: typeof systemMsg?.content === "string" ? systemMsg.content : undefined,
       input: userInput,
     });
 
-    return interaction.output_text ?? "";
+    // The interactions API does not expose usage_metadata; tokens are null for Gemini.
+    return {
+      text: interaction.output_text ?? "",
+      model,
+      provider: "gemini",
+      usage: {
+        promptTokens: 0,
+        completionTokens: 0,
+      },
+    };
   }
    // The * makes it a generator function — it can yield values one at a time instead of returning everything at once
 

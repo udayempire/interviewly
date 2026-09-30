@@ -55,8 +55,9 @@ export interface FallbackNotice {
 }
 
 export interface LLMExecutionResult {
-  content: string;
-  fallbackNotice?: FallbackNotice;
+  // Full response from the provider including model name and token usage
+  response: LLMResponse;
+  fallbackNotice: FallbackNotice;
 }
 
 export interface UserProfileLLMConfig {

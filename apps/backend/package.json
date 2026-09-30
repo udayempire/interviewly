@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "devDependencies": {
+    "pino-pretty": "^13.0.0",
     "@types/bcryptjs": "^3.0.0",
     "@types/bun": "latest",
     "@types/cookie-parser": "^1.4.10",
