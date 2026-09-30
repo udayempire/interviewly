@@ -1,46 +1,68 @@
 import Groq from "groq-sdk";
-import type { ChatMessage, LLMProvider, STTProvider, TTSProvider } from "../types";
+import type { ChatMessage, LLMProvider, STTProvider, TTSProvider, LLMResponse } from "../types";
 
 export class GroqProvider implements LLMProvider {
     private ai: Groq;
 
     constructor(apiKey?: string) {
         const key = apiKey || process.env.GROQ_API_KEY;
+
         if (!key) {
             throw new Error("Groq API key is not configured.");
         }
+
         this.ai = new Groq({ apiKey: key });
     }
-    async chat(messages: ChatMessage[]): Promise<string> {
-        const hasImage = messages.some(msg =>
-            Array.isArray(msg.content) && msg.content.some(part => part.type === "image_url")
+
+    async chat(messages: ChatMessage[]): Promise<LLMResponse> {
+        const hasImage = messages.some(
+            (msg) =>
+                Array.isArray(msg.content) &&
+                msg.content.some((part) => part.type === "image_url")
         );
-        const model = hasImage ? "meta-llama/llama-4-scout-17b-16e-instruct" : "openai/gpt-oss-120b";
+
+        const model = hasImage
+            ? "meta-llama/llama-4-scout-17b-16e-instruct"
+            : "openai/gpt-oss-120b";
 
         const response = await this.ai.chat.completions.create({
-            model: model,
+            model,
             messages: messages as any,
         });
-        return response.choices[0]?.message?.content ?? "";
-    };
-    // The * makes it a generator function — it can yield values one at a time instead of returning everything at once
+
+        return {
+            text: response.choices[0]?.message?.content ?? "",
+            model,
+            provider: "groq",
+            usage: {
+                promptTokens: response.usage?.prompt_tokens ?? 0,
+                completionTokens: response.usage?.completion_tokens ?? 0,
+            },
+        };
+    }
+
     async *stream(messages: ChatMessage[]): AsyncIterable<string> {
-        const hasImage = messages.some(msg =>
-            Array.isArray(msg.content) && msg.content.some(part => part.type === "image_url")
+        const hasImage = messages.some(
+            (msg) =>
+                Array.isArray(msg.content) &&
+                msg.content.some((part) => part.type === "image_url")
         );
-        const model = hasImage ? "meta-llama/llama-4-scout-17b-16e-instruct " : "openai/gpt-oss-120b";
+
+        const model = hasImage
+            ? "meta-llama/llama-4-scout-17b-16e-instruct"
+            : "openai/gpt-oss-120b";
 
         const stream = await this.ai.chat.completions.create({
-            model: model,
+            model,
             messages: messages as any,
             stream: true,
         });
+
         for await (const chunk of stream) {
             yield chunk.choices[0]?.delta.content ?? "";
-        };
-    };
-};
-
+        }
+    }
+}
 export class GroqSTTProvider implements STTProvider {
     private ai = new Groq({ apiKey: process.env.GROQ_API_KEY! });
     async transcribe(audio: Buffer, options?: { model?: string; prompt?: string; }): Promise<string> {
