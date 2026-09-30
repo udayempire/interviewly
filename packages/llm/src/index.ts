@@ -1,7 +1,7 @@
 import type { LLMProvider, STTProvider, TTSProvider, LLMExecutionOptions, LLMExecutionResult } from "./types";
 import { GeminiProvider } from "./providers/gemini";
 import { GroqProvider, GroqSTTProvider, GroqTTSProvider } from "./providers/groq";
-import { DeepgramProvider } from "./providers/deepgram";
+import { DeepgramProvider, DeepgramSTTProvider } from "./providers/deepgram";
 
 
 // new () => LLMProvider means "a class that can create an LLMProvider object."
@@ -13,6 +13,7 @@ const providers = new Map<string, new (apiKey?: string) => LLMProvider>([
 
 const sttProviders = new Map<string, new () => STTProvider>([
     ["groq", GroqSTTProvider],
+    ["deepgram", DeepgramSTTProvider],
 ]);
 
 const ttsProviders = new Map<string, new () => TTSProvider>([
