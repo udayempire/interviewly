@@ -30,7 +30,7 @@ model UserAccount {
   userId           String
   provider         AuthProvider
   providerId       String? // null for email
-  passwordHash     String? //only for email password 
+  passwordHash     String? //only for email password
   createdAt        DateTime     @default(now())
   user             User         @relation(fields: [userId], references: [id])
   providerImageUrl String? // profile picture gave by google/github
@@ -127,6 +127,27 @@ model InterviewReport {
   createdAt        DateTime  @default(now())
   interview        Interview @relation(fields: [interviewId], references: [id])
   user             User      @relation(fields: [userId], references: [id])
+}
+
+model LLMCall {
+  id          String @id @default(cuid())
+  interviewId String?
+  userId      String?
+  operation   String // what operation is being performed
+  llmProvider    String
+  llmModel       String
+  inputTokens Int?
+  outputTokens Int?
+  latencyMs Int?
+  estimatedCost Decimal?
+  status String
+  errorCode String?
+  createdAt   DateTime @default(now())
+  @@index([interviewId])
+  @@index([userId])
+  @@index([llmModel])
+  @@index([llmProvider])
+  @@index([createdAt])
 }
 
 enum MessageRole {
