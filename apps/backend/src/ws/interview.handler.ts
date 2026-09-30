@@ -3,6 +3,8 @@ import { createLLMProvider, createSTTProvider, createTTSProvider, type ChatMessa
 import { verify } from "jsonwebtoken";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { buildSTTVocabulary, isLikelyHallucination } from "../services/stt.service";
+import { logger, createInterviewLogger, type InterviewLogger } from "../lib/logger";
+import { recordAICall } from "../services/telemetry.service";
 
 interface DecodedToken {
     userId: string;
@@ -155,14 +157,20 @@ export function setupInterviewWS(wss: WebSocketServer) {
     const tts = createTTSProvider();
     const llm = createLLMProvider();
 
-    async function sendSpeechIfAvailable(ws: WebSocket, text: string) {
+    async function sendSpeechIfAvailable(ws: WebSocket, text: string, log: InterviewLogger, ctx: { interviewId: string; userId: string }) {
+        const start = Date.now();
         try {
             const audio = await tts.synthesize(text);
+            const latencyMs = Date.now() - start;
+            log.info({ operation: "tts", latencyMs, status: "success" }, "TTS completed");
+            recordAICall({ interviewId: ctx.interviewId, userId: ctx.userId, operation: "tts", llmProvider: "deepgram", llmModel: "aura-2-thalia-en", latencyMs, status: "success" });
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send(audio);
             }
         } catch (error) {
-            console.error("TTS failed; continuing with text-only response:", error);
+            const latencyMs = Date.now() - start;
+            log.error({ operation: "tts", latencyMs, err: error }, "TTS failed; falling back to text-only");
+            recordAICall({ interviewId: ctx.interviewId, userId: ctx.userId, operation: "tts", llmProvider: "deepgram", llmModel: "aura-2-thalia-en", latencyMs, status: "error", errorCode: error instanceof Error ? error.message : String(error) });
             sendJson(ws, {
                 type: "notice",
                 message: "Voice playback is unavailable, showing the response in chat."
@@ -171,12 +179,12 @@ export function setupInterviewWS(wss: WebSocketServer) {
     }
 
     wss.on("connection", async (ws, req) => {
-        console.log("Client Connected to interview Websocket");
         const url = new URL(req.url!, "http://localhost");
         const token = url.searchParams.get("token");
         const interviewId = url.searchParams.get("interviewId");
         // reject if no token 
         if (!token) {
+            logger.warn("WebSocket rejected: missing token");
             ws.close(1008, "Unauthorized: Missing Token");
             return;
         };
@@ -185,28 +193,21 @@ export function setupInterviewWS(wss: WebSocketServer) {
             const decoded = verify(token, process.env.JWT_SECRET!) as DecodedToken;
             userId = decoded.userId
         } catch (err) {
+            logger.warn({ err }, "WebSocket rejected: invalid token");
             ws.close(1008, "Unauthorized: Invalid Token");
             return;
         };
         if (!interviewId) {
+            logger.warn({ userId }, "WebSocket rejected: missing interviewId");
             ws.close(1008, "Unauthorized: Missing Interview ID");
             return;
         }
-        // verify jwt
+
+        // Create per-interview child logger — every line from here carries interviewId + userId
+        const log = createInterviewLogger(interviewId, userId);
+        log.info("Interview WebSocket connected");
+
         try {
-            // const userProfile = await prisma.userProfile.findUnique({
-            //     where: { userId },
-            //     select: {
-            //         id: true,
-            //         resumeText: true,
-            //         githubData: true
-            //     },
-            // });
-            // if (!userProfile) {
-            //     ws.close(1008, "Profile not found");
-            //     return;
-            // };
-            console.log(`Authenticated: userId ${userId}`);
             const interview = await prisma.interview.findUnique({
                 where: {
                     id: interviewId,
@@ -219,6 +220,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
                 }
             });
             if (!interview) {
+                log.warn("Interview not found in DB");
                 ws.close(1008, "Interview not found");
                 return;
             };
@@ -261,12 +263,27 @@ export function setupInterviewWS(wss: WebSocketServer) {
                 where: { id: interviewId },
                 data: { status: "IN_PROGRESS" }
             });
-            const openingText = await llm.chat(messageHistory);
-            messageHistory.push({ role: "assistant", content: openingText });
+            log.info("Interview started");
+
+            const openingStart = Date.now();
+            const openingResponse = await llm.chat(messageHistory);
+            const openingLatency = Date.now() - openingStart;
+            log.info({
+                operation: "opening_message",
+                provider: openingResponse.provider,
+                model: openingResponse.model,
+                latencyMs: openingLatency,
+                inputTokens: openingResponse.usage.promptTokens,
+                outputTokens: openingResponse.usage.completionTokens,
+                status: "success",
+            }, "LLM request completed");
+            recordAICall({ interviewId, userId, operation: "opening_message", llmProvider: openingResponse.provider, llmModel: openingResponse.model, inputTokens: openingResponse.usage.promptTokens, outputTokens: openingResponse.usage.completionTokens, latencyMs: openingLatency, status: "success" });
+
+            messageHistory.push({ role: "assistant", content: openingResponse.text });
             await prisma.interviewMessage.create({
-                data: { interviewId, role: "ASSISTANT", content: openingText }
+                data: { interviewId, role: "ASSISTANT", content: openingResponse.text }
             });
-            sendJson(ws, { type: "message", role: "ai", content: openingText });
+            sendJson(ws, { type: "message", role: "ai", content: openingResponse.text });
 
             ws.on("message", async (data) => {
                 try {
@@ -274,16 +291,25 @@ export function setupInterviewWS(wss: WebSocketServer) {
                     if (audioBuffer.length === 0) return;
 
                     // transcribe the audio
+                    const sttStart = Date.now();
                     const transcript = await stt.transcribe(audioBuffer, { prompt: sttVocabulary });
-                    if (!transcript.trim()) return;
+                    const sttLatency = Date.now() - sttStart;
+
+                    if (!transcript.trim()) {
+                        log.debug({ operation: "stt", latencyMs: sttLatency }, "STT returned empty transcript");
+                        return;
+                    }
                     // Whisper invents subtitle boilerplate when handed audio with
                     // no speech in it. The client gates on speech detection, but a
                     // stray artifact must never become a candidate turn - it would
                     // be persisted and answered as if the candidate had spoken.
                     if (isLikelyHallucination(transcript)) {
-                        console.warn(`Dropped likely STT hallucination: ${JSON.stringify(transcript)}`);
+                        log.warn({ operation: "stt", latencyMs: sttLatency }, "Dropped likely STT hallucination");
                         return;
                     }
+
+                    log.info({ operation: "stt", latencyMs: sttLatency, status: "success" }, "STT completed");
+                    recordAICall({ interviewId, userId, operation: "stt", llmProvider: "deepgram", llmModel: "nova-3", latencyMs: sttLatency, status: "success" });
 
                     messageHistory.push({ role: "user", content: transcript });
                     await prisma.interviewMessage.create({
@@ -295,25 +321,38 @@ export function setupInterviewWS(wss: WebSocketServer) {
                     });
                     sendJson(ws, { type: "message", role: "user", content: transcript });
 
-                    const responseText = await llm.chat(messageHistory);
+                    const llmStart = Date.now();
+                    const llmResponse = await llm.chat(messageHistory);
+                    const llmLatency = Date.now() - llmStart;
+                    log.info({
+                        operation: "question_response",
+                        provider: llmResponse.provider,
+                        model: llmResponse.model,
+                        latencyMs: llmLatency,
+                        inputTokens: llmResponse.usage.promptTokens,
+                        outputTokens: llmResponse.usage.completionTokens,
+                        status: "success",
+                    }, "LLM request completed");
+                    recordAICall({ interviewId, userId, operation: "question_response", llmProvider: llmResponse.provider, llmModel: llmResponse.model, inputTokens: llmResponse.usage.promptTokens, outputTokens: llmResponse.usage.completionTokens, latencyMs: llmLatency, status: "success" });
 
-                    messageHistory.push({ role: "assistant", content: responseText });
+                    messageHistory.push({ role: "assistant", content: llmResponse.text });
                     await prisma.interviewMessage.create({
                         data: {
                             interviewId,
                             role: "ASSISTANT",   // match your MessageRole enum exactly
-                            content: responseText
+                            content: llmResponse.text
                         }
                     });
-                    sendJson(ws, { type: "message", role: "ai", content: responseText });
-                    await sendSpeechIfAvailable(ws, responseText);
+                    sendJson(ws, { type: "message", role: "ai", content: llmResponse.text });
+                    await sendSpeechIfAvailable(ws, llmResponse.text, log, { interviewId, userId });
                 } catch (error) {
-                    console.error(`Pipeline error (userId ${userId}):`, error);
+                    log.error({ operation: "pipeline", err: error }, "Interview pipeline error");
+                    recordAICall({ interviewId, userId, operation: "pipeline", llmProvider: "unknown", llmModel: "unknown", status: "error", errorCode: error instanceof Error ? error.message : String(error) });
                     sendJson(ws, { error: "Internal error - try again" });
                 }
             });
-            ws.on("close", async () => {
-                console.log(`Client disconnected: userId ${userId}`);
+            ws.on("close", async (code, reason) => {
+                log.info({ closeCode: code, closeReason: reason.toString("utf8") }, "Interview WebSocket disconnected");
                 try {
                     //mark interview as completed
                     await prisma.interview.update({
@@ -333,20 +372,31 @@ export function setupInterviewWS(wss: WebSocketServer) {
                         interview.description as string,
                         transcript
                     );
-                    // ask llm to interview the interview
+                    // ask llm to evaluate the interview
+                    const evalStart = Date.now();
                     const evaluationResponse = await llm.chat([
                         {
                             role: "system",
                             content: evaluationPrompt
                         }
                     ]);
-                    console.log("Evaluation response:", evaluationResponse);
+                    const evalLatency = Date.now() - evalStart;
+                    log.info({
+                        operation: "evaluation",
+                        provider: evaluationResponse.provider,
+                        model: evaluationResponse.model,
+                        latencyMs: evalLatency,
+                        inputTokens: evaluationResponse.usage.promptTokens,
+                        outputTokens: evaluationResponse.usage.completionTokens,
+                        status: "success",
+                    }, "LLM evaluation completed");
+                    recordAICall({ interviewId, userId, operation: "evaluation", llmProvider: evaluationResponse.provider, llmModel: evaluationResponse.model, inputTokens: evaluationResponse.usage.promptTokens, outputTokens: evaluationResponse.usage.completionTokens, latencyMs: evalLatency, status: "success" });
+
                     let evaluation;
                     try {
-                        evaluation = JSON.parse(evaluationResponse);
+                        evaluation = JSON.parse(evaluationResponse.text);
                     } catch (error) {
-                        console.error("Failed to parse evaluatiomn JSON", error);
-                        console.error("Raw response:", evaluationResponse);
+                        log.error({ operation: "evaluation", err: error }, "Failed to parse evaluation JSON from LLM");
                         return;
                     }
                     //save evaluation report
@@ -362,15 +412,17 @@ export function setupInterviewWS(wss: WebSocketServer) {
                             breakdown: evaluation.breakdown ?? null
                         }
                     });
+                    log.info({ operation: "evaluation", overallScore: evaluation.overallScore }, "Interview completed and report saved");
                 } catch (error) {
-                    console.error(`Evaluation failed for interview ${interviewId}:`, error);
+                    log.error({ operation: "evaluation", err: error }, "Evaluation failed");
                 };
             });
             ws.on("error", (err) => {
-                console.error(`WebSocket error for userId ${userId}:`, err);
+                log.error({ err }, "WebSocket error");
             });
-            await sendSpeechIfAvailable(ws, openingText);
+            await sendSpeechIfAvailable(ws, openingResponse.text, log, { interviewId, userId });
         } catch (error) {
+            logger.error({ interviewId, userId, err: error }, "Interview setup failed");
             ws.close(1011, "Internal Server Error");
             return
         };

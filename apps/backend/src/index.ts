@@ -9,6 +9,7 @@ import { WebSocketServer } from "ws";
 import { setupInterviewWS } from "./ws/interview.handler";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import { logger } from "./lib/logger";
 
 app.use(express.json());
 app.use(cookieParser());
@@ -45,6 +46,6 @@ app.use('/api/v1', router);
 
 setupInterviewWS(wss);
 server.listen(port, () => {
-    console.log(`Example app listening on port ${port}`);
+    logger.info({ port }, "Server started");
     startOtpCleanupScheduler();
 });
