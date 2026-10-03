@@ -15,6 +15,9 @@ type RecentInterview = {
   description?: string | null;
   status: string;
   createdAt: string;
+  report?: {
+    overallScore?: number | null;
+  } | null;
 };
 
 async function fetchRecentInterviews() {
@@ -37,7 +40,9 @@ export default function Home() {
     queryKey: ["interviews", { limit: 5 }],
     queryFn: fetchRecentInterviews,
   });
-  const interviews = data?.interviews || [];
+  const interviews = (data?.interviews || []).filter(
+    (interview: RecentInterview) => interview.status === "COMPLETED",
+  );
 
   return (
     <div className="product-page min-h-full bg-[#faf9f5] text-[#20201e] dark:bg-[#171715] dark:text-[#f4f1e8]">
@@ -111,6 +116,7 @@ export default function Home() {
                     title={interview.description || "Interview session"}
                     status={interview.status}
                     timeAgo={new Date(interview.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                    score={interview.report?.overallScore}
                   />
                 ))
               )}

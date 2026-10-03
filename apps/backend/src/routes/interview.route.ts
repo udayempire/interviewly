@@ -3,7 +3,7 @@ import { randomInt } from "crypto";
 import { createInterviewSchema } from "@repo/types";
 import { extractGithubUsername, getGithubData } from "../services/githubExtraction.service";
 import { extractResumeData } from "../services/resumeExtraction.service";
-import { AIMode, prisma } from "@repo/db";
+import { AIMode, InterviewStatus, prisma } from "@repo/db";
 import { authMiddleware } from "../middleware/auth";
 import multer from "multer";
 
@@ -15,6 +15,28 @@ export function generateCode(length = 6): string {
 };
 
 const upload = multer({ storage: multer.memoryStorage() });
+
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+
+async function autoAbandonStaleInterviews(userId: string) {
+    try {
+        const twoHoursAgo = new Date(Date.now() - TWO_HOURS_MS);
+        await prisma.interview.updateMany({
+            where: {
+                userId,
+                status: InterviewStatus.IN_PROGRESS,
+                createdAt: {
+                    lt: twoHoursAgo,
+                },
+            },
+            data: {
+                status: InterviewStatus.ABANDONED,
+            },
+        });
+    } catch (err) {
+        console.error("Failed to auto-abandon stale interviews:", err);
+    }
+}
 
 interviewRouter.post("/create", authMiddleware, upload.single("resume"), async (req, res) => {
     const result = createInterviewSchema.safeParse(req.body);
@@ -98,6 +120,23 @@ interviewRouter.get("/report/:interviewId", authMiddleware, async (req, res) => 
     });
 
     if (!report) {
+        const interview = await prisma.interview.findUnique({
+            where: { id: interviewId, userId },
+            select: { status: true, createdAt: true }
+        });
+        if (!interview) {
+            return res.status(404).json({ error: "Interview not found" });
+        }
+        const isStale = new Date(interview.createdAt).getTime() < Date.now() - TWO_HOURS_MS;
+        if (interview.status === InterviewStatus.ABANDONED || (interview.status === InterviewStatus.IN_PROGRESS && isStale)) {
+            if (interview.status === InterviewStatus.IN_PROGRESS) {
+                await prisma.interview.update({
+                    where: { id: interviewId },
+                    data: { status: InterviewStatus.ABANDONED }
+                });
+            }
+            return res.status(400).json({ error: "This interview session was abandoned before completion." });
+        }
         // Report not yet generated — still processing
         return res.status(202).json({ status: "pending" });
     }
@@ -113,6 +152,8 @@ interviewRouter.get("/report/:interviewId", authMiddleware, async (req, res) => 
 interviewRouter.get('/', authMiddleware, async (req, res) => {
     try {
         const userId = req.userId as string;
+        await autoAbandonStaleInterviews(userId);
+
         const limit = req.query.limit ? Number(req.query.limit) : undefined;
         const interviews = await prisma.interview.findMany({
             where: { userId },
@@ -186,6 +227,7 @@ interviewRouter.delete('/:interviewId', authMiddleware, async (req, res) => {
 interviewRouter.get('/stats/quick', authMiddleware, async (req, res) => {
     try {
         const userId = req.userId as string;
+        await autoAbandonStaleInterviews(userId);
 
         // Run all queries in parallel
         const [totalInterviews, completedInterviews, reports] = await Promise.all([
