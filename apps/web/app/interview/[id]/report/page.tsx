@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
   Brain,
@@ -40,6 +41,24 @@ interface ReportData {
   };
 }
 
+async function fetchInterviewReport(interviewId: string) {
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/interview/report/${interviewId}`,
+    { credentials: "include" },
+  );
+
+  if (response.status === 202) {
+    return { pending: true, report: null as ReportData | null };
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch interview report");
+  }
+
+  const data = await response.json();
+  return { pending: false, report: data.report as ReportData };
+}
+
 function formatDuration(startedAt: string, completedAt: string | null) {
   if (!completedAt) return "—";
   const seconds = Math.floor(
@@ -64,6 +83,45 @@ function scoreLabel(score: number) {
   if (score >= 75) return "Strong performance";
   if (score >= 60) return "Solid foundation";
   return "Practice opportunity";
+}
+
+function LoadingReport() {
+  return (
+    <main className="min-h-screen bg-stone-50 text-stone-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <div className="mx-auto w-full max-w-6xl px-5 py-7 sm:px-8 lg:px-10 lg:py-10">
+        <header className="border-b border-stone-200 pb-6 dark:border-zinc-800">
+          <div className="h-4 w-28 animate-pulse rounded bg-stone-200 dark:bg-zinc-800" />
+          <div className="mt-7 h-3 w-24 animate-pulse rounded bg-stone-200 dark:bg-zinc-800" />
+          <div className="mt-2 h-8 w-72 animate-pulse rounded bg-stone-200 dark:bg-zinc-800" />
+          <div className="mt-3 h-4 w-48 animate-pulse rounded bg-stone-200 dark:bg-zinc-800" />
+        </header>
+        <section className="border-b border-stone-200 py-7 dark:border-zinc-800">
+          <div className="h-3 w-16 animate-pulse rounded bg-stone-200 dark:bg-zinc-800" />
+          <div className="mt-3 space-y-2">
+            <div className="h-4 w-full max-w-3xl animate-pulse rounded bg-stone-200 dark:bg-zinc-800" />
+            <div className="h-4 w-5/6 max-w-3xl animate-pulse rounded bg-stone-200 dark:bg-zinc-800" />
+            <div className="h-4 w-2/3 max-w-3xl animate-pulse rounded bg-stone-200 dark:bg-zinc-800" />
+          </div>
+        </section>
+        <section className="grid gap-8 border-b border-stone-200 py-8 dark:border-zinc-800 lg:grid-cols-[13rem_1fr]">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-28 w-28 animate-pulse rounded-full bg-stone-200 dark:bg-zinc-800" />
+            <div className="h-4 w-24 animate-pulse rounded bg-stone-200 dark:bg-zinc-800" />
+          </div>
+          <div className="grid gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="space-y-3 px-2">
+                <div className="h-4 w-4 animate-pulse rounded bg-stone-200 dark:bg-zinc-800" />
+                <div className="h-4 w-24 animate-pulse rounded bg-stone-200 dark:bg-zinc-800" />
+                <div className="h-6 w-12 animate-pulse rounded bg-stone-200 dark:bg-zinc-800" />
+                <div className="h-3 w-full animate-pulse rounded bg-stone-200 dark:bg-zinc-800" />
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </main>
+  );
 }
 
 function GeneratingReport() {
@@ -129,45 +187,29 @@ function ReportError() {
 export default function InterviewReportPage() {
   const params = useParams<{ id: string }>();
   const interviewId = params?.id;
-  const [report, setReport] = useState<ReportData | null>(null);
-  const [status, setStatus] = useState<
-    "loading" | "pending" | "ready" | "error"
-  >("loading");
 
-  useEffect(() => {
-    if (!interviewId) return;
-    let cancelled = false;
-    async function poll() {
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/interview/report/${interviewId}`,
-          { credentials: "include" },
-        );
-        if (cancelled) return;
-        if (response.status === 202) {
-          setStatus("pending");
-          setTimeout(poll, 3000);
-          return;
-        }
-        if (!response.ok) {
-          setStatus("error");
-          return;
-        }
-        const data = await response.json();
-        setReport(data.report);
-        setStatus("ready");
-      } catch {
-        if (!cancelled) setStatus("error");
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["interview-report", interviewId],
+    queryFn: () => fetchInterviewReport(interviewId!),
+    enabled: !!interviewId,
+    staleTime: Infinity, // Completed interview reports are static data. Cache for session.
+    gcTime: 1000 * 60 * 60, // Retain in cache memory for 1 hour
+    refetchInterval: (query) => {
+      // If backend returns 202 (pending report), poll every 3 seconds until ready
+      if (query.state.data?.pending) {
+        return 3000;
       }
-    }
-    poll();
-    return () => {
-      cancelled = true;
-    };
-  }, [interviewId]);
+      return false;
+    },
+    refetchOnWindowFocus: false,
+  });
 
-  if (status === "loading" || status === "pending") return <GeneratingReport />;
-  if (status === "error" || !report) return <ReportError />;
+  if (isLoading) return <LoadingReport />;
+  if (isError || !data) return <ReportError />;
+  if (data.pending) return <GeneratingReport />;
+
+  const report = data.report;
+  if (!report) return <ReportError />;
 
   const breakdown = report.breakdown ?? ({} as Breakdown);
   const skills = [

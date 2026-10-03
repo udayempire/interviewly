@@ -1,13 +1,37 @@
 import { ArrowUpRight } from "lucide-react";
+import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface InterviewReportCardProps {
+  id: string;
   title: string;
   status: string;
   timeAgo: string;
 }
 
-export const InterviewReportCard = ({ title, status, timeAgo }: InterviewReportCardProps) => {
+export const InterviewReportCard = ({ id, title, status, timeAgo }: InterviewReportCardProps) => {
   const isCompleted = status === "COMPLETED";
+  const queryClient = useQueryClient();
+
+  const handlePrefetch = () => {
+    if (!id || !isCompleted) return;
+    queryClient.prefetchQuery({
+      queryKey: ["interview-report", id],
+      queryFn: async () => {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/interview/report/${id}`,
+          { credentials: "include" },
+        );
+        if (response.status === 202) {
+          return { pending: true, report: null };
+        }
+        if (!response.ok) throw new Error("Failed to fetch report");
+        const data = await response.json();
+        return { pending: false, report: data.report };
+      },
+      staleTime: Infinity,
+    });
+  };
 
   return (
     <article className="group flex items-center justify-between gap-4 py-5 first:pt-5">
@@ -20,13 +44,15 @@ export const InterviewReportCard = ({ title, status, timeAgo }: InterviewReportC
           <span>{timeAgo}</span>
         </div>
       </div>
-      <button
-        type="button"
+      <Link
+        href={`/interview/${id}/report`}
+        onMouseEnter={handlePrefetch}
+        onFocus={handlePrefetch}
         className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-[#51451f] transition-colors hover:text-[#20201e] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#d39c13] dark:text-amber-300 dark:hover:text-amber-200"
       >
         View report
         <ArrowUpRight className="h-3.5 w-3.5" />
-      </button>
+      </Link>
     </article>
   );
 };

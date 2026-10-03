@@ -107,6 +107,7 @@ export default function Home() {
                 interviews.map((interview: RecentInterview) => (
                   <InterviewReportCard
                     key={interview.id}
+                    id={interview.id}
                     title={interview.description || "Interview session"}
                     status={interview.status}
                     timeAgo={new Date(interview.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
