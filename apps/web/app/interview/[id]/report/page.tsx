@@ -247,6 +247,7 @@ export default function InterviewReportPage() {
     <main className="min-h-screen bg-stone-50 text-stone-900 dark:bg-zinc-950 dark:text-zinc-100">
       <div className="mx-auto w-full max-w-6xl px-5 py-7 sm:px-8 lg:px-10 lg:py-10">
         <ReportHeader
+          interviewId={interviewId}
           interviewTitle={report.interview.description || "Interview"}
           date={formatDate(report.interview.startedAt)}
           time={formatTime(report.interview.startedAt)}
@@ -293,6 +294,25 @@ export default function InterviewReportPage() {
             </p>
           </section>
         )}
+        <section className="mt-8 border-t border-stone-200 pt-8 dark:border-zinc-800">
+          <div className="flex flex-col items-start justify-between gap-4 rounded border border-stone-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900/50 sm:flex-row sm:items-center">
+            <div>
+              <h3 className="text-base font-semibold text-stone-900 dark:text-zinc-100">
+                Interview Transcript
+              </h3>
+              <p className="mt-1 text-sm text-stone-600 dark:text-zinc-400">
+                Review the entire conversation between you and the AI interviewer.
+              </p>
+            </div>
+            <a
+              href={`/interview/${interviewId}/transcript`}
+              className="inline-flex items-center gap-2 bg-amber-400 px-5 py-2.5 text-xs font-bold tracking-wide text-stone-950 transition-all hover:bg-amber-300 dark:bg-amber-400 dark:text-stone-950 dark:hover:bg-amber-300"
+            >
+              <MessageSquare className="h-4 w-4" />
+              View Transcript
+            </a>
+          </div>
+        </section>
       </div>
     </main>
   );

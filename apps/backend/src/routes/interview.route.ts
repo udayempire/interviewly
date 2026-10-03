@@ -148,6 +148,52 @@ interviewRouter.get("/report/:interviewId", authMiddleware, async (req, res) => 
     return res.status(200).json({ status: "ready", report });
 });
 
+// GET /:interviewId/transcript — returns full interview transcript (messages)
+interviewRouter.get("/:interviewId/transcript", authMiddleware, async (req, res) => {
+    try {
+        const userId = req.userId as string;
+        const interviewId = req.params.interviewId as string;
+
+        const interview = await prisma.interview.findUnique({
+            where: {
+                id: interviewId,
+                userId,
+            },
+            select: {
+                id: true,
+                description: true,
+                startedAt: true,
+                completedAt: true,
+                status: true,
+                messages: {
+                    orderBy: {
+                        createdAt: "asc",
+                    },
+                    select: {
+                        id: true,
+                        role: true,
+                        content: true,
+                        questionNum: true,
+                        createdAt: true,
+                    },
+                },
+            },
+        });
+
+        if (!interview) {
+            return res.status(404).json({ error: "Interview not found" });
+        }
+
+        return res.status(200).json({
+            success: true,
+            interview,
+        });
+    } catch (error) {
+        console.error("Failed to fetch transcript:", error);
+        return res.status(500).json({ error: "Failed to fetch transcript" });
+    }
+});
+
 //GET all interviews for the user
 interviewRouter.get('/', authMiddleware, async (req, res) => {
     try {
