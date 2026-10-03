@@ -138,7 +138,7 @@ export default function AllInterviewsPage() {
                   : "bg-stone-200/60 text-[#77746b] hover:bg-stone-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
               }`}
             >
-              abandoned ({interviews.length - completedCount})
+              Abandoned ({interviews.length - completedCount})
             </button>
           </div>
         </div>

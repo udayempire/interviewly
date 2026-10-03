@@ -40,7 +40,7 @@ export const InterviewReportCard = ({ id, title, status, timeAgo, score }: Inter
         <h3 className="truncate text-[15px] font-medium tracking-[-0.015em] text-[#20201e] dark:text-zinc-100">{title}</h3>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[#77746b] dark:text-zinc-400">
           <span className={`h-1.5 w-1.5 rounded-full ${isCompleted ? "bg-[#c79612]" : "bg-[#a9a59a]"}`} />
-          <span>{isCompleted ? "Completed" : "abandoned"}</span>
+          <span>{isCompleted ? "Completed" : "Abandoned"}</span>
           <span aria-hidden="true">·</span>
           <span>{timeAgo}</span>
           {score !== undefined && score !== null && (
@@ -66,7 +66,7 @@ export const InterviewReportCard = ({ id, title, status, timeAgo, score }: Inter
         </Link>
       ) : (
         <span className="rounded-md bg-stone-200/60 px-2.5 py-1 text-xs font-medium text-[#77746b] dark:bg-zinc-800 dark:text-zinc-400">
-          abandoned
+          Abandoned
         </span>
       )}
     </article>
