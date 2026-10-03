@@ -76,6 +76,8 @@ export async function executeLLMWithFallback(options: LLMExecutionOptions): Prom
     const hasUserKey = Boolean(userProfile?.llmApiKey && userProfile.llmApiKey.trim().length > 0);
     const shouldUseUserKey = Boolean(userProfile?.useCustomKey && hasUserKey);
 
+    const platformProvider = defaultProvider || process.env.DEFAULT_LLM_PROVIDER || "gemini";
+
     if (shouldUseUserKey && userProfile?.llmApiKey) {
         const customProvider = userProfile.llmProvider || defaultProvider || process.env.DEFAULT_LLM_PROVIDER || "gemini";
         try {
@@ -90,7 +92,6 @@ export async function executeLLMWithFallback(options: LLMExecutionOptions): Prom
             console.warn(`Custom LLM key execution failed (${reason}). Retrying with platform default...`);
 
             try {
-                const platformProvider = defaultProvider || process.env.DEFAULT_LLM_PROVIDER || "gemini";
                 const fallbackLLM = createLLMProvider(platformProvider);
                 const response = await fallbackLLM.chat(messages);
                 return {
@@ -99,19 +100,29 @@ export async function executeLLMWithFallback(options: LLMExecutionOptions): Prom
                 };
             } catch (fallbackError) {
                 console.error("Platform default LLM execution also failed:", fallbackError);
-                throw fallbackError;
+                const alternateProvider = platformProvider.toLowerCase() === "gemini" ? "groq" : "gemini";
+                const alternateLLM = createLLMProvider(alternateProvider);
+                const response = await alternateLLM.chat(messages);
+                return {
+                    response,
+                    fallbackNotice: { occurred: true, reason },
+                };
             }
         }
     }
 
-    const platformProvider = defaultProvider || process.env.DEFAULT_LLM_PROVIDER || "gemini";
-    const llm = createLLMProvider(platformProvider);
-    const response = await llm.chat(messages);
-
-    return {
-        response,
-        fallbackNotice: { occurred: false },
-    };
+    try {
+        const llm = createLLMProvider(platformProvider);
+        const response = await llm.chat(messages);
+        return { response, fallbackNotice: { occurred: false } };
+    } catch (error) {
+        const reason = classifyLLMError(error);
+        const fallbackProvider = platformProvider.toLowerCase() === "gemini" ? "groq" : "gemini";
+        console.warn(`Platform LLM provider ${platformProvider} failed (${reason}); trying ${fallbackProvider}...`);
+        const fallbackLLM = createLLMProvider(fallbackProvider);
+        const response = await fallbackLLM.chat(messages);
+        return { response, fallbackNotice: { occurred: true, reason } };
+    }
 }
 
 export async function validateApiKey(provider: string, apiKey: string): Promise<{ valid: boolean; error?: string }> {
@@ -140,4 +151,3 @@ export type {
     UserProfileLLMConfig,
     LLMExecutionOptions,
 } from "./types.js";
-

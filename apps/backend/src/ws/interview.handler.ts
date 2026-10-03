@@ -1,10 +1,11 @@
 import { prisma } from "@repo/db";
-import { createLLMProvider, createSTTProvider, createTTSProvider, type ChatMessage } from "@repo/llm";
+import { executeLLMWithFallback, createSTTProvider, createTTSProvider, type ChatMessage } from "@repo/llm";
 import { verify } from "jsonwebtoken";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { buildSTTVocabulary, isLikelyHallucination } from "../services/stt.service";
 import { logger, createInterviewLogger, type InterviewLogger } from "../lib/logger";
 import { recordAICall } from "../services/telemetry.service";
+import { decrypt } from "../services/encryption";
 
 interface DecodedToken {
     userId: string;
@@ -230,11 +231,11 @@ export function setupInterviewWS(wss: WebSocketServer) {
             let resumeText = interview.resumeText;
             let githubData = interview.githubData;
 
-            if (!resumeText || !githubData) {
-                const userProfile = await prisma.userProfile.findUnique({
+            const userProfile = await prisma.userProfile.findUnique({
                     where: { userId: interview.userId || userId },
-                    select: { resumeText: true, githubData: true }
+                    select: { resumeText: true, githubData: true, llmApiKey: true, llmProvider: true, useCustomKey: true }
                 });
+            if (userProfile) {
                 if (!resumeText && userProfile?.resumeText) {
                     resumeText = userProfile.resumeText;
                 }
@@ -242,6 +243,24 @@ export function setupInterviewWS(wss: WebSocketServer) {
                     githubData = userProfile.githubData;
                 }
             }
+
+            let customApiKey: string | null = null;
+            if (userProfile?.useCustomKey && userProfile.llmApiKey) {
+                try {
+                    customApiKey = decrypt(userProfile.llmApiKey);
+                } catch (error) {
+                    log.error({ err: error }, "Could not decrypt custom LLM key; using platform provider");
+                }
+            }
+            const llmConfig = {
+                userProfile: {
+                    useCustomKey: Boolean(customApiKey),
+                    llmApiKey: customApiKey,
+                    llmProvider: userProfile?.llmProvider,
+                },
+            };
+            const chat = async (messages: ChatMessage[]) =>
+                (await executeLLMWithFallback({ messages, ...llmConfig })).response;
 
             // Session state - scoped per connection
             // Bias transcription toward this candidate's own stack. The same
@@ -266,7 +285,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
             log.info("Interview started");
 
             const openingStart = Date.now();
-            const openingResponse = await llm.chat(messageHistory);
+            const openingResponse = await chat(messageHistory);
             const openingLatency = Date.now() - openingStart;
             log.info({
                 operation: "opening_message",
@@ -322,7 +341,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
                     sendJson(ws, { type: "message", role: "user", content: transcript });
 
                     const llmStart = Date.now();
-                    const llmResponse = await llm.chat(messageHistory);
+                    const llmResponse = await chat(messageHistory);
                     const llmLatency = Date.now() - llmStart;
                     log.info({
                         operation: "question_response",
@@ -374,7 +393,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
                     );
                     // ask llm to evaluate the interview
                     const evalStart = Date.now();
-                    const evaluationResponse = await llm.chat([
+                    const evaluationResponse = await chat([
                         {
                             role: "system",
                             content: evaluationPrompt
