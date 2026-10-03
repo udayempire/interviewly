@@ -22,7 +22,7 @@ type RecentInterview = {
 
 async function fetchRecentInterviews() {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/interview?limit=5`,
+    `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/interview?limit=20`,
     { credentials: "include", method: "GET" },
   );
 
@@ -37,12 +37,12 @@ export default function Home() {
   const router = useRouter();
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   const { data, isLoading, error } = useQuery({
-    queryKey: ["interviews", { limit: 5 }],
+    queryKey: ["interviews", { limit: 20 }],
     queryFn: fetchRecentInterviews,
   });
-  const interviews = (data?.interviews || []).filter(
-    (interview: RecentInterview) => interview.status === "COMPLETED",
-  );
+  const interviews = (data?.interviews || [])
+    .filter((interview: RecentInterview) => interview.status === "COMPLETED")
+    .slice(0, 5);
 
   return (
     <div className="product-page min-h-full bg-[#faf9f5] text-[#20201e] dark:bg-[#171715] dark:text-[#f4f1e8]">
@@ -100,7 +100,20 @@ export default function Home() {
 
             <div className="divide-y divide-[#e5e3da] dark:divide-[#3a3934]">
               {isLoading ? (
-                <p className="py-8 text-sm text-[#77746b]">Loading your recent interviews…</p>
+                <div className="divide-y divide-[#e5e3da] dark:divide-[#3a3934]">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between gap-4 py-5 first:pt-5">
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="h-4 w-52 animate-pulse rounded bg-[#e5e3da] dark:bg-zinc-800" />
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-[#e5e3da] dark:bg-zinc-800" />
+                          <div className="h-3 w-32 animate-pulse rounded bg-[#e5e3da] dark:bg-zinc-800" />
+                        </div>
+                      </div>
+                      <div className="h-4 w-20 animate-pulse rounded bg-[#e5e3da] dark:bg-zinc-800" />
+                    </div>
+                  ))}
+                </div>
               ) : error ? (
                 <p className="py-8 text-sm text-[#a53b31]">We couldn&apos;t load your recent interviews. Please try again.</p>
               ) : interviews.length === 0 ? (
