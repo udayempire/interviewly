@@ -8,6 +8,7 @@ import { OAuth2Client } from "google-auth-library";
 import { URLSearchParams } from "url";
 import { authMiddleware } from "../middleware/auth";
 import { requestOtp, verifyOtp } from "../services/otp.service";
+import { grantSignupBonus } from "../services/credits.service";
 
 interface AuthPayload extends JwtPayload {
     userId: string
@@ -158,6 +159,8 @@ authRouter.get("/google/callback", async (req, res) => {
 
         const token = issueJwt(user.id);
         const userStr = encodeURIComponent(JSON.stringify({ id: user.id, email: user.email, name: user.name }));
+        // Grant signup bonus (non-blocking; does nothing if SIGNUP_BONUS_CREDITS=0)
+        grantSignupBonus(user.id).catch((err) => console.error("[signup-bonus/google]", err));
         res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
         return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${userStr}`);
 
@@ -307,6 +310,8 @@ authRouter.get("/github/callback", async (req, res) => {
 
         const token = issueJwt(user.id);
         const userStr = encodeURIComponent(JSON.stringify({ id: user.id, email: user.email, name: user.name }));
+        // Grant signup bonus (non-blocking; does nothing if SIGNUP_BONUS_CREDITS=0)
+        grantSignupBonus(user.id).catch((err) => console.error("[signup-bonus/github]", err));
         res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
         return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${userStr}`);
 
@@ -348,6 +353,8 @@ authRouter.post("/signup", async (req, res) => {
     });
 
     const token = issueJwt(user.id);
+    // Grant signup bonus (non-blocking; does nothing if SIGNUP_BONUS_CREDITS=0)
+    grantSignupBonus(user.id).catch((err) => console.error("[signup-bonus/email]", err));
     res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "lax" });
     return res.status(201).json({ token, user: { id: user.id, email: user.email, name: user.name } });
 });
@@ -501,6 +508,11 @@ authRouter.post("/otp/verify", async (req, res) => {
                 },
                 include: { accounts: true },
             });
+        }
+
+        // If brand new user, grant signup bonus
+        if (!user.accounts || user.accounts.length === 0 || (user.accounts.length === 1 && user.accounts[0]!.createdAt.getTime() > Date.now() - 5000)) {
+            grantSignupBonus(user.id).catch((err) => console.error("[signup-bonus/otp]", err));
         }
 
         const token = issueJwt(user.id);

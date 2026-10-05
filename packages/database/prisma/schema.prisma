@@ -14,15 +14,19 @@ enum AuthProvider {
 }
 
 model User {
-  id              String            @id @default(cuid())
-  email           String            @unique
-  name            String?
-  authProvider    AuthProvider
-  createdAt       DateTime          @default(now())
-  accounts        UserAccount[]
-  interview       Interview[]
-  interviewReport InterviewReport[]
-  userProfile     UserProfile?
+  id               String              @id @default(cuid())
+  email            String              @unique
+  name             String?
+  authProvider     AuthProvider
+  createdAt        DateTime            @default(now())
+  accounts         UserAccount[]
+  interview        Interview[]
+  interviewReport  InterviewReport[]
+  userProfile      UserProfile?
+  credit           UserCredit?
+  creditTransactions CreditTransaction[]
+  // plan            Plan?             @default(FREE)
+  // nextBillingDate DateTime?
 }
 
 model UserAccount {
@@ -130,19 +134,20 @@ model InterviewReport {
 }
 
 model LLMCall {
-  id          String @id @default(cuid())
-  interviewId String?
-  userId      String?
-  operation   String // what operation is being performed
-  llmProvider    String
-  llmModel       String
-  inputTokens Int?
-  outputTokens Int?
-  latencyMs Int?
+  id            String   @id @default(cuid())
+  interviewId   String?
+  userId        String?
+  operation     String // what operation is being performed
+  llmProvider   String
+  llmModel      String
+  inputTokens   Int?
+  outputTokens  Int?
+  latencyMs     Int?
   estimatedCost Decimal?
-  status String
-  errorCode String?
-  createdAt   DateTime @default(now())
+  status        String
+  errorCode     String?
+  createdAt     DateTime @default(now())
+
   @@index([interviewId])
   @@index([userId])
   @@index([llmModel])
@@ -175,4 +180,44 @@ enum InterviewStatus {
 enum TemplateSource {
   PLATFORM
   USER
+}
+
+// ─── Credits system ────────────────────────────────────────────────────────────
+// Internal unit: MINUTES (stored as Int — no decimals, no precision issues).
+// "1 credit" shown to users = 15 minutes in the DB.
+// A 17-minute interview deducts 17, not 1.133.
+// UI layer converts: displayCredits = floor(balance / MINUTES_PER_CREDIT)
+
+model UserCredit {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  balance   Int      @default(0) // minutes available (not credits)
+  updatedAt DateTime @default(now()) @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model CreditTransaction {
+  id          String                @id @default(cuid())
+  userId      String
+  delta       Int                   // minutes: positive = add, negative = deduct
+  type        CreditTransactionType
+  note        String?               // human-readable reason, e.g. "signup bonus (30 min)", "17 min interview"
+  interviewId String?               // set when type = DEDUCTED or REFUNDED
+  grantedBy   String?               // admin userId when type = GIFTED or ADMIN_ADJUSTMENT
+  createdAt   DateTime              @default(now())
+  user        User                  @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([interviewId])
+}
+
+enum CreditTransactionType {
+  SIGNUP_BONUS       // free credits on account creation
+  GIFTED             // manually gifted by admin
+  PURCHASED          // user bought a pack (future)
+  DEDUCTED           // interview started / consumed credits
+  REFUNDED           // interview failed / refunded credits
+  EXPIRED            // subscription cycle reset (future)
+  ADMIN_ADJUSTMENT   // manual correction by admin
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { CreditBalance } from "./creditBalance";
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}`;
 
@@ -33,7 +34,9 @@ export const QuickStats = () => {
   return (
     <section aria-labelledby="quick-stats-heading">
       <h2 id="quick-stats-heading" className="mt-1 text-xl font-semibold tracking-[-0.035em] ">Progress</h2>
-      <dl className="mt-6 divide-y divide-[#dfddd3] border-y border-[#dfddd3]">
+      <dl className="mt-6 divide-y divide-[#dfddd3] border-y border-[#dfddd3] dark:divide-[#3a3934] dark:border-[#3a3934]">
+        {/* Credit balance always shown first */}
+        <CreditBalance />
         {items.map(({ label, value }) => (
           <div key={label} className="flex items-baseline justify-between gap-4 py-4">
             <dt className="text-sm text-zinc-700 dark:text-zinc-300">{label}</dt>

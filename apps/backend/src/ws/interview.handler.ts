@@ -6,6 +6,7 @@ import { buildSTTVocabulary, isLikelyHallucination } from "../services/stt.servi
 import { logger, createInterviewLogger, type InterviewLogger } from "../lib/logger";
 import { recordAICall } from "../services/telemetry.service";
 import { decrypt } from "../services/encryption";
+import { checkAndDeduct } from "../services/credits.service";
 
 interface DecodedToken {
     userId: string;
@@ -232,9 +233,9 @@ export function setupInterviewWS(wss: WebSocketServer) {
             let githubData = interview.githubData;
 
             const userProfile = await prisma.userProfile.findUnique({
-                    where: { userId: interview.userId || userId },
-                    select: { resumeText: true, githubData: true, llmApiKey: true, llmProvider: true, useCustomKey: true }
-                });
+                where: { userId: interview.userId || userId },
+                select: { resumeText: true, githubData: true, llmApiKey: true, llmProvider: true, useCustomKey: true }
+            });
             if (userProfile) {
                 if (!resumeText && userProfile?.resumeText) {
                     resumeText = userProfile.resumeText;
@@ -278,6 +279,22 @@ export function setupInterviewWS(wss: WebSocketServer) {
                     )
                 }
             ];
+            // Credit gate 
+            // When CREDITS_ENFORCED=false (default) this is a no-op and always
+            // allows the interview through. Set CREDITS_ENFORCED=true in .env
+            // to start blocking interviews when a user has 0 credits.
+            const creditResult = await checkAndDeduct(userId, interviewId);
+            if (!creditResult.allowed) {
+                log.warn({ userId, interviewId }, "Interview blocked: insufficient credits");
+                sendJson(ws, {
+                    type: "error",
+                    code: "INSUFFICIENT_CREDITS",
+                    message: "You don't have enough credits to start an interview.",
+                });
+                ws.close(1008, "Insufficient credits");
+                return;
+            }
+
             await prisma.interview.update({
                 where: { id: interviewId },
                 data: { status: "IN_PROGRESS" }

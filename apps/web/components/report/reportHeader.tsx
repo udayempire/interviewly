@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, MessageSquareText } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 interface ReportHeaderProps {
   interviewId?: string;
@@ -10,7 +10,6 @@ interface ReportHeaderProps {
 }
 
 export const ReportHeader = ({
-  interviewId,
   interviewTitle,
   date,
   time,
