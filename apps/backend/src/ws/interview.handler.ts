@@ -1,5 +1,5 @@
 import { prisma } from "@repo/db";
-import { executeLLMWithFallback, createSTTProvider, createTTSProvider, type ChatMessage } from "@repo/llm";
+import { executeLLMWithFallback, createSTTProvider, createTTSProvider, type ChatMessage, createLLMProvider } from "@repo/llm";
 import { verify } from "jsonwebtoken";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { buildSTTVocabulary, isLikelyHallucination } from "../services/stt.service";

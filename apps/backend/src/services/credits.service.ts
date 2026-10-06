@@ -218,6 +218,19 @@ export async function checkCanStart(
 }
 
 /**
+ * Gate check called before an interview session begins.
+ * Alias / wrapper for checkCanStart when checked at WS connection start.
+ */
+export async function checkAndDeduct(
+    userId: string,
+    interviewId?: string,
+    minRequired = MIN_MINUTES_TO_START
+): Promise<{ allowed: true } | { allowed: false; reason: string; balanceMinutes?: number }> {
+    return checkCanStart(userId, minRequired);
+}
+
+
+/**
  * Deduct the actual elapsed minutes at the end of an interview.
  * This is the preferred deduction path: charge for exactly what was used.
  *
