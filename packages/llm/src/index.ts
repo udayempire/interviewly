@@ -74,56 +74,54 @@ export async function executeLLMWithFallback(options: LLMExecutionOptions): Prom
     const { messages, userProfile } = options;
 
     const hasUserKey = Boolean(userProfile?.llmApiKey && userProfile.llmApiKey.trim().length > 0);
-    const shouldUseUserKey = Boolean(userProfile?.useCustomKey && hasUserKey);
+    const hasUserProvider = Boolean(userProfile?.llmProvider && userProfile.llmProvider.trim().length > 0);
+    const shouldUseUserKey = Boolean(userProfile?.useCustomKey && hasUserKey && hasUserProvider);
 
-    const platformProvider = process.env.DEFAULT_LLM_PROVIDER || "gemini";
+    let fallbackReason: string | undefined;
 
-    if (shouldUseUserKey && userProfile?.llmApiKey) {
-        const customProvider = userProfile.llmProvider || process.env.DEFAULT_LLM_PROVIDER || "gemini";
+    // 1. Try user's custom key first (if enabled)
+    if (shouldUseUserKey && userProfile?.llmApiKey && userProfile?.llmProvider) {
         try {
-            const llm = createLLMProvider(customProvider, userProfile.llmApiKey);
+            const llm = createLLMProvider(userProfile.llmProvider, userProfile.llmApiKey);
             const response = await llm.chat(messages);
-            return {
-                response,
-                fallbackNotice: { occurred: false },
-            };
+            return { response, fallbackNotice: { occurred: false } };
         } catch (error) {
-            const reason = classifyLLMError(error);
-            console.warn(`Custom LLM key execution failed (${reason}). Retrying with platform default...`);
-
-            try {
-                const fallbackLLM = createLLMProvider(platformProvider);
-                const response = await fallbackLLM.chat(messages);
-                return {
-                    response,
-                    fallbackNotice: { occurred: true, reason },
-                };
-            } catch (fallbackError) {
-                console.error("Platform default LLM execution also failed:", fallbackError);
-                const alternateProvider = platformProvider.toLowerCase() === "gemini" ? "groq" : "gemini";
-                const alternateLLM = createLLMProvider(alternateProvider);
-                const response = await alternateLLM.chat(messages);
-                return {
-                    response,
-                    fallbackNotice: { occurred: true, reason },
-                };
-            }
+            fallbackReason = classifyLLMError(error);
+            console.warn(`Custom LLM key execution failed (${fallbackReason}). Falling back to platform default...`);
         }
     }
 
+    const platformProvider = process.env.DEFAULT_LLM_PROVIDER || "gemini";
+
+    // 2. Try primary platform provider
     try {
         const llm = createLLMProvider(platformProvider);
         const response = await llm.chat(messages);
-        return { response, fallbackNotice: { occurred: false } };
+        return {
+            response,
+            fallbackNotice: {
+                occurred: Boolean(fallbackReason),
+                reason: fallbackReason,
+            },
+        };
     } catch (error) {
-        const reason = classifyLLMError(error);
-        const fallbackProvider = platformProvider.toLowerCase() === "gemini" ? "groq" : "gemini";
-        console.warn(`Platform LLM provider ${platformProvider} failed (${reason}); trying ${fallbackProvider}...`);
-        const fallbackLLM = createLLMProvider(fallbackProvider);
-        const response = await fallbackLLM.chat(messages);
-        return { response, fallbackNotice: { occurred: true, reason } };
+        const platformReason = classifyLLMError(error);
+        const alternateProvider = platformProvider.toLowerCase() === "gemini" ? "groq" : "gemini";
+        console.warn(`Platform provider ${platformProvider} failed (${platformReason}). Retrying with alternate (${alternateProvider})...`);
+
+        // 3. Try alternate platform provider as final safety net
+        const alternateLLM = createLLMProvider(alternateProvider);
+        const response = await alternateLLM.chat(messages);
+        return {
+            response,
+            fallbackNotice: {
+                occurred: true,
+                reason: fallbackReason || platformReason,
+            },
+        };
     }
 }
+
 
 export async function validateApiKey(provider: string, apiKey: string): Promise<{ valid: boolean; error?: string }> {
     if (!apiKey || apiKey.trim().length === 0) {

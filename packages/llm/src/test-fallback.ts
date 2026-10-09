@@ -1,6 +1,6 @@
 import { executeLLMWithFallback, validateApiKey, type ChatMessage } from "./index.js";
 
-// ─── Provider registry ────────────────────────────────────────────────────────
+// Provider registry 
 // To add a new provider to the full test suite, add one entry here.
 // All three test groups (fallback, invalid-key validation, valid-key validation)
 // will pick it up automatically.
