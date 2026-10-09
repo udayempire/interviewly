@@ -27,7 +27,7 @@ const PROVIDERS: ProviderConfig[] = [
     },
 ];
 
-// ─── Tiny logging helpers ─────────────────────────────────────────────────────
+//  Tiny logging helpers 
 
 function header(n: number, label: string) {
     console.log(`\n👉 Test ${n}: ${label}`);

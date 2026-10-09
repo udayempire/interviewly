@@ -71,15 +71,15 @@ export function classifyLLMError(error: unknown): string {
 }
 
 export async function executeLLMWithFallback(options: LLMExecutionOptions): Promise<LLMExecutionResult> {
-    const { messages, userProfile, defaultProvider } = options;
+    const { messages, userProfile } = options;
 
     const hasUserKey = Boolean(userProfile?.llmApiKey && userProfile.llmApiKey.trim().length > 0);
     const shouldUseUserKey = Boolean(userProfile?.useCustomKey && hasUserKey);
 
-    const platformProvider = defaultProvider || process.env.DEFAULT_LLM_PROVIDER || "gemini";
+    const platformProvider = process.env.DEFAULT_LLM_PROVIDER || "gemini";
 
     if (shouldUseUserKey && userProfile?.llmApiKey) {
-        const customProvider = userProfile.llmProvider || defaultProvider || process.env.DEFAULT_LLM_PROVIDER || "gemini";
+        const customProvider = userProfile.llmProvider || process.env.DEFAULT_LLM_PROVIDER || "gemini";
         try {
             const llm = createLLMProvider(customProvider, userProfile.llmApiKey);
             const response = await llm.chat(messages);

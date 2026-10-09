@@ -69,5 +69,4 @@ export interface UserProfileLLMConfig {
 export interface LLMExecutionOptions {
   messages: ChatMessage[];
   userProfile?: UserProfileLLMConfig | null;
-  defaultProvider?: string;
 }
