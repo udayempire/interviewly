@@ -1,21 +1,32 @@
 import express from "express";
-import bcrypt from "bcrypt";
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { verify, type JwtPayload } from "jsonwebtoken";
-import { prisma } from "@repo/db";
-import { signupSchema, signinSchema } from "@repo/types";
 import { OAuth2Client } from "google-auth-library";
-import { URLSearchParams } from "url";
-import { authMiddleware } from "../middleware/auth";
-import { requestOtp, verifyOtp } from "../services/otp.service";
-import { grantSignupBonus } from "../services/credits.service";
 
 interface AuthPayload extends JwtPayload {
-    userId: string
+    userId: string;
 }
 
-// Helper: extract userId from cookie (for linking flows — does not reject, returns null)
-function getUserIdFromCookie(req: express.Request): string | null {
+export const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+
+export const oauth2Client = new OAuth2Client(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_SECRET,
+    process.env.GOOGLE_REDIRECT_URI
+);
+
+/** Sign a 7-day JWT for the given userId */
+export function issueJwt(userId: string) {
+    return jwt.sign({ userId }, process.env.JWT_SECRET!, { expiresIn: "7d" });
+}
+
+/** Format a provider enum value for display ("GOOGLE" → "Google") */
+export function providerLabel(provider: string) {
+    return provider.charAt(0) + provider.slice(1).toLowerCase();
+}
+
+export function getUserIdFromCookie(req: express.Request): string | null {
     try {
         const token = req.cookies?.token;
         if (!token) return null;
@@ -26,505 +37,59 @@ function getUserIdFromCookie(req: express.Request): string | null {
     }
 }
 
+// One-time auth code store (in-memory, TTL 60 s) 
+
+interface AuthCodePayload {
+    token: string;
+    user: { id: string; email: string; name: string | null };
+    expiresAt: number;
+}
+
+const authCodeStore = new Map<string, AuthCodePayload>();
+
+/** Generate a single-use opaque code that maps to a JWT for 60 seconds */
+export function issueAuthCode(
+    token: string,
+    user: { id: string; email: string; name: string | null }
+): string {
+    const code = crypto.randomBytes(32).toString("hex");
+    authCodeStore.set(code, { token, user, expiresAt: Date.now() + 60_000 });
+    // Passive cleanup after TTL
+    setTimeout(() => authCodeStore.delete(code), 60_000);
+    return code;
+}
+
 const authRouter = express.Router();
 
-const oauth2Client = new OAuth2Client(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_SECRET,
-    process.env.GOOGLE_REDIRECT_URI
-);
+// Mount sub-routers
+import googleRouter from "./auth/google.auth";
+import githubRouter from "./auth/github.auth";
+import emailRouter from "./auth/email.auth";
+authRouter.use("/google", googleRouter);
+authRouter.use("/github", githubRouter);
+authRouter.use("/", emailRouter);
 
-function issueJwt(userId: string) {
-    return jwt.sign({ userId }, process.env.JWT_SECRET!, { expiresIn: "7d" });
-}
-
-function providerLabel(provider: string) {
-    return provider.charAt(0) + provider.slice(1).toLowerCase(); // "EMAIL" → "Email"
-}
-
-// GET /google — initiates Google Auth (pass ?action=link to link to existing account)
-authRouter.get("/google", (req, res) => {
-    try {
-        const action = req.query.action === "link" ? "link" : "login";
-        const url = oauth2Client.generateAuthUrl({
-            access_type: "offline",
-            scope: ["openid", "email", "profile"],
-            redirect_uri: process.env.GOOGLE_REDIRECT_URI,
-            state: action,
-        });
-        res.redirect(url);
-    } catch (error) {
-        console.error("Error initiating Google Auth:", error);
-        return res.status(500).json({ error: "Internal server error" });
-    }
-});
-
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
-
-// GET /google/callback — handles redirect from Google
-authRouter.get("/google/callback", async (req, res) => {
-    try {
-        const { code, state } = req.query;
-        const isLinkAction = state === "link";
-
-        if (!code || typeof code !== "string") {
-            const errorMsg = encodeURIComponent("Missing authorization code");
-            return res.redirect(isLinkAction ? `${FRONTEND_URL}/profile?error=${errorMsg}` : `${FRONTEND_URL}/signin?error=${errorMsg}`);
-        }
-
-        const { tokens } = await oauth2Client.getToken(code);
-        oauth2Client.setCredentials(tokens);
-
-        const profileRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-            headers: { Authorization: `Bearer ${tokens.access_token}` },
-        });
-        if (!profileRes.ok) throw new Error("Failed to fetch Google user profile");
-
-        const profile = await profileRes.json() as { sub: string; email?: string; name?: string; picture?: string };
-        if (!profile.email) {
-            const errorMsg = encodeURIComponent("No email found on Google account");
-            return res.redirect(isLinkAction ? `${FRONTEND_URL}/profile?error=${errorMsg}` : `${FRONTEND_URL}/signin?error=${errorMsg}`);
-        }
-
-        // ─── LINK MODE: attach this Google account to the logged-in user ───
-        if (isLinkAction) {
-            const loggedInUserId = getUserIdFromCookie(req);
-            if (!loggedInUserId) {
-                const errorMsg = encodeURIComponent("You must be logged in to link an account.");
-                return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
-            }
-
-            // Check if this Google account is already linked to someone
-            const existingAccount = await prisma.userAccount.findUnique({
-                where: { provider_providerId: { provider: "GOOGLE", providerId: profile.sub } },
-            });
-            if (existingAccount && existingAccount.userId !== loggedInUserId) {
-                const errorMsg = encodeURIComponent("This Google account is already linked to a different Interviewly account.");
-                return res.redirect(`${FRONTEND_URL}/profile?error=${errorMsg}`);
-            }
-            if (existingAccount && existingAccount.userId === loggedInUserId) {
-                return res.redirect(`${FRONTEND_URL}/profile?success=${encodeURIComponent("Google is already linked.")}`);
-            }
-
-            await prisma.userAccount.create({
-                data: { userId: loggedInUserId, provider: "GOOGLE", providerId: profile.sub },
-            });
-
-            return res.redirect(`${FRONTEND_URL}/profile?success=${encodeURIComponent("Google account linked successfully!")}`);
-        }
-
-        // ─── LOGIN / SIGNUP MODE (original behavior) ───
-
-        // 1. Check if this Google account is already linked to any user
-        const existingAccount = await prisma.userAccount.findUnique({
-            where: { provider_providerId: { provider: "GOOGLE", providerId: profile.sub } },
-            include: { user: true },
-        });
-
-        if (existingAccount) {
-            // Already linked — just log them in
-            const token = issueJwt(existingAccount.userId);
-            const userStr = encodeURIComponent(JSON.stringify({
-                id: existingAccount.user.id,
-                email: existingAccount.user.email,
-                name: existingAccount.user.name,
-            }));
-            res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
-            return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${userStr}`);
-        }
-
-        // 2. No linked account — check if email already belongs to a user
-        const existingUser = await prisma.user.findUnique({ where: { email: profile.email } });
-        if (existingUser) {
-            const errorMsg = encodeURIComponent(
-                `This email is already registered with ${providerLabel(existingUser.authProvider)}. Sign in with that method, then link Google in Settings.`
-            );
-            return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
-        }
-
-        // 3. New user — create User + UserAccount
-        const user = await prisma.user.create({
-            data: {
-                name: profile.name || "Google User",
-                email: profile.email,
-                authProvider: "GOOGLE",
-                accounts: {
-                    create: { provider: "GOOGLE", providerId: profile.sub, providerImageUrl: profile.picture },
-                },
-                userProfile: {
-                    create: { profileImageUrl: profile.picture }
-                },
-            },
-        });
-
-        const token = issueJwt(user.id);
-        const userStr = encodeURIComponent(JSON.stringify({ id: user.id, email: user.email, name: user.name }));
-        // Grant signup bonus (non-blocking; does nothing if SIGNUP_BONUS_CREDITS=0)
-        grantSignupBonus(user.id).catch((err) => console.error("[signup-bonus/google]", err));
-        res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
-        return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${userStr}`);
-
-    } catch (error: any) {
-        console.error("Error in Google Auth Callback:", error.response?.data || error);
-        const errorMsg = encodeURIComponent("Google authentication failed");
-        return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
-    }
-});
-
-// initiates GitHub Auth (pass ?action=link to link to existing account)
-authRouter.get("/github", (req, res) => {
-    try {
-        const action = req.query.action === "link" ? "link" : "login";
-        const params = new URLSearchParams({
-            client_id: process.env.GITHUB_CLIENT_ID!,
-            redirect_uri: process.env.GITHUB_REDIRECT_URI!,
-            scope: "read:user user:email",
-            state: action,
-        });
-        res.redirect(`https://github.com/login/oauth/authorize?${params.toString()}`);
-    } catch (error) {
-        console.error("Error initiating GitHub Auth:", error);
-        return res.status(500).json({ error: "Internal server error" });
-    }
-});
-
-// GET /github/callback — handles redirect from GitHub
-authRouter.get("/github/callback", async (req, res) => {
-    try {
-        const { code, state } = req.query;
-        const isLinkAction = state === "link";
-
-        if (!code || typeof code !== "string") {
-            const errorMsg = encodeURIComponent("Missing authorization code");
-            return res.redirect(isLinkAction ? `${FRONTEND_URL}/profile?error=${errorMsg}` : `${FRONTEND_URL}/signin?error=${errorMsg}`);
-        }
-
-        // Exchange code for access token
-        const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Accept: "application/json" },
-            body: JSON.stringify({
-                client_id: process.env.GITHUB_CLIENT_ID,
-                client_secret: process.env.GITHUB_CLIENT_SECRET,
-                code,
-                redirect_uri: process.env.GITHUB_REDIRECT_URI,
-            }),
-        });
-        const tokenData = await tokenRes.json() as { access_token?: string; error?: string };
-        if (!tokenData.access_token) {
-            throw new Error(tokenData.error || "Failed to get GitHub access token");
-        }
-
-        // Fetch GitHub profile
-        const profileRes = await fetch("https://api.github.com/user", {
-            headers: { Authorization: `Bearer ${tokenData.access_token}`, Accept: "application/vnd.github+json" },
-        });
-        if (!profileRes.ok) throw new Error("Failed to fetch GitHub user profile");
-
-        const profile = await profileRes.json() as { id: number; name?: string; email?: string | null; login: string, avatar_url?: string };
-
-        // GitHub may not expose email publicly — fetch separately
-        let email = profile.email;
-        if (!email) {
-            const emailRes = await fetch("https://api.github.com/user/emails", {
-                headers: { Authorization: `Bearer ${tokenData.access_token}`, Accept: "application/vnd.github+json" },
-            });
-            const emails = await emailRes.json() as { email: string; primary: boolean; verified: boolean }[];
-            email = emails.find((e) => e.primary && e.verified)?.email ?? null;
-        }
-        if (!email) {
-            const errorMsg = encodeURIComponent("No verified email found on GitHub account");
-            return res.redirect(isLinkAction ? `${FRONTEND_URL}/profile?error=${errorMsg}` : `${FRONTEND_URL}/signin?error=${errorMsg}`);
-        }
-
-        const githubId = String(profile.id);
-
-        // ─── LINK MODE: attach this GitHub account to the logged-in user ───
-        if (isLinkAction) {
-            const loggedInUserId = getUserIdFromCookie(req);
-            if (!loggedInUserId) {
-                const errorMsg = encodeURIComponent("You must be logged in to link an account.");
-                return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
-            }
-
-            const existingAccount = await prisma.userAccount.findUnique({
-                where: { provider_providerId: { provider: "GITHUB", providerId: githubId } },
-            });
-            if (existingAccount && existingAccount.userId !== loggedInUserId) {
-                const errorMsg = encodeURIComponent("This GitHub account is already linked to a different Interviewly account.");
-                return res.redirect(`${FRONTEND_URL}/profile?error=${errorMsg}`);
-            }
-            if (existingAccount && existingAccount.userId === loggedInUserId) {
-                return res.redirect(`${FRONTEND_URL}/profile?success=${encodeURIComponent("GitHub is already linked.")}`);
-            }
-
-            await prisma.userAccount.create({
-                data: { userId: loggedInUserId, provider: "GITHUB", providerId: githubId },
-            });
-
-            return res.redirect(`${FRONTEND_URL}/profile?success=${encodeURIComponent("GitHub account linked successfully!")}`);
-        }
-
-        // ─── LOGIN / SIGNUP MODE (original behavior) ───
-
-        // 1. Check if this GitHub account is already linked to any user
-        const existingAccount = await prisma.userAccount.findUnique({
-            where: { provider_providerId: { provider: "GITHUB", providerId: githubId } },
-            include: { user: true },
-        });
-
-        if (existingAccount) {
-            const token = issueJwt(existingAccount.userId);
-            const userStr = encodeURIComponent(JSON.stringify({
-                id: existingAccount.user.id,
-                email: existingAccount.user.email,
-                name: existingAccount.user.name,
-            }));
-            res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
-            return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${userStr}`);
-        }
-
-        // 2. Check if email already belongs to a user
-        const existingUser = await prisma.user.findUnique({ where: { email } });
-        if (existingUser) {
-            const errorMsg = encodeURIComponent(
-                `This email is already registered with ${providerLabel(existingUser.authProvider)}. Sign in with that method, then link GitHub in Settings.`
-            );
-            return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
-        }
-
-        // 3. New user — create User + UserAccount
-        const user = await prisma.user.create({
-            data: {
-                name: profile.name || profile.login,
-                email,
-                authProvider: "GITHUB",
-                accounts: {
-                    create: { provider: "GITHUB", providerId: githubId, providerImageUrl: profile.avatar_url },
-                },
-                userProfile: {
-                    create: { profileImageUrl: profile.avatar_url }
-                }
-            },
-        });
-
-        const token = issueJwt(user.id);
-        const userStr = encodeURIComponent(JSON.stringify({ id: user.id, email: user.email, name: user.name }));
-        // Grant signup bonus (non-blocking; does nothing if SIGNUP_BONUS_CREDITS=0)
-        grantSignupBonus(user.id).catch((err) => console.error("[signup-bonus/github]", err));
-        res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
-        return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${userStr}`);
-
-    } catch (error: any) {
-        console.error("Error in GitHub Auth Callback:", error);
-        const errorMsg = encodeURIComponent("GitHub authentication failed");
-        return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
-    }
-});
-
-// POST /signup
-authRouter.post("/signup", async (req, res) => {
-    const result = signupSchema.safeParse(req.body);
-    if (!result.success) {
-        return res.status(400).json({ error: result.error });
-    }
-    const { email, password, name } = result.data;
-
-    // Hard block — email collision across any provider
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) {
-        return res.status(409).json({
-            error: `This email is already registered with ${providerLabel(existing.authProvider)}. Sign in with that method instead.`,
-            authProvider: existing.authProvider,
-        });
+// GET /exchange?code=<one-time-code> — trades a short-lived code for a JWT
+// The token never appears in any URL, browser history, or server log.
+authRouter.get("/exchange", (req, res) => {
+    const { code } = req.query;
+    if (!code || typeof code !== "string") {
+        return res.status(400).json({ error: "Missing or invalid code" });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    const user = await prisma.user.create({
-        data: {
-            name,
-            email,
-            authProvider: "EMAIL",
-            accounts: {
-                create: { provider: "EMAIL", passwordHash },
-            },
-        },
-    });
-
-    const token = issueJwt(user.id);
-    // Grant signup bonus (non-blocking; does nothing if SIGNUP_BONUS_CREDITS=0)
-    grantSignupBonus(user.id).catch((err) => console.error("[signup-bonus/email]", err));
-    res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "lax" });
-    return res.status(201).json({ token, user: { id: user.id, email: user.email, name: user.name } });
-});
-
-// POST /signin
-authRouter.post("/signin", async (req, res) => {
-    const result = signinSchema.safeParse(req.body);
-    if (!result.success) {
-        return res.status(400).json({ error: result.error });
+    const payload = authCodeStore.get(code);
+    if (!payload) {
+        return res.status(401).json({ error: "Code not found or already used" });
     }
-    const { email, password } = result.data;
-
-    const user = await prisma.user.findUnique({
-        where: { email },
-        include: { accounts: true },
-    });
-
-    if (!user) {
-        return res.status(401).json({ error: "Invalid credentials" });
+    if (Date.now() > payload.expiresAt) {
+        authCodeStore.delete(code);
+        return res.status(401).json({ error: "Code expired" });
     }
 
-    // Find the email/password account for this user
-    const emailAccount = user.accounts.find((a) => a.provider === "EMAIL");
-    if (!emailAccount || !emailAccount.passwordHash) {
-        return res.status(401).json({
-            error: `This account uses ${providerLabel(user.authProvider)} login. Please sign in with that method.`,
-            authProvider: user.authProvider,
-        });
-    }
+    // Single-use: delete immediately after consumption
+    authCodeStore.delete(code);
 
-    const valid = await bcrypt.compare(password, emailAccount.passwordHash);
-    if (!valid) {
-        return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    const token = issueJwt(user.id);
-    res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "lax" });
-    return res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
-});
-
-// POST /logout 
-authRouter.post("/logout", async (req, res) => {
-    res.clearCookie("token", { path: "/", sameSite: "lax", httpOnly: true });
-    res.redirect(`${process.env.NEXT_PUBLIC_FRONTEND_URL}`);
-    return res.json({
-        success: true,
-        message: "Logged out successfully"
-    });
-})
-
-// GET /me — return current authenticated user profile
-authRouter.get("/me", authMiddleware, async (req, res) => {
-    try {
-        const user = await prisma.user.findUnique({
-            where: { id: req.userId },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                authProvider: true,
-                userProfile: {
-                    select: {
-                        profileImageUrl: true,
-                    }
-                },
-                accounts: {
-                    select: {
-                        provider: true,
-                    }
-                }
-            },
-        });
-
-        if (!user) {
-            return res.status(404).json({ error: "User not found" });
-        }
-
-        return res.json({ user });
-    } catch (error) {
-        console.error("Error in GET /me:", error);
-        return res.status(500).json({ error: "Internal server error" });
-    }
-});
-
-// Account linking is now handled via ?action=link on the /google and /github OAuth flows.
-// The old POST /link/* endpoints are no longer needed.
-
-// OTP-based Email Login 
-
-// POST /otp/send — sends a one-time code to the given email
-authRouter.post("/otp/send", async (req, res) => {
-    try {
-        const { email } = req.body;
-        if (!email || typeof email !== "string") {
-            return res.status(400).json({ error: "Email is required." });
-        }
-
-        const normalizedEmail = email.trim().toLowerCase();
-        const result = await requestOtp(normalizedEmail);
-
-        if (!result.success) {
-            return res.status(429).json({
-                error: result.message,
-                retryAfterSeconds: result.retryAfterSeconds,
-            });
-        }
-
-        return res.json({ message: result.message });
-    } catch (error) {
-        console.error("Error in POST /otp/send:", error);
-        return res.status(500).json({ error: "Failed to send OTP. Please try again." });
-    }
-});
-
-// POST /otp/verify — verifies the code and logs the user in (or signs them up)
-authRouter.post("/otp/verify", async (req, res) => {
-    try {
-        const { email, code, name, password } = req.body;
-        if (!email || typeof email !== "string" || !code || typeof code !== "string") {
-            return res.status(400).json({ error: "Email and code are required." });
-        }
-
-        const normalizedEmail = email.trim().toLowerCase();
-        const result = await verifyOtp(normalizedEmail, code.trim());
-
-        if (!result.success) {
-            return res.status(400).json({ error: result.message });
-        }
-
-        // OTP is valid — find or create the user
-        let user = await prisma.user.findUnique({
-            where: { email: normalizedEmail },
-            include: { accounts: true },
-        });
-
-        if (!user) {
-            // New user via signup — hash password if provided
-            const passwordHash = password ? await bcrypt.hash(password, 10) : undefined;
-
-            user = await prisma.user.create({
-                data: {
-                    email: normalizedEmail,
-                    name: name || undefined,
-                    authProvider: "EMAIL",
-                    accounts: {
-                        create: {
-                            provider: "EMAIL",
-                            passwordHash,
-                        },
-                    },
-                },
-                include: { accounts: true },
-            });
-        }
-
-        // If brand new user, grant signup bonus
-        if (!user.accounts || user.accounts.length === 0 || (user.accounts.length === 1 && user.accounts[0]!.createdAt.getTime() > Date.now() - 5000)) {
-            grantSignupBonus(user.id).catch((err) => console.error("[signup-bonus/otp]", err));
-        }
-
-        const token = issueJwt(user.id);
-        res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "lax" });
-        return res.json({
-            token,
-            user: { id: user.id, email: user.email, name: user.name },
-        });
-    } catch (error) {
-        console.error("Error in POST /otp/verify:", error);
-        return res.status(500).json({ error: "Verification failed. Please try again." });
-    }
+    return res.json({ token: payload.token, user: payload.user });
 });
 
 export default authRouter;

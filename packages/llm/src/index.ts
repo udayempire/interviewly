@@ -122,7 +122,6 @@ export async function executeLLMWithFallback(options: LLMExecutionOptions): Prom
     }
 }
 
-
 export async function validateApiKey(provider: string, apiKey: string): Promise<{ valid: boolean; error?: string }> {
     if (!apiKey || apiKey.trim().length === 0) {
         return { valid: false, error: "ApiKeyRequired" };

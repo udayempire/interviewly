@@ -53,7 +53,7 @@ function logResponse(result: Awaited<ReturnType<typeof executeLLMWithFallback>>)
     console.log("  Fallback:", JSON.stringify(result.fallbackNotice));
 }
 
-// ─── Tests ────────────────────────────────────────────────────────────────────
+// Tests 
 
 async function runTests() {
     console.log("==================================================");
@@ -66,7 +66,7 @@ async function runTests() {
 
     let n = 0; // auto-incrementing test counter
 
-    // ── Group A: Default platform-key execution ───────────────────────────────
+    // Group A: Default platform-key execution 
     // One test for the "no custom key" path. It exercises whatever provider
     // DEFAULT_LLM_PROVIDER resolves to; we don't care which one it is here.
 
@@ -84,7 +84,7 @@ async function runTests() {
         errored(n, err);
     }
 
-    // ── Group B: Invalid custom key → fallback to platform ────────────────────
+    // Group B: Invalid custom key → fallback to platform 
     // One test per registered provider. Each supplies a bad key; the function
     // should catch the rejection and transparently retry with the platform key.
 
@@ -108,7 +108,7 @@ async function runTests() {
         }
     }
 
-    // ── Group C: validateApiKey — invalid key rejected ────────────────────────
+    // Group C: validateApiKey — invalid key rejected 
     // One test per provider. Each uses the same dummy key as Group B; the
     // validator should return { valid: false } without throwing.
 
@@ -125,7 +125,7 @@ async function runTests() {
         }
     }
 
-    // ── Group D: validateApiKey — real platform key accepted ──────────────────
+    // Group D: validateApiKey — real platform key accepted 
     // One test per provider. Reads the real key from the environment.
     // If the env var is missing the test is skipped with a warning rather than
     // failing, so the suite can run in a CI environment that only has one key set.
