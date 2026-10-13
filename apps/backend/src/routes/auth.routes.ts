@@ -3,7 +3,9 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { verify, type JwtPayload } from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
-
+import googleRouter from "./auth/google.auth";
+import githubRouter from "./auth/github.auth";
+import emailRouter from "./auth/email.auth";
 interface AuthPayload extends JwtPayload {
     userId: string;
 }
@@ -62,9 +64,7 @@ export function issueAuthCode(
 const authRouter = express.Router();
 
 // Mount sub-routers
-import googleRouter from "./auth/google.auth";
-import githubRouter from "./auth/github.auth";
-import emailRouter from "./auth/email.auth";
+
 authRouter.use("/google", googleRouter);
 authRouter.use("/github", githubRouter);
 authRouter.use("/", emailRouter);
