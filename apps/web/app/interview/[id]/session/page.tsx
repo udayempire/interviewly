@@ -9,7 +9,7 @@ import { Participants } from "@/components/interviewSession.tsx/participants";
 import type { ConversationMessage } from "@/components/interviewSession.tsx/types";
 import { Preparation } from "@/components/interviewSession.tsx/preparing";
 import { ErrorLoading } from "@/components/interviewSession.tsx/errorLoading";
-import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
+import { useVoiceRecorder } from "@/hooks/voice-recorder/useVoiceRecorder";
 import { getCookie } from "@/lib/cookies";
 
 export default function InterviewPage() {
