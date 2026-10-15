@@ -37,7 +37,7 @@ async function autoAbandonStaleInterviews(userId: string) {
         console.error("Failed to auto-abandon stale interviews:", err);
     }
 }
-
+//creates interview
 interviewRouter.post("/create", authMiddleware, upload.single("resume"), async (req, res) => {
     const result = createInterviewSchema.safeParse(req.body);
     if (!result.success) {

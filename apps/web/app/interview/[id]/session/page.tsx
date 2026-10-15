@@ -80,11 +80,11 @@ export default function InterviewPage() {
   const handleMicToggle = async () => {
     if (isAiSpeaking) return;
     if (isUserRecording) {
-      setIsUserRecording(false);
       stopRecording();
+      setIsUserRecording(false);
     } else {
-      setIsUserRecording(true);
       await startRecording();
+      setIsUserRecording(true);
     }
   };
 
