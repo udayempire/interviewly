@@ -22,5 +22,5 @@ export async function transcribeWithWhisper(
 ): Promise<string> {
     const stt = createSTTProvider("groq");
     const prompt = buildSTTVocabulary(...sources);
-    return stt.transcribe(audio, { prompt });
+    return stt.transcribe(audio, { model: "whisper-large-v3", prompt });
 }

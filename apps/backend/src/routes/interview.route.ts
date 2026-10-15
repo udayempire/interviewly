@@ -133,7 +133,6 @@ interviewRouter.post("/create", authMiddleware, upload.single("resume"), async (
         success: true,
         interview
     });
-
 });
 
 // GET /report/:interviewId — returns report or 202 if still generating

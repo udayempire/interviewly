@@ -264,7 +264,6 @@ export function setupInterviewWS(wss: WebSocketServer) {
             // pull from candidate's userProfile so AI always has context of profile resume
             let resumeText = interview.resumeText;
             let githubData = interview.githubData;
-
             const userProfile = await prisma.userProfile.findUnique({
                 where: { userId: interview.userId || userId },
                 select: { resumeText: true, githubData: true, llmApiKey: true, llmProvider: true, useCustomKey: true }
@@ -302,7 +301,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
             // doubles as the STT term list so jargon they are about to say is
             // spelled correctly instead of guessed phonetically.
             const sttVocabulary = buildSTTVocabulary(resumeText, githubData);
-            const messageHistory: ChatMessage[] = [
+            const aiContext: ChatMessage[] = [
                 {
                     role: "system",
                     content: buildSystemPrompt(
@@ -335,7 +334,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
             log.info("Interview started");
 
             const openingStart = Date.now();
-            const openingResponse = await chat(messageHistory);
+            const openingResponse = await chat(aiContext);
             const openingLatency = Date.now() - openingStart;
             log.info({
                 operation: "opening_message",
@@ -346,9 +345,18 @@ export function setupInterviewWS(wss: WebSocketServer) {
                 outputTokens: openingResponse.usage.completionTokens,
                 status: "success",
             }, "LLM request completed");
-            recordAICall({ interviewId, userId, operation: "opening_message", llmProvider: openingResponse.provider, llmModel: openingResponse.model, inputTokens: openingResponse.usage.promptTokens, outputTokens: openingResponse.usage.completionTokens, latencyMs: openingLatency, status: "success" });
+            recordAICall(
+                {
 
-            messageHistory.push({ role: "assistant", content: openingResponse.text });
+                    interviewId,
+                    userId, operation: "opening_message",
+                    llmProvider: openingResponse.provider, llmModel:
+                        openingResponse.model, inputTokens:
+                        openingResponse.usage.promptTokens,
+                    outputTokens: openingResponse.usage.completionTokens, latencyMs: openingLatency, status: "success"
+                });
+
+            aiContext.push({ role: "assistant", content: openingResponse.text });
             await prisma.interviewMessage.create({
                 data: { interviewId, role: "ASSISTANT", content: openingResponse.text }
             });
@@ -380,7 +388,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
                     log.info({ operation: "stt", latencyMs: sttLatency, status: "success" }, "STT completed");
                     recordAICall({ interviewId, userId, operation: "stt", llmProvider: "deepgram", llmModel: "nova-3", latencyMs: sttLatency, status: "success" });
 
-                    messageHistory.push({ role: "user", content: transcript });
+                    aiContext.push({ role: "user", content: transcript });
                     await prisma.interviewMessage.create({
                         data: {
                             interviewId,
@@ -391,7 +399,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
                     sendJson(ws, { type: "message", role: "user", content: transcript });
 
                     const llmStart = Date.now();
-                    const llmResponse = await chat(messageHistory);
+                    const llmResponse = await chat(aiContext);
                     const llmLatency = Date.now() - llmStart;
                     log.info({
                         operation: "question_response",
@@ -402,9 +410,19 @@ export function setupInterviewWS(wss: WebSocketServer) {
                         outputTokens: llmResponse.usage.completionTokens,
                         status: "success",
                     }, "LLM request completed");
-                    recordAICall({ interviewId, userId, operation: "question_response", llmProvider: llmResponse.provider, llmModel: llmResponse.model, inputTokens: llmResponse.usage.promptTokens, outputTokens: llmResponse.usage.completionTokens, latencyMs: llmLatency, status: "success" });
+                    recordAICall(
+                        {
+                            interviewId,
+                            userId,
+                            operation: "question_response",
+                            llmProvider: llmResponse.provider,
+                            llmModel: llmResponse.model,
+                            inputTokens: llmResponse.usage.promptTokens,
+                            outputTokens: llmResponse.usage.completionTokens,
+                            latencyMs: llmLatency, status: "success"
+                        });
 
-                    messageHistory.push({ role: "assistant", content: llmResponse.text });
+                    aiContext.push({ role: "assistant", content: llmResponse.text });
                     await prisma.interviewMessage.create({
                         data: {
                             interviewId,
@@ -416,7 +434,15 @@ export function setupInterviewWS(wss: WebSocketServer) {
                     await sendSpeechIfAvailable(ws, llmResponse.text, log, { interviewId, userId });
                 } catch (error) {
                     log.error({ operation: "pipeline", err: error }, "Interview pipeline error");
-                    recordAICall({ interviewId, userId, operation: "pipeline", llmProvider: "unknown", llmModel: "unknown", status: "error", errorCode: error instanceof Error ? error.message : String(error) });
+                    recordAICall({
+                        interviewId,
+                        userId,
+                        operation: "pipeline",
+                        llmProvider: "unknown",
+                        llmModel: "unknown",
+                        status: "error",
+                        errorCode: error instanceof Error ? error.message : String(error)
+                    });
                     sendJson(ws, { error: "Internal error - try again" });
                 }
             });
@@ -433,7 +459,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
                     });
                     //convert chatMessage[] into the format expected
                     // by buildEvaluationPrompt()
-                    const transcript = messageHistory.filter((message) => message.role !== "system").map((message) => ({
+                    const transcript = aiContext.filter((message) => message.role !== "system").map((message) => ({
                         role: message.role === "assistant" ? "ASSISTANT" as const : "USER" as const,
                         content: message.content as string
                     }));
