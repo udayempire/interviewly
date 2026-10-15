@@ -14,7 +14,7 @@ export async function extractResumeData(
 
     if (rawResumeText && rawResumeText.length > 50) {
         console.log("Found text layer. Parsing with Llama Text model...");
-        structuredResume = await llm.chat([
+        const response = await llm.chat([
             {
                 role: "system",
                 content: "You are an expert resume parser. Extract the following from the resume text: name, currentRole, yearsOfExperience, skills, experience, education, projects. Return ONLY a valid JSON object matching this schema. Do not include markdown formatting or backticks."
@@ -24,6 +24,7 @@ export async function extractResumeData(
                 content: rawResumeText
             }
         ]);
+        structuredResume = response.text
     } else {
         console.log("No text layer found. Rendering page screenshot for Groq Vision...");
         const screenshotResult = await parser.getScreenshot({ scale: 1.5 });
@@ -34,7 +35,7 @@ export async function extractResumeData(
         }
 
         console.log("Sending page image to meta-llama model...");
-        structuredResume = await llm.chat([
+        const response = await llm.chat([
             {
                 role: "user",
                 content: [
@@ -51,6 +52,7 @@ export async function extractResumeData(
                 ]
             }
         ]);
+        structuredResume = response.text;
     }
     // Clean markdown backticks (e.g. ```json) and parse into a JSON object
     let parsedResumeJson: any = null;

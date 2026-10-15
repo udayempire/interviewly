@@ -136,7 +136,7 @@ export function AppSidebar() {
             <SidebarMenuButton
               tooltip="Log out"
               onClick={handleLogout}
-              className="h-9 rounded-none text-stone-500 hover:bg-red-50 hover:text-red-700 dark:text-zinc-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+              className="h-9 cursor-pointer rounded-none text-stone-500 hover:bg-red-50 hover:text-red-700 dark:text-zinc-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"
             >
               <span className="flex items-center gap-2.5">
                 <LogOut className="h-4 w-4 shrink-0" strokeWidth={1.7} />

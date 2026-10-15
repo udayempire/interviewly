@@ -272,12 +272,12 @@ profileRouter.post("/profile", authMiddleware, upload.single("resume"), async (r
             create: {
                 userId,
                 githubUrl,
-                githubData,
+                githubData: githubData ?? Prisma.JsonNull,
                 resumeText: parsedResumeJson,
             },
             update: {
                 githubUrl,
-                githubData,
+                githubData: githubData ?? Prisma.JsonNull,
                 resumeText: parsedResumeJson,
             }
         });
