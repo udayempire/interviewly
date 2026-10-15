@@ -39,6 +39,13 @@ export interface STTProvider {
   ): Promise<string>
 };
 
+export interface TTSResponse {
+  audio: Buffer,
+  model: string,
+  provider: string,
+  characterCount: number
+}
+
 export interface TTSProvider {
   synthesize(
     text: string,
@@ -46,7 +53,7 @@ export interface TTSProvider {
       model?: string
       voice?: string
     }
-  ): Promise<Buffer>
+  ): Promise<TTSResponse>
 };
 
 export interface FallbackNotice {

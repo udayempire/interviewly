@@ -1,5 +1,5 @@
 import Groq from "groq-sdk";
-import type { ChatMessage, LLMProvider, STTProvider, TTSProvider, LLMResponse } from "../types";
+import type { ChatMessage, LLMProvider, STTProvider, TTSProvider, LLMResponse, TTSResponse } from "../types";
 
 export class GroqProvider implements LLMProvider {
     private ai: Groq;
@@ -81,7 +81,7 @@ export class GroqSTTProvider implements STTProvider {
 
 export class GroqTTSProvider implements TTSProvider {
     private ai = new Groq({ apiKey: process.env.GROQ_API_KEY! });
-    async synthesize(text: string, options?: { model?: string; voice?: string }): Promise<Buffer> {
+    async synthesize(text: string, options?: { model?: string; voice?: string }): Promise<TTSResponse> {
         const model = options?.model ?? "canopylabs/orpheus-v1-english";
         const voice = options?.voice ?? "autumn"
         const speechResponse = await this.ai.audio.speech.create({
@@ -91,7 +91,12 @@ export class GroqTTSProvider implements TTSProvider {
             response_format: "wav",
         });
         const buffer = Buffer.from(await speechResponse.arrayBuffer());
-        return buffer;
+        return {
+            audio: buffer,
+            model,
+            provider: "groq",
+            characterCount: text.length
+        };
     }
 };
 

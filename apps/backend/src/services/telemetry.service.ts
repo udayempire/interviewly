@@ -34,6 +34,7 @@ interface AICallRecord {
     llmModel: string;
     inputTokens?: number;
     outputTokens?: number;
+    characterCount?: number;
     latencyMs?: number;
     estimatedCost?: number;
     status: string;
@@ -56,6 +57,7 @@ export function recordAICall(record: AICallRecord): void {
                 inputTokens: record.inputTokens ?? null,
                 outputTokens: record.outputTokens ?? null,
                 latencyMs: record.latencyMs ?? null,
+                characterCount: record.characterCount ?? null,
                 estimatedCost: record.estimatedCost ?? null,
                 status: record.status,
                 errorCode: record.errorCode ?? null,

@@ -1,5 +1,5 @@
 import { DeepgramClient } from "@deepgram/sdk";
-import type { STTProvider, TTSProvider } from "../types";
+import type { STTProvider, TTSProvider, TTSResponse } from "../types";
 
 export class DeepgramProvider implements TTSProvider {
     private ai = new DeepgramClient({
@@ -9,7 +9,7 @@ export class DeepgramProvider implements TTSProvider {
     async synthesize(
         text: string,
         options?: { model?: string }
-    ): Promise<Buffer> {
+    ): Promise<TTSResponse> {
         //here voice is the model in deepgram
         const model = options?.model ?? "aura-2-thalia-en";
 
@@ -29,7 +29,12 @@ export class DeepgramProvider implements TTSProvider {
             chunks.push(Buffer.from(chunk));
         }
         const audioBuffer = Buffer.concat(chunks);
-        return audioBuffer;
+        return {
+            audio: audioBuffer,
+            model,
+            provider: "deepgram",
+            characterCount: text.length
+        };
     }
 };
 export class DeepgramSTTProvider implements STTProvider {

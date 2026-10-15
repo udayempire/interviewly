@@ -161,18 +161,20 @@ export function setupInterviewWS(wss: WebSocketServer) {
 
     async function sendSpeechIfAvailable(ws: WebSocket, text: string, log: InterviewLogger, ctx: { interviewId: string; userId: string }) {
         const start = Date.now();
+        // Capture attempted provider name before the call so it's available in the catch block
+        const attemptedProvider = (process.env.DEFAULT_TTS_PROVIDER ?? "unknown").toLowerCase();
         try {
-            const audio = await tts.synthesize(text);
+            const result = await tts.synthesize(text);
             const latencyMs = Date.now() - start;
             log.info({ operation: "tts", latencyMs, status: "success" }, "TTS completed");
-            recordAICall({ interviewId: ctx.interviewId, userId: ctx.userId, operation: "tts", llmProvider: "deepgram", llmModel: "aura-2-thalia-en", latencyMs, status: "success" });
+            recordAICall({ interviewId: ctx.interviewId, userId: ctx.userId, operation: "tts", llmProvider: result.provider, llmModel: result.model, characterCount: result.characterCount, latencyMs, status: "success" });
             if (ws.readyState === WebSocket.OPEN) {
-                ws.send(audio);
+                ws.send(result.audio);
             }
         } catch (error) {
             const latencyMs = Date.now() - start;
             log.error({ operation: "tts", latencyMs, err: error }, "TTS failed; falling back to text-only");
-            recordAICall({ interviewId: ctx.interviewId, userId: ctx.userId, operation: "tts", llmProvider: "deepgram", llmModel: "aura-2-thalia-en", latencyMs, status: "error", errorCode: error instanceof Error ? error.message : String(error) });
+            recordAICall({ interviewId: ctx.interviewId, userId: ctx.userId, operation: "tts", llmProvider: attemptedProvider, llmModel: "unknown", latencyMs, status: "error", errorCode: error instanceof Error ? error.message : String(error) });
             sendJson(ws, {
                 type: "notice",
                 message: "Voice playback is unavailable, showing the response in chat."

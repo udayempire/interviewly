@@ -185,7 +185,7 @@ interviewRouter.get("/:interviewId/transcript", authMiddleware, async (req, res)
         const userId = req.userId as string;
         const interviewId = req.params.interviewId as string;
 
-        const interview = await prisma.interview.findUnique({
+        const interviewTranscript = await prisma.interview.findUnique({
             where: {
                 id: interviewId,
                 userId,
@@ -211,13 +211,13 @@ interviewRouter.get("/:interviewId/transcript", authMiddleware, async (req, res)
             },
         });
 
-        if (!interview) {
+        if (!interviewTranscript) {
             return res.status(404).json({ error: "Interview not found" });
         }
 
         return res.status(200).json({
             success: true,
-            interview,
+            interviewTranscript,
         });
     } catch (error) {
         console.error("Failed to fetch transcript:", error);
