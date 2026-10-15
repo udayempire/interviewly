@@ -1,4 +1,4 @@
-// Hardening for the speech-to-text step of the interview pipeline.
+// Vocabulary extraction utilities for STT prompt conditioning.
 //
 // buildSTTVocabulary: Whisper's `prompt` is conditioning text, not an
 // instruction. It is prepended as though it were the transcript of the audio
@@ -7,31 +7,29 @@
 // ("PostgreSQL", "Next.js") more probable than phonetic guesses
 // ("post gres cue el", "next JS").
 //
-// isLikelyHallucination: Whisper was trained on subtitled web video, so when
-// handed audio with no speech in it the language-model prior takes over from the
-// absent acoustic evidence and it emits the boilerplate that recurs over silent
-// stretches. Those strings must never land in the transcript as candidate turns.
+// These utilities are provider-agnostic. Other STT providers that accept
+// a conditioning vocabulary (e.g. keyterm boosting) can consume them too.
 
 // Whisper's decoder context is 448 tokens with half reserved for output, so the
 // prompt budget is ~224. Term lists tokenize poorly (2-4 tokens each), so these
 // caps stay well clear of it.
-const MAX_VOCAB_TERMS = 60;
-const MAX_VOCAB_CHARS = 500;
+export const MAX_VOCAB_TERMS = 60;
+export const MAX_VOCAB_CHARS = 500;
 
 // resumeText and githubData are untyped Json columns, so bound the walk.
-const MAX_JSON_DEPTH = 8;
-const MAX_STRINGS_SCANNED = 4000;
+export const MAX_JSON_DEPTH = 8;
+export const MAX_STRINGS_SCANNED = 4000;
 
 // Anything that cannot appear inside a technical term. Keeps "Next.js", "C++",
 // "CI/CD", "OAuth2", "socket.io-client" intact.
-const TERM_SPLIT = /[^A-Za-z0-9.+#\-_/]+/;
+export const TERM_SPLIT = /[^A-Za-z0-9.+#\-_/]+/;
 // Trailing "+" and "#" are load-bearing ("C++", "C#"), so they are not trimmed.
-const TRIM_LEAD = /^[.+#\-_/]+/;
-const TRIM_TAIL = /[.\-_/]+$/;
+export const TRIM_LEAD = /^[.+#\-_/]+/;
+export const TRIM_TAIL = /[.\-_/]+$/;
 
 // Capitalised words that carry no vocabulary value - generic resume/GitHub
 // scaffolding and ordinary English that happens to start a sentence.
-const STOPWORDS = new Set([
+export const STOPWORDS = new Set([
     "a", "an", "and", "or", "the", "in", "on", "at", "to", "for", "with", "by",
     "from", "of", "as", "is", "was", "were", "be", "been", "am", "are", "this",
     "that", "these", "those", "my", "our", "their", "its", "it", "we", "you",
@@ -61,7 +59,7 @@ const STOPWORDS = new Set([
 
 // The accept rule below keys off capitals, digits, or "./+/#", which misses
 // all-lowercase terms. These are the ones worth boosting anyway.
-const LOWERCASE_TECH = new Set([
+export const LOWERCASE_TECH = new Set([
     "npm", "pnpm", "yarn", "bun", "node", "deno", "webpack", "vite", "rollup",
     "esbuild", "babel", "eslint", "prettier", "jest", "vitest", "cypress",
     "playwright", "nginx", "apache", "docker", "kubectl", "helm", "terraform",
@@ -75,7 +73,7 @@ const LOWERCASE_TECH = new Set([
     "linux", "ubuntu", "bash", "zsh", "git", "vim", "tmux", "turborepo",
 ]);
 
-function collectStrings(value: unknown, out: string[], depth = 0): void {
+export function collectStrings(value: unknown, out: string[], depth = 0): void {
     if (out.length >= MAX_STRINGS_SCANNED) return;
     if (typeof value === "string") {
         out.push(value);
@@ -89,7 +87,7 @@ function collectStrings(value: unknown, out: string[], depth = 0): void {
     }
 }
 
-function isVocabularyTerm(term: string): boolean {
+export function isVocabularyTerm(term: string): boolean {
     if (term.length < 2 || term.length > 30) return false;
     const lower = term.toLowerCase();
     if (STOPWORDS.has(lower)) return false;
@@ -103,7 +101,7 @@ function isVocabularyTerm(term: string): boolean {
 }
 
 /**
- * Builds a comma-separated term list for Whisper's `prompt` from arbitrary JSON
+ * Builds a comma-separated term list from arbitrary JSON sources
  * (resume text, GitHub payloads). Returns undefined when nothing useful is
  * found, so callers can omit the parameter entirely.
  *
@@ -138,44 +136,4 @@ export function buildSTTVocabulary(...sources: unknown[]): string | undefined {
         chars += term.length + 2;
     }
     return terms.join(", ");
-}
-
-// Matched against the raw lowercased transcript: these come straight out of
-// Whisper's subtitle training data and never occur in a real interview answer.
-const HALLUCINATED_SUBSTRINGS = [
-    "amara.org",
-    "subtitles by",
-    "subtitling by",
-    "captions by",
-    "subscribe to my channel",
-    "transcription by castingwords",
-];
-
-// Matched only when the phrase is the ENTIRE transcript - a candidate can
-// legitimately say "thank you" mid-answer, but a turn consisting of nothing but
-// these carries no interview content and is almost always a silence artifact.
-const HALLUCINATED_TRANSCRIPTS = new Set([
-    "you", "thank you", "thanks", "thank you very much", "thank you so much",
-    "thank you for watching", "thanks for watching",
-    "thank you for watching this video", "please subscribe",
-    "like and subscribe", "bye", "bye bye", "goodbye", "okay bye",
-    "music", "applause", "silence", "blank audio", "inaudible", "laughter",
-    "hmm", "mm", "mhm", "uh", "um", "ah", "oh", "eh",
-]);
-
-/**
- * True when a transcript should be discarded instead of recorded as a candidate
- * turn. Second line of defence behind the client-side speech gate.
- */
-export function isLikelyHallucination(transcript: string): boolean {
-    const lower = transcript.toLowerCase();
-    if (HALLUCINATED_SUBSTRINGS.some(phrase => lower.includes(phrase))) return true;
-
-    const normalized = lower
-        .replace(/[\[\]()*]/g, " ")                    // [MUSIC], (applause)
-        .replace(/[.,!?;:"'’“”]/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
-    if (!normalized) return true;
-    return HALLUCINATED_TRANSCRIPTS.has(normalized);
 }

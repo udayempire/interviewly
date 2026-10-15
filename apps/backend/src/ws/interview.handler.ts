@@ -2,7 +2,7 @@ import { prisma } from "@repo/db";
 import { executeLLMWithFallback, createSTTProvider, createTTSProvider, type ChatMessage, createLLMProvider } from "@repo/llm";
 import { verify } from "jsonwebtoken";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
-import { buildSTTVocabulary, isLikelyHallucination } from "../services/stt.service";
+import { buildSTTVocabulary, isLikelyHallucination } from "../services/stt/stt.service";
 import { logger, createInterviewLogger, type InterviewLogger } from "../lib/logger";
 import { recordAICall } from "../services/telemetry.service";
 import { decrypt } from "../services/encryption";
@@ -166,15 +166,46 @@ export function setupInterviewWS(wss: WebSocketServer) {
         try {
             const result = await tts.synthesize(text);
             const latencyMs = Date.now() - start;
-            log.info({ operation: "tts", latencyMs, status: "success" }, "TTS completed");
-            recordAICall({ interviewId: ctx.interviewId, userId: ctx.userId, operation: "tts", llmProvider: result.provider, llmModel: result.model, characterCount: result.characterCount, latencyMs, status: "success" });
+            log.info(
+                {
+                    operation: "tts",
+                    latencyMs,
+                    characterCount: result.characterCount,
+                    status: "success"
+                }, "TTS completed");
+            recordAICall(
+                {
+                    interviewId: ctx.interviewId,
+                    userId: ctx.userId,
+                    operation: "tts",
+                    llmProvider: result.provider,
+                    llmModel: result.model,
+                    characterCount: result.characterCount,
+                    latencyMs,
+                    status: "success"
+                });
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send(result.audio);
             }
         } catch (error) {
             const latencyMs = Date.now() - start;
-            log.error({ operation: "tts", latencyMs, err: error }, "TTS failed; falling back to text-only");
-            recordAICall({ interviewId: ctx.interviewId, userId: ctx.userId, operation: "tts", llmProvider: attemptedProvider, llmModel: "unknown", latencyMs, status: "error", errorCode: error instanceof Error ? error.message : String(error) });
+            log.error(
+                {
+                    operation: "tts",
+                    latencyMs,
+                    err: error
+                }, "TTS failed; falling back to text-only");
+            recordAICall(
+                {
+                    interviewId: ctx.interviewId,
+                    userId: ctx.userId,
+                    operation: "tts",
+                    llmProvider: attemptedProvider,
+                    llmModel: "unknown",
+                    latencyMs,
+                    status: "error",
+                    errorCode: error instanceof Error ? error.message : String(error)
+                });
             sendJson(ws, {
                 type: "notice",
                 message: "Voice playback is unavailable, showing the response in chat."
