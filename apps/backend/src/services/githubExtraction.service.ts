@@ -58,7 +58,6 @@ query ($username: String!) {
   }
 }
 `;
-// for GitHub REST API
 export function extractGithubUsername(githubUrl: string): string {
   if (!githubUrl || typeof githubUrl !== "string") return "";
 
@@ -84,7 +83,7 @@ export function extractGithubUsername(githubUrl: string): string {
   }
 }
 
-
+// for GitHub REST API
 interface GithubUser {
   login: string;
   name: string | null;

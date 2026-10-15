@@ -51,17 +51,48 @@ interviewRouter.post("/create", authMiddleware, upload.single("resume"), async (
     // Fetch user profile to reuse pre-parsed resumeText and pre-fetched githubData from DB
     const userProfile = await prisma.userProfile.findUnique({
         where: { userId },
-        select: { resumeText: true, githubUrl: true, githubData: true }
+        select: { resumeText: true, githubUrl: true, githubData: true, githubDataUpdatedTime: true }
     });
 
-    // GitHub optimization: reuse pre-fetched githubData from DB if URL matches or if missing
+    // GitHub optimization: reuse pre-fetched githubData from DB if URL matches, with a 3-day staleness check.
+    const GITHUB_DATA_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
     let githubData = null;
     const requestedUsername = githubUrl ? extractGithubUsername(githubUrl) : null;
     const savedUsername = userProfile?.githubUrl ? extractGithubUsername(userProfile.githubUrl) : null;
-
+    // Reuse the saved GitHub data only if both profile & new url available and their usernames exist, match, and GitHub data is available(in profile).
     if (requestedUsername && savedUsername && requestedUsername === savedUsername && userProfile?.githubData) {
-        console.log("[createInterview] Using pre-fetched GitHub data directly from DB (0 API calls)");
-        githubData = userProfile.githubData;
+        const githubDataUpdatedTime = userProfile.githubDataUpdatedTime;
+        const isStale = !githubDataUpdatedTime || (Date.now() - new Date(githubDataUpdatedTime).getTime() > GITHUB_DATA_MAX_AGE_MS);
+
+        if (isStale) {
+            // Data is older than 3 days — re-fetch and update the profile in the background
+            console.log("[createInterview] Cached GitHub data is stale (>3 days). Re-fetching...");
+            try {
+                const freshData = await getGithubData(requestedUsername);
+                if (freshData) {
+                    githubData = freshData;
+                    // Update the profile with fresh data and reset the timestamp
+                    await prisma.userProfile.update({
+                        where: { userId },
+                        data: {
+                            githubData: freshData as any,
+                            githubDataUpdatedTime: new Date(),
+                        },
+                    });
+                    console.log("[createInterview] GitHub data refreshed and profile updated.");
+                } else {
+                    // Re-fetch returned nothing (e.g. API down) — fall back to stale cache
+                    console.warn("[createInterview] Re-fetch returned null. Falling back to stale cached data.");
+                    githubData = userProfile.githubData;
+                }
+            } catch (err) {
+                console.error("[createInterview] Failed to re-fetch GitHub data. Using stale cache.", err);
+                githubData = userProfile.githubData;
+            }
+        } else {
+            console.log("[createInterview] Using pre-fetched GitHub data from DB (fresh, 0 API calls).");
+            githubData = userProfile.githubData;
+        }
     } else if (githubUrl) {
         try {
             console.log("[createInterview] Fetching new GitHub data for:", githubUrl);
@@ -71,7 +102,7 @@ interviewRouter.post("/create", authMiddleware, upload.single("resume"), async (
             console.error("Failed to fetch GitHub data:", err);
         }
     } else if (userProfile?.githubData) {
-        console.log("[createInterview] Reusing saved profile GitHub data from DB");
+        console.log("[createInterview] Reusing saved profile GitHub data from DB (no URL provided).");
         githubData = userProfile.githubData;
     }
 

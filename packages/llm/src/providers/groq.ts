@@ -23,7 +23,7 @@ export class GroqProvider implements LLMProvider {
 
         const model = hasImage
             ? (process.env.GROQ_VISION_MODEL ?? "meta-llama/llama-4-scout-17b-16e-instruct")
-            : (process.env.GROQ_TEXT_MODEL   ?? "openai/gpt-oss-120b");
+            : (process.env.GROQ_TEXT_MODEL ?? "openai/gpt-oss-120b");
 
         const response = await this.ai.chat.completions.create({
             model,
@@ -50,7 +50,7 @@ export class GroqProvider implements LLMProvider {
 
         const model = hasImage
             ? (process.env.GROQ_VISION_MODEL ?? "meta-llama/llama-4-scout-17b-16e-instruct")
-            : (process.env.GROQ_TEXT_MODEL   ?? "openai/gpt-oss-120b");
+            : (process.env.GROQ_TEXT_MODEL ?? "openai/gpt-oss-120b");
 
         const stream = await this.ai.chat.completions.create({
             model,

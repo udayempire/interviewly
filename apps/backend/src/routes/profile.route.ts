@@ -120,16 +120,19 @@ profileRouter.put("/profile", authMiddleware, async (req: Request, res: Response
                 }
             }
 
+            const now = githubData ? new Date() : null;
             await prisma.userProfile.upsert({
                 where: { userId },
                 create: {
                     userId,
                     githubUrl: githubUrl || null,
                     githubData: githubData ?? Prisma.DbNull,
+                    githubDataUpdatedTime: now,
                 },
                 update: {
                     githubUrl: githubUrl || null,
                     githubData: githubData ?? Prisma.DbNull,
+                    githubDataUpdatedTime: now,
                 },
             });
         }

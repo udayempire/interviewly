@@ -14,16 +14,16 @@ enum AuthProvider {
 }
 
 model User {
-  id               String              @id @default(cuid())
-  email            String              @unique
-  name             String?
-  authProvider     AuthProvider
-  createdAt        DateTime            @default(now())
-  accounts         UserAccount[]
-  interview        Interview[]
-  interviewReport  InterviewReport[]
-  userProfile      UserProfile?
-  credit           UserCredit?
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  name               String?
+  authProvider       AuthProvider
+  createdAt          DateTime            @default(now())
+  accounts           UserAccount[]
+  interview          Interview[]
+  interviewReport    InterviewReport[]
+  userProfile        UserProfile?
+  credit             UserCredit?
   creditTransactions CreditTransaction[]
   // plan            Plan?             @default(FREE)
   // nextBillingDate DateTime?
@@ -44,20 +44,21 @@ model UserAccount {
 }
 
 model UserProfile {
-  id              String      @id @default(cuid())
-  userId          String      @unique
-  githubUrl       String?     @unique
-  githubData      Json?
-  resumeText      Json?
-  resumePdf       Bytes?
-  llmProvider     String?
-  llmApiKey       String?
-  useCustomKey    Boolean     @default(false)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @default(now()) @updatedAt
-  interviews      Interview[]
-  profileImageUrl String? // profile picture gave by user later
-  user            User        @relation(fields: [userId], references: [id])
+  id                    String      @id @default(cuid())
+  userId                String      @unique
+  githubUrl             String?     @unique
+  githubData            Json?
+  githubDataUpdatedTime DateTime?
+  resumeText            Json?
+  resumePdf             Bytes?
+  llmProvider           String?
+  llmApiKey             String?
+  useCustomKey          Boolean     @default(false)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @default(now()) @updatedAt
+  interviews            Interview[]
+  profileImageUrl       String? // profile picture gave by user later
+  user                  User        @relation(fields: [userId], references: [id])
 }
 
 model OtpVerification {
@@ -199,11 +200,11 @@ model UserCredit {
 model CreditTransaction {
   id          String                @id @default(cuid())
   userId      String
-  delta       Int                   // minutes: positive = add, negative = deduct
+  delta       Int // minutes: positive = add, negative = deduct
   type        CreditTransactionType
-  note        String?               // human-readable reason, e.g. "signup bonus (30 min)", "17 min interview"
-  interviewId String?               // set when type = DEDUCTED or REFUNDED
-  grantedBy   String?               // admin userId when type = GIFTED or ADMIN_ADJUSTMENT
+  note        String? // human-readable reason, e.g. "signup bonus (30 min)", "17 min interview"
+  interviewId String? // set when type = DEDUCTED or REFUNDED
+  grantedBy   String? // admin userId when type = GIFTED or ADMIN_ADJUSTMENT
   createdAt   DateTime              @default(now())
   user        User                  @relation(fields: [userId], references: [id])
 
@@ -213,11 +214,11 @@ model CreditTransaction {
 }
 
 enum CreditTransactionType {
-  SIGNUP_BONUS       // free credits on account creation
-  GIFTED             // manually gifted by admin
-  PURCHASED          // user bought a pack (future)
-  DEDUCTED           // interview started / consumed credits
-  REFUNDED           // interview failed / refunded credits
-  EXPIRED            // subscription cycle reset (future)
-  ADMIN_ADJUSTMENT   // manual correction by admin
+  SIGNUP_BONUS // free credits on account creation
+  GIFTED // manually gifted by admin
+  PURCHASED // user bought a pack (future)
+  DEDUCTED // interview started / consumed credits
+  REFUNDED // interview failed / refunded credits
+  EXPIRED // subscription cycle reset (future)
+  ADMIN_ADJUSTMENT // manual correction by admin
 }
