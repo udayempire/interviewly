@@ -325,98 +325,100 @@ profileRouter.get("/api-key", authMiddleware, async (req: Request, res: Response
     }
 });
 
+// CURRENTLY BLOCKING BYOK FEATURE.
+
 // PUT /api/v1/user/api-key (add/update apikey)
-profileRouter.put("/api-key", authMiddleware, async (req: Request, res: Response) => {
-    try {
-        const result = userProfileApiKeySchema.safeParse(req.body);
-        if (!result.success) {
-            return res.status(400).json({ error: "Invalid api key provided", details: result.error.flatten() });
-        }
-        const { llmProvider, llmApiKey, useCustomKey } = result.data;
-        const encryptedllmApiKey = encrypt(llmApiKey);
-        const userId = req.userId as string;
-        await prisma.userProfile.upsert({
-            where: {
-                userId,
-            },
-            create: {
-                userId,
-                llmApiKey: encryptedllmApiKey,
-                llmProvider,
-                useCustomKey,
-            },
-            update: {
-                llmApiKey: encryptedllmApiKey,
-                llmProvider,
-                useCustomKey,
-            },
-        });
-        return res.json({ success: true, message: "User's API key updated successfully" });
-    } catch (error) {
-        console.error("Error in PUT /api-key:", error);
-        return res.status(500).json({ error: "Failed to update user's api key" });
-    }
-});
+// profileRouter.put("/api-key", authMiddleware, async (req: Request, res: Response) => {
+//     try {
+//         const result = userProfileApiKeySchema.safeParse(req.body);
+//         if (!result.success) {
+//             return res.status(400).json({ error: "Invalid api key provided", details: result.error.flatten() });
+//         }
+//         const { llmProvider, llmApiKey, useCustomKey } = result.data;
+//         const encryptedllmApiKey = encrypt(llmApiKey);
+//         const userId = req.userId as string;
+//         await prisma.userProfile.upsert({
+//             where: {
+//                 userId,
+//             },
+//             create: {
+//                 userId,
+//                 llmApiKey: encryptedllmApiKey,
+//                 llmProvider,
+//                 useCustomKey,
+//             },
+//             update: {
+//                 llmApiKey: encryptedllmApiKey,
+//                 llmProvider,
+//                 useCustomKey,
+//             },
+//         });
+//         return res.json({ success: true, message: "User's API key updated successfully" });
+//     } catch (error) {
+//         console.error("Error in PUT /api-key:", error);
+//         return res.status(500).json({ error: "Failed to update user's api key" });
+//     }
+// });
 
 // DELETE /api/v1/user/api-key (remove user api key)
-profileRouter.delete("/api-key", authMiddleware, async (req: Request, res: Response) => {
-    try {
-        const userId = req.userId as string;
-        await prisma.userProfile.update({
-            where: { userId },
-            data: {
-                llmApiKey: null,
-                llmProvider: null,
-                useCustomKey: false,
-            },
-        });
-        return res.json({ success: true, message: "User API key removed successfully" });
-    } catch (error) {
-        console.error("Error in DELETE /api-key:", error);
-        return res.status(500).json({ error: "Failed to remove API key" });
-    }
-});
+// profileRouter.delete("/api-key", authMiddleware, async (req: Request, res: Response) => {
+//     try {
+//         const userId = req.userId as string;
+//         await prisma.userProfile.update({
+//             where: { userId },
+//             data: {
+//                 llmApiKey: null,
+//                 llmProvider: null,
+//                 useCustomKey: false,
+//             },
+//         });
+//         return res.json({ success: true, message: "User API key removed successfully" });
+//     } catch (error) {
+//         console.error("Error in DELETE /api-key:", error);
+//         return res.status(500).json({ error: "Failed to remove API key" });
+//     }
+// });
 
 // patch /api/v1/user/api-key/toggle - to toggle btw platform api key and user api key 
 
-profileRouter.patch("/api-key/toggle", authMiddleware, async (req: Request, res: Response) => {
-    try {
-        const userId = req.userId as string;
-        const currentProfile = await prisma.userProfile.findUnique({ where: { userId } });
-        const newStatus = typeof req.body.useCustomKey === "boolean" ? req.body.useCustomKey : !currentProfile?.useCustomKey;
+// profileRouter.patch("/api-key/toggle", authMiddleware, async (req: Request, res: Response) => {
+//     try {
+//         const userId = req.userId as string;
+//         const currentProfile = await prisma.userProfile.findUnique({ where: { userId } });
+//         const newStatus = typeof req.body.useCustomKey === "boolean" ? req.body.useCustomKey : !currentProfile?.useCustomKey;
 
-        await prisma.userProfile.update({
-            where: {
-                userId,
-            },
-            data: {
-                useCustomKey: newStatus,
-            },
-        });
-        return res.json({ success: true, useCustomKey: newStatus, message: "User's API key usage toggled successfully" });
-    } catch (error) {
-        console.error("Error in PATCH /api-key/toggle:", error);
-        return res.status(500).json({ error: "Failed to toggle user's API key usage" });
-    }
-});
+//         await prisma.userProfile.update({
+//             where: {
+//                 userId,
+//             },
+//             data: {
+//                 useCustomKey: newStatus,
+//             },
+//         });
+//         return res.json({ success: true, useCustomKey: newStatus, message: "User's API key usage toggled successfully" });
+//     } catch (error) {
+//         console.error("Error in PATCH /api-key/toggle:", error);
+//         return res.status(500).json({ error: "Failed to toggle user's API key usage" });
+//     }
+// });
 
 // POST /api/v1/user/api-key/validate - test connection for user's custom API key
-profileRouter.post("/api-key/validate", authMiddleware, async (req: Request, res: Response) => {
-    try {
-        const { llmProvider, llmApiKey } = req.body;
-        if (!llmProvider || !llmApiKey) {
-            return res.status(400).json({ success: false, error: "llmProvider and llmApiKey are required" });
-        }
-        const result = await validateApiKey(llmProvider, llmApiKey);
-        if (result.valid) {
-            return res.json({ success: true, message: "API key is valid and working" });
-        } else {
-            return res.status(400).json({ success: false, error: result.error || "Invalid API key" });
-        }
-    } catch (error) {
-        console.error("Error in POST /api-key/validate:", error);
-        return res.status(500).json({ success: false, error: "Failed to validate API key" });
-    }
-});
+// profileRouter.post("/api-key/validate", authMiddleware, async (req: Request, res: Response) => {
+//     try {
+//         const { llmProvider, llmApiKey } = req.body;
+//         if (!llmProvider || !llmApiKey) {
+//             return res.status(400).json({ success: false, error: "llmProvider and llmApiKey are required" });
+//         }
+//         const result = await validateApiKey(llmProvider, llmApiKey);
+//         if (result.valid) {
+//             return res.json({ success: true, message: "API key is valid and working" });
+//         } else {
+//             return res.status(400).json({ success: false, error: result.error || "Invalid API key" });
+//         }
+//     } catch (error) {
+//         console.error("Error in POST /api-key/validate:", error);
+//         return res.status(500).json({ success: false, error: "Failed to validate API key" });
+//     }
+// });
 
 export default profileRouter;

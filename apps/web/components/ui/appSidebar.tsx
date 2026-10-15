@@ -25,7 +25,8 @@ const mainNav = [
 ];
 const accountNav = [
   { label: "Profile", href: "/profile", icon: User },
-  { label: "Settings", href: "/settings", icon: Settings },
+  // not rendering it for sometime for testing purposes.
+  // { label: "Settings", href: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
