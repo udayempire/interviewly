@@ -10,7 +10,7 @@ import type { ConversationMessage } from "@/components/interviewSession.tsx/type
 import { Preparation } from "@/components/interviewSession.tsx/preparing";
 import { ErrorLoading } from "@/components/interviewSession.tsx/errorLoading";
 import { useVoiceRecorder } from "@/hooks/voice-recorder/useVoiceRecorder";
-import { getCookie } from "@/lib/cookies";
+
 
 export default function InterviewPage() {
   const params = useParams<{ id: string }>();
@@ -18,6 +18,7 @@ export default function InterviewPage() {
   const router = useRouter();
   const [sessionState, setSessionState] = useState<"preparing" | "live" | "error">("preparing");
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [isUserRecording, setIsUserRecording] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
@@ -30,17 +31,15 @@ export default function InterviewPage() {
 
   useEffect(() => {
     if (!interviewId) return;
-    const token = getCookie("token");
-    if (!token) {
-      setSessionState("error");
-      return;
-    }
-
-    const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:4000"}/ws/interview?token=${token}&interviewId=${interviewId}`;
+    let disposed = false;
+    // The browser includes the backend's HttpOnly session cookie in the handshake.
+    const wsUrl = new URL("/ws/interview", process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:4000");
+    wsUrl.searchParams.set("interviewId", interviewId);
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onmessage = async (event) => {
+      if (disposed) return;
       if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
         const blob = event.data instanceof Blob ? event.data : new Blob([event.data]);
         const audio = new Audio(URL.createObjectURL(blob));
@@ -56,7 +55,11 @@ export default function InterviewPage() {
 
       try {
         const payload = JSON.parse(event.data);
-        if (payload.error) return;
+        if (payload.type === "error" || payload.error) {
+          setErrorMessage(payload.message || payload.error || "The interview could not be started.");
+          setSessionState("error");
+          return;
+        }
         if (payload.type === "message" || payload.role) {
           const isAi = payload.role === "assistant" || payload.role === "ai";
           setSessionState("live");
@@ -73,8 +76,20 @@ export default function InterviewPage() {
         console.log("[WS] Non-JSON message:", event.data);
       }
     };
-    ws.onerror = () => setSessionState("error");
-    return () => ws.close();
+    ws.onerror = () => {
+      if (disposed) return;
+      setErrorMessage("Could not connect to the interview server. Please try again.");
+      setSessionState("error");
+    };
+    ws.onclose = (event) => {
+      if (disposed) return;
+      setErrorMessage((previous) => previous || event.reason || "The interview connection closed unexpectedly. Please try again.");
+      setSessionState("error");
+    };
+    return () => {
+      disposed = true;
+      ws.close();
+    };
   }, [interviewId, setAiSpeaking]);
 
   const handleMicToggle = async () => {
@@ -95,7 +110,7 @@ export default function InterviewPage() {
   };
 
   if (sessionState === "preparing") return <Preparation />;
-  if (sessionState === "error") return <ErrorLoading />;
+  if (sessionState === "error") return <ErrorLoading message={errorMessage} />;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-stone-50 text-stone-900 dark:bg-zinc-950 dark:text-zinc-100">

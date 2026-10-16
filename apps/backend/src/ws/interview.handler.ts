@@ -1,6 +1,6 @@
 import { prisma } from "@repo/db";
 import { executeLLMWithFallback, createSTTProvider, createTTSProvider, type ChatMessage, createLLMProvider } from "@repo/llm";
-import { verify } from "jsonwebtoken";
+import { authenticateInterviewRequest } from "./interview-auth";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { buildSTTVocabulary, isLikelyHallucination } from "../services/stt/stt.service";
 import { logger, createInterviewLogger, type InterviewLogger } from "../lib/logger";
@@ -8,9 +8,6 @@ import { recordAICall } from "../services/telemetry.service";
 import { decrypt } from "../services/encryption";
 import { checkAndDeduct } from "../services/credits.service";
 
-interface DecodedToken {
-    userId: string;
-};
 
 function sendJson(ws: WebSocket, payload: unknown) {
     if (ws.readyState === WebSocket.OPEN) {
@@ -215,21 +212,17 @@ export function setupInterviewWS(wss: WebSocketServer) {
 
     wss.on("connection", async (ws, req) => {
         const url = new URL(req.url!, "http://localhost");
-        const token = url.searchParams.get("token");
         const interviewId = url.searchParams.get("interviewId");
-        // reject if no token 
-        if (!token) {
-            logger.warn("WebSocket rejected: missing token");
-            ws.close(1008, "Unauthorized: Missing Token");
-            return;
-        };
         let userId: string;
         try {
-            const decoded = verify(token, process.env.JWT_SECRET!) as DecodedToken;
-            userId = decoded.userId
+            userId = authenticateInterviewRequest(
+                req,
+                process.env.JWT_SECRET,
+                process.env.FRONTEND_URL || "http://localhost:3000",
+            );
         } catch (err) {
-            logger.warn({ err }, "WebSocket rejected: invalid token");
-            ws.close(1008, "Unauthorized: Invalid Token");
+            logger.warn({ err }, "WebSocket rejected: authentication failed");
+            ws.close(1008, err instanceof Error ? err.message : "Unauthorized");
             return;
         };
         if (!interviewId) {
@@ -246,6 +239,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
             const interview = await prisma.interview.findUnique({
                 where: {
                     id: interviewId,
+                    userId,
                 },
                 select: {
                     description: true,
