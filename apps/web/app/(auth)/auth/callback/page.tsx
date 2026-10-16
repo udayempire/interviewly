@@ -31,8 +31,6 @@ function CallbackHandler() {
     })
       .then(async (res) => {
         if (!res.ok) throw new Error("Exchange failed");
-        const data = await res.json() as { token: string; user: { id: string; email: string; name: string } };
-        document.cookie = `token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
         router.replace(next);
       })
       .catch(() => {

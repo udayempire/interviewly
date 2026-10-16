@@ -89,7 +89,14 @@ authRouter.get("/exchange", (req, res) => {
     // Single-use: delete immediately after consumption
     authCodeStore.delete(code);
 
-    return res.json({ token: payload.token, user: payload.user });
+    res.cookie("token", payload.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    return res.json({ user: payload.user });
 });
 
 export default authRouter;
