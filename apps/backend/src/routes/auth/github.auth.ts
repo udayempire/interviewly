@@ -1,6 +1,7 @@
 import express from "express";
 import { URLSearchParams } from "url";
 import { prisma } from "@repo/db";
+import { logger } from "../../lib/logger";
 import { grantSignupBonus } from "../../services/credits.service";
 import {
     FRONTEND_URL,
@@ -24,7 +25,7 @@ githubRouter.get("/", (req, res) => {
         });
         res.redirect(`https://github.com/login/oauth/authorize?${params.toString()}`);
     } catch (error) {
-        console.error("Error initiating GitHub Auth:", error);
+        logger.error({ err: error, provider: "github" }, "Failed to initiate GitHub OAuth");
         return res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -103,6 +104,7 @@ githubRouter.get("/callback", async (req, res) => {
                 data: { userId: loggedInUserId, provider: "GITHUB", providerId: githubId },
             });
 
+            logger.info({ userId: loggedInUserId, provider: "github", action: "link" }, "GitHub account linked to existing user");
             return res.redirect(`${FRONTEND_URL}/profile?success=${encodeURIComponent("GitHub account linked successfully!")}`);
         }
 
@@ -121,6 +123,7 @@ githubRouter.get("/callback", async (req, res) => {
                 email: existingAccount.user.email,
                 name: existingAccount.user.name,
             });
+            logger.info({ userId: existingAccount.userId, email: existingAccount.user.email, provider: "github", action: "login" }, "User logged in via GitHub");
             return res.redirect(`${FRONTEND_URL}/auth/callback?code=${authCode}`);
         }
 
@@ -150,12 +153,13 @@ githubRouter.get("/callback", async (req, res) => {
 
         const token = issueJwt(user.id);
         // Grant signup bonus (non-blocking; does nothing if SIGNUP_BONUS_CREDITS=0)
-        grantSignupBonus(user.id).catch((err) => console.error("[signup-bonus/github]", err));
+        grantSignupBonus(user.id).catch((err) => logger.error({ err, userId: user.id, provider: "github" }, "Failed to grant signup bonus"));
+        logger.info({ userId: user.id, email: user.email, provider: "github", action: "signup" }, "New user signed up via GitHub");
         const authCode = issueAuthCode(token, { id: user.id, email: user.email, name: user.name });
         return res.redirect(`${FRONTEND_URL}/auth/callback?code=${authCode}`);
 
     } catch (error: any) {
-        console.error("Error in GitHub Auth Callback:", error);
+        logger.error({ err: error, provider: "github" }, "GitHub OAuth callback failed");
         const errorMsg = encodeURIComponent("GitHub authentication failed");
         return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
     }

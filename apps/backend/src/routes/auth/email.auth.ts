@@ -1,5 +1,6 @@
 import express from "express";
 import bcrypt from "bcrypt";
+import { logger } from "../../lib/logger";
 import { prisma } from "@repo/db";
 import { signupSchema, signinSchema } from "@repo/types";
 import { authMiddleware } from "../../middleware/auth";
@@ -41,7 +42,8 @@ emailRouter.post("/signup", async (req, res) => {
 
     const token = issueJwt(user.id);
     // Grant signup bonus (non-blocking; does nothing if SIGNUP_BONUS_CREDITS=0)
-    grantSignupBonus(user.id).catch((err) => console.error("[signup-bonus/email]", err));
+    grantSignupBonus(user.id).catch((err) => logger.error({ err, userId: user.id, provider: "email" }, "Failed to grant signup bonus"));
+    logger.info({ userId: user.id, email: user.email, provider: "email", action: "signup" }, "New user signed up via email");
     res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "lax" });
     return res.status(201).json({ token, user: { id: user.id, email: user.email, name: user.name } });
 });
@@ -77,6 +79,7 @@ emailRouter.post("/signin", async (req, res) => {
     }
 
     const token = issueJwt(user.id);
+    logger.info({ userId: user.id, email: user.email, provider: "email", action: "login" }, "User logged in via email");
     res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "lax" });
     return res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
 });
@@ -112,7 +115,7 @@ emailRouter.get("/me", authMiddleware, async (req, res) => {
 
         return res.json({ user });
     } catch (error) {
-        console.error("Error in GET /me:", error);
+        logger.error({ err: error }, "Failed to fetch user profile (/me)");
         return res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -137,7 +140,7 @@ emailRouter.post("/otp/send", async (req, res) => {
 
         return res.json({ message: result.message });
     } catch (error) {
-        console.error("Error in POST /otp/send:", error);
+        logger.error({ err: error }, "Failed to send OTP");
         return res.status(500).json({ error: "Failed to send OTP. Please try again." });
     }
 });
@@ -182,17 +185,18 @@ emailRouter.post("/otp/verify", async (req, res) => {
 
         // If brand new user, grant signup bonus
         if (!user.accounts || user.accounts.length === 0 || (user.accounts.length === 1 && user.accounts[0]!.createdAt.getTime() > Date.now() - 5000)) {
-            grantSignupBonus(user.id).catch((err) => console.error("[signup-bonus/otp]", err));
+            grantSignupBonus(user.id).catch((err) => logger.error({ err, userId: user.id, provider: "otp" }, "Failed to grant signup bonus"));
         }
 
         const token = issueJwt(user.id);
+        logger.info({ userId: user.id, email: user.email, provider: "otp", action: "login" }, "User logged in via OTP");
         res.cookie("token", token, { path: "/", maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: "lax" });
         return res.json({
             token,
             user: { id: user.id, email: user.email, name: user.name },
         });
     } catch (error) {
-        console.error("Error in POST /otp/verify:", error);
+        logger.error({ err: error }, "OTP verification failed");
         return res.status(500).json({ error: "Verification failed. Please try again." });
     }
 });

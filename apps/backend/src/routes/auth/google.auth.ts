@@ -1,5 +1,6 @@
 import express from "express";
 import { prisma } from "@repo/db";
+import { logger } from "../../lib/logger";
 import { grantSignupBonus } from "../../services/credits.service";
 import {
     FRONTEND_URL,
@@ -24,7 +25,7 @@ googleRouter.get("/", (req, res) => {
         });
         res.redirect(url);
     } catch (error) {
-        console.error("Error initiating Google Auth:", error);
+        logger.error({ err: error, provider: "google" }, "Failed to initiate Google OAuth");
         return res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -77,6 +78,7 @@ googleRouter.get("/callback", async (req, res) => {
                 data: { userId: loggedInUserId, provider: "GOOGLE", providerId: profile.sub },
             });
 
+            logger.info({ userId: loggedInUserId, provider: "google", action: "link" }, "Google account linked to existing user");
             return res.redirect(`${FRONTEND_URL}/profile?success=${encodeURIComponent("Google account linked successfully!")}`);
         }
 
@@ -96,6 +98,7 @@ googleRouter.get("/callback", async (req, res) => {
                 email: existingAccount.user.email,
                 name: existingAccount.user.name,
             });
+            logger.info({ userId: existingAccount.userId, email: existingAccount.user.email, provider: "google", action: "login" }, "User logged in via Google");
             return res.redirect(`${FRONTEND_URL}/auth/callback?code=${authCode}`);
         }
 
@@ -125,12 +128,13 @@ googleRouter.get("/callback", async (req, res) => {
 
         const token = issueJwt(user.id);
         // Grant signup bonus (non-blocking; does nothing if SIGNUP_BONUS_CREDITS=0)
-        grantSignupBonus(user.id).catch((err) => console.error("[signup-bonus/google]", err));
+        grantSignupBonus(user.id).catch((err) => logger.error({ err, userId: user.id, provider: "google" }, "Failed to grant signup bonus"));
+        logger.info({ userId: user.id, email: user.email, provider: "google", action: "signup" }, "New user signed up via Google");
         const authCode = issueAuthCode(token, { id: user.id, email: user.email, name: user.name });
         return res.redirect(`${FRONTEND_URL}/auth/callback?code=${authCode}`);
 
     } catch (error: any) {
-        console.error("Error in Google Auth Callback:", error.response?.data || error);
+        logger.error({ err: error, provider: "google" }, "Google OAuth callback failed");
         const errorMsg = encodeURIComponent("Google authentication failed");
         return res.redirect(`${FRONTEND_URL}/signin?error=${errorMsg}`);
     }
