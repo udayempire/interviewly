@@ -85,10 +85,15 @@ function SignupForm() {
       return data;
     },
     onSuccess: (data) => {
-      if (data.token) {
-        document.cookie = `token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
+      if (!data.token) {
+        setOtpError("Your account was created, but sign-in could not be completed. Please sign in.");
+        router.replace("/signin");
+        return;
       }
-      router.push("/interview");
+
+      const secure = window.location.protocol === "https:" ? "; Secure" : "";
+      document.cookie = `token=${data.token}; path=/; max-age=604800; SameSite=Lax${secure}`;
+      router.replace("/home");
     },
     onError: (error) => {
       setOtpError(error.message);

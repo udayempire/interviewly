@@ -69,8 +69,8 @@ authRouter.use("/google", googleRouter);
 authRouter.use("/github", githubRouter);
 authRouter.use("/", emailRouter);
 
-// GET /exchange?code=<one-time-code> — trades a short-lived code for a JWT
-// The token never appears in any URL, browser history, or server log.
+// GET /exchange?code=<one-time-code> — trades a short-lived code for a JWT.
+// The token is returned in the response body so the frontend can store it on its own host.
 authRouter.get("/exchange", (req, res) => {
     const { code } = req.query;
     if (!code || typeof code !== "string") {
@@ -96,7 +96,7 @@ authRouter.get("/exchange", (req, res) => {
         path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    return res.json({ user: payload.user });
+    return res.json({ token: payload.token, user: payload.user });
 });
 
 export default authRouter;

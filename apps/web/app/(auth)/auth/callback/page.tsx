@@ -29,6 +29,11 @@ function CallbackHandler() {
     })
       .then(async (res) => {
         if (!res.ok) throw new Error("Exchange failed");
+        const data: { token?: string } = await res.json();
+        if (!data.token) throw new Error("Missing session token");
+
+        const secure = window.location.protocol === "https:" ? "; Secure" : "";
+        document.cookie = `token=${data.token}; path=/; max-age=604800; SameSite=Lax${secure}`;
         router.replace(next);
       })
       .catch(() => {
