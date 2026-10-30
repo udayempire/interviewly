@@ -46,7 +46,7 @@ async function fetchInterviewTranscript(interviewId: string): Promise<Transcript
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
     year: "numeric",
-    month: "short",
+  month: "short",
     day: "numeric",
   });
 }

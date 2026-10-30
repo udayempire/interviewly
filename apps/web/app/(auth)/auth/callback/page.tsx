@@ -3,8 +3,6 @@
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
-
 function CallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -26,7 +24,7 @@ function CallbackHandler() {
 
     // Exchange the one-time opaque code for a JWT.
     // The real token never appears in any URL, browser history, or server log.
-    fetch(`${BACKEND_URL}/api/v1/auth/exchange?code=${encodeURIComponent(code)}`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/exchange?code=${encodeURIComponent(code)}`, {
       credentials: "include",
     })
       .then(async (res) => {
