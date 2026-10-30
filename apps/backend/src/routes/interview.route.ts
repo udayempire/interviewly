@@ -203,7 +203,6 @@ interviewRouter.get("/:interviewId/transcript", authMiddleware, async (req, res)
                         id: true,
                         role: true,
                         content: true,
-                        questionNum: true,
                         createdAt: true,
                     },
                 },

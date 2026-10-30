@@ -17,7 +17,6 @@ interface TranscriptMessage {
   id: string;
   role: "USER" | "ASSISTANT";
   content: string;
-  questionNum?: number;
   createdAt: string;
 }
 
@@ -41,7 +40,7 @@ async function fetchInterviewTranscript(interviewId: string): Promise<Transcript
   }
 
   const data = await response.json();
-  return data.interview;
+  return data.interviewTranscript;
 }
 
 function formatDate(iso: string) {

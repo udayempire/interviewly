@@ -112,7 +112,6 @@ model InterviewMessage {
   role        MessageRole
   content     String
   audioUrl    String?
-  questionNum Int?
   type        InterviewType?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @default(now()) @updatedAt
