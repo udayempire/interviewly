@@ -11,11 +11,12 @@ import { createVolumeMonitor } from "./volumeMonitor";
 
 export interface UseVoiceRecorderOptions {
   onSpeechEnd: (audioBlob: Blob) => void;
+  onVoiceActivity?: (active: boolean) => void;
   silenceThreshold?: number;
   silenceDurationMs?: number;
 }
 
-export function useVoiceRecorder({ onSpeechEnd, silenceThreshold = 10, silenceDurationMs = 1500 }: UseVoiceRecorderOptions) {
+export function useVoiceRecorder({ onSpeechEnd, onVoiceActivity, silenceThreshold = 10, silenceDurationMs = 1500 }: UseVoiceRecorderOptions) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -29,7 +30,7 @@ export function useVoiceRecorder({ onSpeechEnd, silenceThreshold = 10, silenceDu
 
   const controllersRef = useRef<ReturnType<typeof createControllers> | null>(null);
   if (!controllersRef.current) {
-    controllersRef.current = createControllers({ mediaRecorderRef, streamRef, audioContextRef, analyserRef, isListeningRef, isRecordingRef, isAiSpeakingRef, activeModeRef, onSpeechEndRef, silenceThreshold, silenceDurationMs });
+    controllersRef.current = createControllers({ mediaRecorderRef, streamRef, audioContextRef, analyserRef, isListeningRef, isRecordingRef, isAiSpeakingRef, activeModeRef, onSpeechEndRef, onVoiceActivity, silenceThreshold, silenceDurationMs });
   }
   const controllers = controllersRef.current;
 
@@ -84,13 +85,14 @@ interface ControllerRefs {
   onSpeechEndRef: MutableRefObject<(audioBlob: Blob) => void>;
   silenceThreshold: number;
   silenceDurationMs: number;
+  onVoiceActivity?: (active: boolean) => void;
 }
 
 // Wires the shared browser-resource controllers used by both recording strategies.
 function createControllers(refs: ControllerRefs) {
   const audioStream = createAudioStreamController(refs);
   const chunks = createAudioChunkCollector(refs);
-  const volumeMonitor = createVolumeMonitor({ analyserRef: refs.analyserRef, mediaRecorderRef: refs.mediaRecorderRef, isAiSpeakingRef: refs.isAiSpeakingRef, chunks, silenceThreshold: refs.silenceThreshold, silenceDurationMs: refs.silenceDurationMs });
+  const volumeMonitor = createVolumeMonitor({ analyserRef: refs.analyserRef, mediaRecorderRef: refs.mediaRecorderRef, isAiSpeakingRef: refs.isAiSpeakingRef, chunks, silenceThreshold: refs.silenceThreshold, silenceDurationMs: refs.silenceDurationMs, onVoiceActivity: refs.onVoiceActivity });
   return {
     audioStream,
     chunks,

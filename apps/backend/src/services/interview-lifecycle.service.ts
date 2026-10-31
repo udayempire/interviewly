@@ -99,7 +99,7 @@ export async function recordInactivityWarning(interviewId: string, warningNumber
 export async function endInterview(interviewId: string, userId: string, reason: EndReason) {
     const status = reason === "candidate_finished" ? InterviewStatus.COMPLETED : InterviewStatus.TIMED_OUT;
     const changed = await prisma.interview.updateMany({
-        where: { id: interviewId, userId, status: InterviewStatus.IN_PROGRESS },
+        where: { id: interviewId, userId, status: { in: [InterviewStatus.IN_PROGRESS, InterviewStatus.RECONNECTING] } },
         data: { status, completedAt: new Date(), reconnectUntil: null, connectionId: null, connectionLeaseUntil: null },
     });
     if (changed.count === 0) return false;

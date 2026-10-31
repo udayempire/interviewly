@@ -27,17 +27,29 @@ export default function InterviewPage() {
   const [isEnding, setIsEnding] = useState(false);
   const [canRespond, setCanRespond] = useState(false);
   const [inactivityWarning, setInactivityWarning] = useState<number | null>(null);
-  const [recordingIdleWarning, setRecordingIdleWarning] = useState(false);
+  const [recordingIdleWarning, setRecordingIdleWarning] = useState<number | null>(null);
+  const [warningCountdown, setWarningCountdown] = useState<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const aiAudioPlayingRef = useRef(false);
   const awaitingCandidateRef = useRef(false);
 
+  useEffect(() => {
+    if (warningCountdown === null) return;
+    const timer = setInterval(() => setWarningCountdown((seconds) => seconds === null || seconds <= 1 ? null : seconds - 1), 1000);
+    return () => clearInterval(timer);
+  }, [warningCountdown !== null]);
+
   const { startRecording, stopRecording, setAiSpeaking } = useVoiceRecorder({
+    onVoiceActivity: (active) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: "voice_activity", active }));
+      }
+    },
     onSpeechEnd: (audioBlob) => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(audioBlob);
         setInactivityWarning(null);
-        setRecordingIdleWarning(false);
+        setRecordingIdleWarning(null);
         setCanRespond(false);
       }
     },
@@ -130,10 +142,22 @@ export default function InterviewPage() {
           }
           if (payload.type === "inactivity_warning") {
             setInactivityWarning(payload.warningNumber as number);
+            setWarningCountdown(typeof payload.secondsUntilEnd === "number" ? payload.secondsUntilEnd : null);
+            return;
+          }
+          if (payload.type === "recording_activity") {
+            setRecordingIdleWarning(null);
+            setInactivityWarning(null);
+            setWarningCountdown(null);
             return;
           }
           if (payload.type === "recording_idle_warning") {
-            setRecordingIdleWarning(true);
+            setRecordingIdleWarning(payload.warningNumber as number);
+            return;
+          }
+          if (payload.type === "long_answer_warning") {
+            setRecordingIdleWarning(PRACTICE_INTERVIEW_POLICY.inactivityWarningAfterMs.length + 1);
+            setWarningCountdown(payload.secondsUntilEnd as number);
             return;
           }
           if (payload.type === "interview_ended") {
@@ -155,7 +179,7 @@ export default function InterviewPage() {
             const isAi = payload.role === "assistant" || payload.role === "ai";
             if (!isAi) {
               setInactivityWarning(null);
-              setRecordingIdleWarning(false);
+              setRecordingIdleWarning(null);
               setCanRespond(false);
             }
             setSessionState("live");
@@ -219,7 +243,7 @@ export default function InterviewPage() {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({ type: "recording_started" }));
       }
-      setRecordingIdleWarning(false);
+      setRecordingIdleWarning(null);
       await startRecording();
       setIsUserRecording(true);
     }
@@ -240,9 +264,9 @@ export default function InterviewPage() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-stone-50 text-stone-900 dark:bg-zinc-950 dark:text-zinc-100">
       <AppbarInterviewSession isAiSpeaking={isAiSpeaking} isUserRecording={isUserRecording} isConnected={isConnected} isEnding={isEnding} canRespond={canRespond} canEnd={sessionState === "live"} onMicToggle={handleMicToggle} onLeave={handleLeave} />
-      {(isReconnecting || inactivityWarning !== null || recordingIdleWarning || isEnding) && (
+      {(isReconnecting || inactivityWarning !== null || recordingIdleWarning !== null || isEnding) && (
         <div className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-center text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200" role="status">
-          {isEnding ? "Ending interview and preparing your report…" : isReconnecting ? "Connection lost. Reconnecting to your interview…" : recordingIdleWarning ? "Still recording? Stop recording when you have finished your answer." : `No response detected. Please answer soon (warning ${inactivityWarning} of ${PRACTICE_INTERVIEW_POLICY.inactivityWarningAfterMs.length}).`}
+          {isEnding ? "Ending interview and preparing your report…" : isReconnecting ? "Connection lost. Reconnecting to your interview…" : recordingIdleWarning === PRACTICE_INTERVIEW_POLICY.inactivityWarningAfterMs.length + 1 ? `This answer is taking a while. The interview will end in ${warningCountdown ?? Math.round(PRACTICE_INTERVIEW_POLICY.inactivityEndGraceMs / 1000)} seconds unless you finish now.` : recordingIdleWarning !== null ? `No speech detected (warning ${recordingIdleWarning} of ${PRACTICE_INTERVIEW_POLICY.inactivityWarningAfterMs.length}). After the final warning, the interview will end in ${warningCountdown ?? Math.round(PRACTICE_INTERVIEW_POLICY.inactivityEndGraceMs / 1000)} seconds.` : inactivityWarning === PRACTICE_INTERVIEW_POLICY.inactivityWarningAfterMs.length ? `No response detected. Final warning: the interview will end in ${warningCountdown ?? Math.round(PRACTICE_INTERVIEW_POLICY.inactivityEndGraceMs / 1000)} seconds.` : `No response detected. Please answer soon (warning ${inactivityWarning} of ${PRACTICE_INTERVIEW_POLICY.inactivityWarningAfterMs.length}).`}
         </div>
       )}
       <main className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1.7fr)_minmax(22rem,1fr)]">

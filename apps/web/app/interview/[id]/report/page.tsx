@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { PRACTICE_INTERVIEW_POLICY } from "@repo/types";
 import {
   AlertCircle,
   Brain,
@@ -226,16 +227,16 @@ export default function InterviewReportPage() {
     queryKey: ["interview-report", interviewId],
     queryFn: () => fetchInterviewReport(interviewId!),
     enabled: !!interviewId,
-    staleTime: Infinity, // Completed interview reports are static data. Cache for session.
+    staleTime: 0, // Recheck report state whenever the page is revisited.
     gcTime: 1000 * 60 * 60, // Retain in cache memory for 1 hour
     refetchInterval: (query) => {
-      // If backend returns 202 (pending report), poll every 3 seconds until ready
+      // Poll while report generation is still pending.
       if (query.state.data?.pending) {
-        return 3000;
+        return PRACTICE_INTERVIEW_POLICY.reportPollIntervalMs;
       }
       return false;
     },
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
   });
 
   if (isLoading) return <LoadingReport />;

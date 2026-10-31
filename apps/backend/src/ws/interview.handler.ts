@@ -210,9 +210,11 @@ export function setupInterviewWS(wss: WebSocketServer) {
         let inactivityMonitor: ReturnType<typeof createInterviewInactivityMonitor> | undefined;
         let messageQueue: Promise<void> = Promise.resolve();
         let recordingGuard: ReturnType<typeof setTimeout> | undefined;
+        let recordingEndGuard: ReturnType<typeof setTimeout> | undefined;
         ws.once("close", async (code, reason) => {
             clearInterval(heartbeat);
             clearTimeout(recordingGuard);
+            clearTimeout(recordingEndGuard);
             inactivityMonitor?.stop();
             log.info({ closeCode: code, closeReason: reason.toString("utf8") }, "Interview WebSocket disconnected");
             if (!acceptedInterviewSocket || activeSockets.get(interviewId) !== ws) return;
@@ -401,7 +403,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
             inactivityMonitor = createInterviewInactivityMonitor({
                 onWarning: (warningNumber) => {
                     void recordInactivityWarning(interviewId, warningNumber).catch((error) => log.error({ err: error }, "Could not persist inactivity warning"));
-                    sendJson(ws, { type: "inactivity_warning", warningNumber, totalWarnings: PRACTICE_INTERVIEW_POLICY.inactivityWarningAfterMs.length });
+                    sendJson(ws, { type: "inactivity_warning", warningNumber, totalWarnings: PRACTICE_INTERVIEW_POLICY.inactivityWarningAfterMs.length, secondsUntilEnd: warningNumber === PRACTICE_INTERVIEW_POLICY.inactivityWarningAfterMs.length ? PRACTICE_INTERVIEW_POLICY.inactivityEndGraceMs / 1000 : undefined });
                 },
                 onTimeout: () => { void finishForInactivity().catch((error) => log.error({ err: error }, "Could not end inactive interview")); },
             });
@@ -423,6 +425,8 @@ export function setupInterviewWS(wss: WebSocketServer) {
             // Transcribe and durably save one candidate answer before requesting the next AI turn.
             const handleCandidateAudio = async (data: RawData) => {
                 clearTimeout(recordingGuard);
+                clearTimeout(recordingEndGuard);
+                clearTimeout(recordingEndGuard);
                 inactivityMonitor?.pause();
                 const audioBuffer = audioDataToBuffer(data);
                 if (audioBuffer.length === 0) {
@@ -468,17 +472,27 @@ export function setupInterviewWS(wss: WebSocketServer) {
                         await handleCandidateAudio(data);
                         return;
                     }
-                    const control = JSON.parse(data.toString()) as { type?: string };
+                    const control = JSON.parse(data.toString()) as { type?: string; active?: boolean };
                     if (control.type === "recording_started") {
-                        inactivityMonitor?.pause();
+                        inactivityMonitor?.reset();
                         await markCandidateActivity(interviewId);
                         clearTimeout(recordingGuard);
                         recordingGuard = setTimeout(() => {
-                            sendJson(ws, { type: "recording_idle_warning" });
-                            inactivityMonitor?.reset();
+                            sendJson(ws, { type: "long_answer_warning", secondsUntilEnd: PRACTICE_INTERVIEW_POLICY.inactivityEndGraceMs / 1000 });
+                            recordingEndGuard = setTimeout(() => {
+                                void finishForInactivity().catch((error) => log.error({ err: error }, "Could not end overlong answer"));
+                            }, PRACTICE_INTERVIEW_POLICY.inactivityEndGraceMs);
                         }, PRACTICE_INTERVIEW_POLICY.maximumRecordingMs);
+                    } else if (control.type === "voice_activity") {
+                        if (control.active === true) {
+                            inactivityMonitor?.reset();
+                            sendJson(ws, { type: "recording_activity" });
+                        } else if (control.active === false) {
+                            inactivityMonitor?.reset();
+                        }
                     } else if (control.type === "candidate_ready") {
                         clearTimeout(recordingGuard);
+                        clearTimeout(recordingEndGuard);
                         inactivityMonitor?.reset();
                     }
                     else if (control.type === "end_interview") {

@@ -5,6 +5,7 @@ import { extractGithubUsername, getGithubData } from "../services/githubExtracti
 import { extractResumeData } from "../services/resumeExtraction.service";
 import { AIMode, InterviewReportStatus, InterviewStatus, prisma } from "@repo/db";
 import { authMiddleware } from "../middleware/auth";
+import { endInterview } from "../services/interview-lifecycle.service";
 import multer from "multer";
 
 const interviewRouter = express.Router();
@@ -164,6 +165,15 @@ interviewRouter.get("/report/:interviewId", authMiddleware, async (req, res) => 
     }
 
     return res.status(200).json({ status: "ready", report });
+});
+
+// Let a candidate explicitly end a resumable practice interview from home.
+interviewRouter.post("/:interviewId/end", authMiddleware, async (req, res) => {
+    const interviewId = req.params.interviewId as string;
+    const userId = req.userId as string;
+    const ended = await endInterview(interviewId, userId, "candidate_finished");
+    if (!ended) return res.status(409).json({ error: "Interview is no longer active" });
+    return res.status(200).json({ success: true });
 });
 
 // GET /:interviewId/transcript — returns full interview transcript (messages)

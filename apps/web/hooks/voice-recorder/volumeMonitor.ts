@@ -10,6 +10,7 @@ export interface VolumeMonitorDependencies {
   chunks: AudioChunkCollector;
   silenceThreshold: number;
   silenceDurationMs: number;
+  onVoiceActivity?: (active: boolean) => void;
 }
 
 export interface VolumeMonitor {
@@ -21,6 +22,14 @@ export interface VolumeMonitor {
 export function createVolumeMonitor(dependencies: VolumeMonitorDependencies): VolumeMonitor {
   let animationFrame: number | null = null;
   let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+  let voiceActive = false;
+  let lastVoiceActivityPing = 0;
+
+  const setVoiceActive = (active: boolean) => {
+    if (voiceActive === active) return;
+    voiceActive = active;
+    dependencies.onVoiceActivity?.(active);
+  };
 
   // Cancels an in-progress silence timeout without stopping volume monitoring.
   const cancelSilenceTimer = () => {
@@ -33,11 +42,13 @@ export function createVolumeMonitor(dependencies: VolumeMonitorDependencies): Vo
     if (animationFrame !== null) cancelAnimationFrame(animationFrame);
     animationFrame = null;
     cancelSilenceTimer();
+    setVoiceActive(false);
   };
 
   // Starts one volume loop, optionally stopping the recorder after speech silence.
   const start = (withSilenceCut: boolean) => {
     stop();
+    lastVoiceActivityPing = 0;
     const analyser = dependencies.analyserRef.current;
     if (!analyser) return;
     const data = new Uint8Array(analyser.frequencyBinCount);
@@ -50,8 +61,16 @@ export function createVolumeMonitor(dependencies: VolumeMonitorDependencies): Vo
       if (!dependencies.isAiSpeakingRef.current) {
         if (volume > dependencies.silenceThreshold) {
           dependencies.chunks.markSpeechDetected();
+          setVoiceActive(true);
+          if (Date.now() - lastVoiceActivityPing >= 10_000) {
+            lastVoiceActivityPing = Date.now();
+            dependencies.onVoiceActivity?.(true);
+          }
           cancelSilenceTimer();
-        } else if (
+        } else {
+          setVoiceActive(false);
+        }
+        if (
           withSilenceCut &&
           dependencies.chunks.hasSpeechDetected() &&
           !silenceTimer &&
