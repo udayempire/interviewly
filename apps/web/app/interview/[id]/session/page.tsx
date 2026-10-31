@@ -35,7 +35,7 @@ export default function InterviewPage() {
 
   useEffect(() => {
     if (warningCountdown === null) return;
-    const timer = setInterval(() => setWarningCountdown((seconds) => seconds === null || seconds <= 1 ? null : seconds - 1), 1000);
+    const timer = setInterval(() => setWarningCountdown((seconds) => seconds === null || seconds <= 0 ? null : seconds - 1), 1000);
     return () => clearInterval(timer);
   }, [warningCountdown !== null]);
 

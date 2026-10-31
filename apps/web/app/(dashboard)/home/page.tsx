@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Mic, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 import { InterviewActionCards } from "@/components/home/interviewActionCards";
 import { InterviewReportCard } from "@/components/home/interviewReportCard";
 import { QuickStats } from "@/components/home/quickStats";
@@ -15,6 +16,7 @@ type RecentInterview = {
   description?: string | null;
   status: string;
   createdAt: string;
+  reconnectUntil?: string | null;
   report?: {
     overallScore?: number | null;
   } | null;
@@ -35,14 +37,57 @@ async function fetchRecentInterviews() {
 
 export default function Home() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
-  const { data, isLoading, error } = useQuery({
+  const [reconnectDialogOpen, setReconnectDialogOpen] = useState(false);
+  const [exitingInterview, setExitingInterview] = useState(false);
+  const [dismissedReconnectId, setDismissedReconnectId] = useState<string | null>(null);
+  const [exitError, setExitError] = useState<string | null>(null);
+  const [followUpFetches, setFollowUpFetches] = useState(0);
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["interviews", { limit: 20 }],
     queryFn: fetchRecentInterviews,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
+  //shows pending interviews.
+  useEffect(() => {
+    if (isLoading || followUpFetches >= 4) return;
+    const timer = setTimeout(() => {
+      void refetch();
+      setFollowUpFetches((count) => count + 1);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [followUpFetches, isLoading, refetch]);
+  const reconnectInterview = useMemo(() => (data?.interviews || [])
+    .filter((interview: RecentInterview) => interview.status === "RECONNECTING" && interview.reconnectUntil && new Date(interview.reconnectUntil).getTime() > Date.now())
+    .sort((a: RecentInterview, b: RecentInterview) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0], [data]);
+  useEffect(() => {
+    if (reconnectInterview && reconnectInterview.id !== dismissedReconnectId) setReconnectDialogOpen(true);
+  }, [reconnectInterview, dismissedReconnectId]);
   const interviews = (data?.interviews || [])
     .filter((interview: RecentInterview) => interview.status === "COMPLETED" || interview.status === "TIMED_OUT")
     .slice(0, 5);
+
+  const exitReconnectInterview = async () => {
+    if (!reconnectInterview) return;
+    setExitingInterview(true);
+    setExitError(null);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/interview/${reconnectInterview.id}/end`, {
+        credentials: "include",
+        method: "POST",
+      });
+      if (!response.ok) throw new Error("Could not end this interview. Please try again.");
+      setReconnectDialogOpen(false);
+      setDismissedReconnectId(reconnectInterview.id);
+      await queryClient.invalidateQueries({ queryKey: ["interviews"] });
+    } catch (error) {
+      setExitError(error instanceof Error ? error.message : "Could not end this interview.");
+    } finally {
+      setExitingInterview(false);
+    }
+  };
 
   return (
     <div className="product-page min-h-full bg-[#faf9f5] text-[#20201e] dark:bg-[#171715] dark:text-[#f4f1e8]">
@@ -150,6 +195,22 @@ export default function Home() {
               This feature is currently in progress. Stay tuned!
             </DialogDescription>
           </DialogHeader>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={reconnectDialogOpen && !!reconnectInterview} onOpenChange={(open) => {
+        setReconnectDialogOpen(open);
+        if (!open && reconnectInterview) setDismissedReconnectId(reconnectInterview.id);
+      }}>
+        <DialogContent className="border-[#d5d2c8] bg-[#fffdf8] dark:border-[#3a3934] dark:bg-[#20201e] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold tracking-[-0.035em]">Your last interview was interrupted</DialogTitle>
+            <DialogDescription className="leading-6">Your previous interview is still available. Reconnect now to pick up where you left off before your recovery window expires.</DialogDescription>
+          </DialogHeader>
+          {exitError && <p className="text-sm text-destructive" role="alert">{exitError}</p>}
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={exitReconnectInterview} disabled={exitingInterview}>{exitingInterview ? "Exiting…" : "Exit interview"}</Button>
+            <Button asChild><Link href={`/interview/${reconnectInterview?.id}/session`}>Join interview</Link></Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
