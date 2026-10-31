@@ -31,7 +31,7 @@ async function fetchAllInterviews() {
 
 export default function AllInterviewsPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "COMPLETED" | "IN_PROGRESS">("COMPLETED");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "COMPLETED" | "INTERRUPTED">("COMPLETED");
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["interviews", "all"],
@@ -46,15 +46,15 @@ export default function AllInterviewsPage() {
       .includes(searchQuery.toLowerCase());
 
     if (statusFilter === "COMPLETED") {
-      return matchesSearch && interview.status === "COMPLETED";
+      return matchesSearch && (interview.status === "COMPLETED" || interview.status === "TIMED_OUT");
     }
-    if (statusFilter === "IN_PROGRESS") {
-      return matchesSearch && interview.status !== "COMPLETED";
+    if (statusFilter === "INTERRUPTED") {
+      return matchesSearch && interview.status !== "COMPLETED" && interview.status !== "TIMED_OUT";
     }
     return matchesSearch;
   });
 
-  const completedCount = interviews.filter((i) => i.status === "COMPLETED").length;
+  const completedCount = interviews.filter((i) => i.status === "COMPLETED" || i.status === "TIMED_OUT").length;
   const totalScored = interviews.filter((i) => i.report?.overallScore !== undefined && i.report?.overallScore !== null);
   const avgScore = totalScored.length > 0
     ? Math.round(totalScored.reduce((acc, curr) => acc + (curr.report?.overallScore || 0), 0) / totalScored.length)
@@ -83,7 +83,7 @@ export default function AllInterviewsPage() {
               <div className="flex items-center gap-3 text-xs text-[#77746b] dark:text-[#aaa69b]">
                 <span>Total: <strong className="font-semibold text-[#20201e] dark:text-[#f4f1e8]">{interviews.length}</strong></span>
                 <span aria-hidden="true">·</span>
-                <span>Completed: <strong className="font-semibold text-[#20201e] dark:text-[#f4f1e8]">{completedCount}</strong></span>
+                <span>Ended: <strong className="font-semibold text-[#20201e] dark:text-[#f4f1e8]">{completedCount}</strong></span>
                 {avgScore !== null && (
                   <>
                     <span aria-hidden="true">·</span>
@@ -128,17 +128,17 @@ export default function AllInterviewsPage() {
                   : "bg-stone-200/60 text-[#77746b] hover:bg-stone-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
               }`}
             >
-              Completed ({completedCount})
+              Ended ({completedCount})
             </button>
             <button
-              onClick={() => setStatusFilter("IN_PROGRESS")}
+              onClick={() => setStatusFilter("INTERRUPTED")}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                statusFilter === "IN_PROGRESS"
+                statusFilter === "INTERRUPTED"
                   ? "bg-[#20201e] text-white dark:bg-[#f4f1e8] dark:text-[#20201e]"
                   : "bg-stone-200/60 text-[#77746b] hover:bg-stone-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
               }`}
             >
-              Abandoned ({interviews.length - completedCount})
+              Interrupted / active ({interviews.length - completedCount})
             </button>
           </div>
         </div>

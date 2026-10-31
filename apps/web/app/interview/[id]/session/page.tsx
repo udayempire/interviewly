@@ -10,6 +10,7 @@ import type { ConversationMessage } from "@/components/interviewSession.tsx/type
 import { Preparation } from "@/components/interviewSession.tsx/preparing";
 import { ErrorLoading } from "@/components/interviewSession.tsx/errorLoading";
 import { useVoiceRecorder } from "@/hooks/voice-recorder/useVoiceRecorder";
+import { PRACTICE_INTERVIEW_POLICY } from "@repo/types";
 
 
 export default function InterviewPage() {
@@ -21,92 +22,216 @@ export default function InterviewPage() {
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [isUserRecording, setIsUserRecording] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
+  const [canRespond, setCanRespond] = useState(false);
+  const [inactivityWarning, setInactivityWarning] = useState<number | null>(null);
+  const [recordingIdleWarning, setRecordingIdleWarning] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const aiAudioPlayingRef = useRef(false);
+  const awaitingCandidateRef = useRef(false);
 
   const { startRecording, stopRecording, setAiSpeaking } = useVoiceRecorder({
     onSpeechEnd: (audioBlob) => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) wsRef.current.send(audioBlob);
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(audioBlob);
+        setInactivityWarning(null);
+        setRecordingIdleWarning(false);
+        setCanRespond(false);
+      }
     },
   });
 
   useEffect(() => {
     if (!interviewId) return;
     let disposed = false;
-    // The browser includes the backend's HttpOnly session cookie in the handshake.
-    const wsUrl = new URL("/ws/interview", process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:4000");
-    wsUrl.searchParams.set("interviewId", interviewId);
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    let reconnectDeadline = 0;
+    let reconnectDelay = 1000;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let ended = false;
 
-    ws.onmessage = async (event) => {
-      if (disposed) return;
-      if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
-        const blob = event.data instanceof Blob ? event.data : new Blob([event.data]);
-        const audio = new Audio(URL.createObjectURL(blob));
-        setIsAiSpeaking(true);
-        setAiSpeaking(true);
-        audio.onended = () => {
-          setIsAiSpeaking(false);
-          setAiSpeaking(false);
-        };
-        audio.play().catch((audioError) => console.error("[Audio] Play error:", audioError));
-        return;
+    // Notify the server when AI playback has finished and a candidate response is due.
+    const signalCandidateReady = () => {
+      if (!awaitingCandidateRef.current || aiAudioPlayingRef.current) return;
+      awaitingCandidateRef.current = false;
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: "candidate_ready" }));
       }
+    };
 
-      try {
-        const payload = JSON.parse(event.data);
-        if (payload.type === "error" || payload.error) {
-          setErrorMessage(payload.message || payload.error || "The interview could not be started.");
+    // Open or retry the same interview socket within the bounded recovery window.
+    const connect = () => {
+      if (disposed || ended) return;
+      const wsUrl = new URL("/ws/interview", process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:4000");
+      wsUrl.searchParams.set("interviewId", interviewId);
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        if (disposed) return;
+        setIsConnected(true);
+        setIsReconnecting(false);
+        reconnectDelay = 1000;
+      };
+
+      ws.onmessage = (event) => {
+        if (disposed) return;
+        if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
+          const blob = event.data instanceof Blob ? event.data : new Blob([event.data]);
+          const objectUrl = URL.createObjectURL(blob);
+          const audio = new Audio(objectUrl);
+          aiAudioPlayingRef.current = true;
+          setIsAiSpeaking(true);
+          setAiSpeaking(true);
+          audio.onended = () => {
+            URL.revokeObjectURL(objectUrl);
+            aiAudioPlayingRef.current = false;
+            setIsAiSpeaking(false);
+            setAiSpeaking(false);
+            signalCandidateReady();
+          };
+          audio.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            aiAudioPlayingRef.current = false;
+            setIsAiSpeaking(false);
+            setAiSpeaking(false);
+            signalCandidateReady();
+          };
+          audio.play().catch((audioError) => {
+            console.error("[Audio] Play error:", audioError);
+            aiAudioPlayingRef.current = false;
+            setIsAiSpeaking(false);
+            setAiSpeaking(false);
+            signalCandidateReady();
+          });
+          return;
+        }
+
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === "history") {
+            setSessionState("live");
+            setMessages(payload.messages.map((message: { id: string; role: "ai" | "user"; content: string; createdAt: string }) => ({
+              id: message.id,
+              role: message.role,
+              senderName: message.role === "ai" ? "AI Interviewer" : "You",
+              content: message.content,
+              timestamp: new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              avatarInitial: message.role === "ai" ? "AI" : "U",
+            })));
+            return;
+          }
+          if (payload.type === "awaiting_candidate") {
+            setCanRespond(true);
+            awaitingCandidateRef.current = true;
+            signalCandidateReady();
+            return;
+          }
+          if (payload.type === "inactivity_warning") {
+            setInactivityWarning(payload.warningNumber as number);
+            return;
+          }
+          if (payload.type === "recording_idle_warning") {
+            setRecordingIdleWarning(true);
+            return;
+          }
+          if (payload.type === "interview_ended") {
+            ended = true;
+            setIsEnding(false);
+            router.replace(`/interview/${interviewId}/report`);
+            return;
+          }
+          if (payload.type === "error" || payload.error) {
+            if (payload.code === "ALREADY_CONNECTED") {
+              setIsReconnecting(true);
+              return;
+            }
+            setErrorMessage(payload.message || payload.error || "The interview could not be started.");
+            setSessionState("error");
+            return;
+          }
+          if (payload.type === "message" || payload.role) {
+            const isAi = payload.role === "assistant" || payload.role === "ai";
+            if (!isAi) {
+              setInactivityWarning(null);
+              setRecordingIdleWarning(false);
+              setCanRespond(false);
+            }
+            setSessionState("live");
+            setMessages((previous) => [...previous, {
+              id: payload.id || `${Date.now()}-${previous.length}`,
+              role: isAi ? "ai" : "user",
+              senderName: isAi ? "AI Interviewer" : "You",
+              content: payload.content,
+              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              avatarInitial: isAi ? "AI" : "U",
+            }]);
+          }
+        } catch {
+          console.log("[WS] Non-JSON message:", event.data);
+        }
+      };
+
+      ws.onerror = () => {
+        if (!disposed) setIsConnected(false);
+      };
+      ws.onclose = (event) => {
+        if (disposed || ended) return;
+        setIsConnected(false);
+        if (event.code === 1008 && event.reason !== "Interview is no longer active") {
+          setErrorMessage(event.reason || "Could not connect to the interview server.");
           setSessionState("error");
           return;
         }
-        if (payload.type === "message" || payload.role) {
-          const isAi = payload.role === "assistant" || payload.role === "ai";
-          setSessionState("live");
-          setMessages((previous) => [...previous, {
-            id: Date.now().toString(),
-            role: isAi ? "ai" : "user",
-            senderName: isAi ? "AI Interviewer" : "You",
-            content: payload.content,
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            avatarInitial: isAi ? "AI" : "U",
-          }]);
+        if (!reconnectDeadline) {
+          reconnectDeadline = Date.now()
+            + PRACTICE_INTERVIEW_POLICY.reconnectWindowMs
+            + PRACTICE_INTERVIEW_POLICY.connectionLeaseMs
+            + PRACTICE_INTERVIEW_POLICY.lifecycleSweepIntervalMs;
         }
-      } catch {
-        console.log("[WS] Non-JSON message:", event.data);
-      }
+        const remainingMs = reconnectDeadline - Date.now();
+        if (remainingMs <= 0) {
+          router.replace(`/interview/${interviewId}/report`);
+          return;
+        }
+        setIsReconnecting(true);
+        retryTimer = setTimeout(connect, Math.min(reconnectDelay, remainingMs));
+        reconnectDelay = Math.min(reconnectDelay * 2, 5000);
+      };
     };
-    ws.onerror = () => {
-      if (disposed) return;
-      setErrorMessage("Could not connect to the interview server. Please try again.");
-      setSessionState("error");
-    };
-    ws.onclose = (event) => {
-      if (disposed) return;
-      setErrorMessage((previous) => previous || event.reason || "The interview connection closed unexpectedly. Please try again.");
-      setSessionState("error");
-    };
+
+    connect();
     return () => {
       disposed = true;
-      ws.close();
+      clearTimeout(retryTimer);
+      wsRef.current?.close(1000, "Interview page closed");
     };
-  }, [interviewId, setAiSpeaking]);
+  }, [interviewId, router, setAiSpeaking]);
 
   const handleMicToggle = async () => {
-    if (isAiSpeaking) return;
+    if (isAiSpeaking || (!canRespond && !isUserRecording)) return;
     if (isUserRecording) {
       stopRecording();
       setIsUserRecording(false);
     } else {
+      setCanRespond(false);
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: "recording_started" }));
+      }
+      setRecordingIdleWarning(false);
       await startRecording();
       setIsUserRecording(true);
     }
   };
 
   const handleLeave = () => {
+    if (sessionState !== "live") return;
     if (isUserRecording) stopRecording();
-    wsRef.current?.close();
-    router.push(`/interview/${interviewId}/report`);
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      setIsEnding(true);
+      wsRef.current.send(JSON.stringify({ type: "end_interview" }));
+    }
   };
 
   if (sessionState === "preparing") return <Preparation />;
@@ -114,7 +239,12 @@ export default function InterviewPage() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-stone-50 text-stone-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <AppbarInterviewSession isAiSpeaking={isAiSpeaking} isUserRecording={isUserRecording} onMicToggle={handleMicToggle} onLeave={handleLeave} />
+      <AppbarInterviewSession isAiSpeaking={isAiSpeaking} isUserRecording={isUserRecording} isConnected={isConnected} isEnding={isEnding} canRespond={canRespond} canEnd={sessionState === "live"} onMicToggle={handleMicToggle} onLeave={handleLeave} />
+      {(isReconnecting || inactivityWarning !== null || recordingIdleWarning || isEnding) && (
+        <div className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-center text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200" role="status">
+          {isEnding ? "Ending interview and preparing your report…" : isReconnecting ? "Connection lost. Reconnecting to your interview…" : recordingIdleWarning ? "Still recording? Stop recording when you have finished your answer." : `No response detected. Please answer soon (warning ${inactivityWarning} of ${PRACTICE_INTERVIEW_POLICY.inactivityWarningAfterMs.length}).`}
+        </div>
+      )}
       <main className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1.7fr)_minmax(22rem,1fr)]">
         <section className="flex min-h-0 flex-col border-b border-stone-200 p-4 dark:border-zinc-800 lg:border-r lg:border-b-0 lg:p-5">
           <Participants isUserSpeaking={isUserRecording} isAiSpeaking={isAiSpeaking} />

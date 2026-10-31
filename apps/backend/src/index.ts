@@ -41,6 +41,7 @@ app.get('/test-llm', async (req, res) => {
 });
 
 import { startOtpCleanupScheduler } from "./services/otp.service";
+import { startInterviewLifecycleScheduler } from "./services/interview-lifecycle.service";
 
 app.use('/api/v1', router);
 
@@ -48,4 +49,5 @@ setupInterviewWS(wss);
 server.listen(port, () => {
     logger.info({ port }, "Server started");
     startOtpCleanupScheduler();
+    startInterviewLifecycleScheduler();
 });

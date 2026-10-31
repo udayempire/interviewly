@@ -12,10 +12,11 @@ interface InterviewReportCardProps {
 
 export const InterviewReportCard = ({ id, title, status, timeAgo, score }: InterviewReportCardProps) => {
   const isCompleted = status === "COMPLETED";
+  const isTerminal = isCompleted || status === "TIMED_OUT";
   const queryClient = useQueryClient();
 
   const handlePrefetch = () => {
-    if (!id || !isCompleted) return;
+    if (!id || !isTerminal) return;
     queryClient.prefetchQuery({
       queryKey: ["interview-report", id],
       queryFn: async () => {
@@ -28,7 +29,12 @@ export const InterviewReportCard = ({ id, title, status, timeAgo, score }: Inter
         }
         if (!response.ok) throw new Error("Failed to fetch report");
         const data = await response.json();
-        return { pending: false, report: data.report };
+        return {
+          pending: false,
+          report: data.report ?? null,
+          outcome: data.status === "not_eligible" || data.status === "failed" ? data.status : undefined,
+          message: data.message,
+        };
       },
       staleTime: Infinity,
     });
@@ -39,8 +45,8 @@ export const InterviewReportCard = ({ id, title, status, timeAgo, score }: Inter
       <div className="min-w-0">
         <h3 className="truncate text-[15px] font-medium tracking-[-0.015em] text-[#20201e] dark:text-zinc-100">{title}</h3>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[#77746b] dark:text-zinc-400">
-          <span className={`h-1.5 w-1.5 rounded-full ${isCompleted ? "bg-[#c79612]" : "bg-[#a9a59a]"}`} />
-          <span>{isCompleted ? "Completed" : "Abandoned"}</span>
+          <span className={`h-1.5 w-1.5 rounded-full ${isTerminal ? "bg-[#c79612]" : "bg-[#a9a59a]"}`} />
+          <span>{isCompleted ? "Completed" : status === "TIMED_OUT" ? "Partial" : status === "RECONNECTING" ? "Reconnecting" : status === "IN_PROGRESS" ? "In progress" : "Abandoned"}</span>
           <span aria-hidden="true">·</span>
           <span>{timeAgo}</span>
           {score !== undefined && score !== null && (
@@ -54,7 +60,7 @@ export const InterviewReportCard = ({ id, title, status, timeAgo, score }: Inter
           )}
         </div>
       </div>
-      {isCompleted ? (
+      {isTerminal ? (
         <Link
           href={`/interview/${id}/report`}
           onMouseEnter={handlePrefetch}
@@ -66,7 +72,7 @@ export const InterviewReportCard = ({ id, title, status, timeAgo, score }: Inter
         </Link>
       ) : (
         <span className="rounded-md bg-stone-200/60 px-2.5 py-1 text-xs font-medium text-[#77746b] dark:bg-zinc-800 dark:text-zinc-400">
-          Abandoned
+          {status === "RECONNECTING" ? "Reconnecting" : status === "IN_PROGRESS" ? "In progress" : "Unavailable"}
         </span>
       )}
     </article>

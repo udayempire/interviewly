@@ -93,6 +93,11 @@ model Interview {
   status      InterviewStatus    @default(IN_PROGRESS)
   startedAt   DateTime           @default(now())
   completedAt DateTime?
+  reconnectUntil DateTime?
+  connectionId String?
+  connectionLeaseUntil DateTime?
+  lastActivityAt DateTime        @default(now())
+  inactivityWarningCount Int     @default(0)
   description String?
   githubData  Json?
   joinCode    String?
@@ -101,6 +106,7 @@ model Interview {
   template    Template?          @relation(fields: [templateId], references: [id])
   user        User               @relation(fields: [userId], references: [id])
   messages    InterviewMessage[]
+  events      InterviewEvent[]
   report      InterviewReport?
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @default(now()) @updatedAt
@@ -122,15 +128,32 @@ model InterviewReport {
   id               String    @id @default(cuid())
   userId           String
   interviewId      String    @unique
-  strengths        String[]
-  improvements     String[]
-  detailedFeedback String
-  aiSummary        String
+  status           InterviewReportStatus @default(READY)
+  isPartial        Boolean   @default(false)
+  eligibilityReason String?
+  generationError  String?
+  generationStartedAt DateTime?
+  strengths        String[]  @default([])
+  improvements     String[]  @default([])
+  detailedFeedback String?
+  aiSummary        String?
   overallScore     Int?
   breakdown        Json?
   createdAt        DateTime  @default(now())
   interview        Interview @relation(fields: [interviewId], references: [id])
   user             User      @relation(fields: [userId], references: [id])
+}
+
+model InterviewEvent {
+  id          String    @id @default(cuid())
+  interviewId String
+  type        InterviewEventType
+  details     Json?
+  createdAt   DateTime  @default(now())
+  interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@index([interviewId, createdAt])
+  @@index([type, createdAt])
 }
 
 model LLMCall {
@@ -174,8 +197,33 @@ enum AIMode {
 
 enum InterviewStatus {
   IN_PROGRESS
+  RECONNECTING
   COMPLETED
+  TIMED_OUT
   ABANDONED
+}
+
+enum InterviewReportStatus {
+  PENDING
+  GENERATING
+  READY
+  NOT_ELIGIBLE
+  FAILED
+}
+
+enum InterviewEventType {
+  SOCKET_CONNECTED
+  SOCKET_DISCONNECTED
+  RECONNECT_WINDOW_STARTED
+  RECONNECTED
+  CANDIDATE_ACTIVITY
+  INACTIVITY_WARNING
+  INTERVIEW_COMPLETED
+  INTERVIEW_TIMED_OUT
+  REPORT_GENERATION_STARTED
+  REPORT_GENERATION_SUCCEEDED
+  REPORT_GENERATION_FAILED
+  REPORT_NOT_ELIGIBLE
 }
 
 enum TemplateSource {

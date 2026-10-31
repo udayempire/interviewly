@@ -7,6 +7,8 @@ import {
   AlertCircle,
   Brain,
   Code2,
+  Home,
+  HomeIcon,
   Lightbulb,
   Loader2,
   MessageSquare,
@@ -16,6 +18,7 @@ import { ReportHeader } from "@/components/report/reportHeader";
 import { OverallScoreRing } from "@/components/report/overallScoreRing";
 import { SkillScoreCard } from "@/components/report/skillScoreCard";
 import { AIFeedbackSection } from "@/components/report/aiFeedbackSection";
+import { Homemade_Apple } from "next/font/google";
 
 interface Breakdown {
   technicalKnowledge: number;
@@ -34,11 +37,19 @@ interface ReportData {
   overallScore: number;
   breakdown: Breakdown;
   createdAt: string;
+  isPartial: boolean;
   interview: {
     description: string;
     startedAt: string;
     completedAt: string | null;
   };
+}
+
+interface ReportQueryData {
+  pending: boolean;
+  report: ReportData | null;
+  outcome?: "not_eligible" | "failed";
+  message?: string;
 }
 
 async function fetchInterviewReport(interviewId: string) {
@@ -48,7 +59,7 @@ async function fetchInterviewReport(interviewId: string) {
   );
 
   if (response.status === 202) {
-    return { pending: true, report: null as ReportData | null };
+    return { pending: true, report: null, outcome: undefined, message: undefined } satisfies ReportQueryData;
   }
 
   if (!response.ok) {
@@ -56,7 +67,12 @@ async function fetchInterviewReport(interviewId: string) {
   }
 
   const data = await response.json();
-  return { pending: false, report: data.report as ReportData };
+  return {
+    pending: false,
+    report: (data.report as ReportData | undefined) ?? null,
+    outcome: data.status === "not_eligible" || data.status === "failed" ? data.status : undefined,
+    message: data.message as string | undefined,
+  } satisfies ReportQueryData;
 }
 
 function formatDuration(startedAt: string, completedAt: string | null) {
@@ -184,6 +200,24 @@ function ReportError() {
   );
 }
 
+// Explain why there is no report while linking the candidate to their saved transcript.
+function ReportUnavailable({ message }: { message: string }) {
+  const params = useParams<{ id: string }>();
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-stone-50 p-6 text-stone-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <section className="w-full max-w-lg border border-stone-200 bg-white p-7 dark:border-zinc-800 dark:bg-zinc-900">
+        <AlertCircle className="h-5 w-5 text-amber-700 dark:text-amber-300" />
+        <h1 className="mt-5 text-xl font-semibold tracking-[-0.03em]">No report available</h1>
+        <p className="mt-2 text-sm leading-6 text-stone-600 dark:text-zinc-400">{message}</p>
+        <div className="flex justify-between">
+        <a href={`/home`} className="mt-5 flex gap-2 h-10 items-center bg-zinc-900 px-4 text-sm font-semibold text-white dark:bg-amber-300 dark:text-stone-900"> <HomeIcon size={20}/><p className="mt-1">Go to Home</p> </a>
+        <a href={`/interview/${params.id}/transcript`} className="mt-5 inline-flex h-10 items-center bg-zinc-900 px-4 text-sm font-semibold text-white dark:bg-amber-300 dark:text-stone-900">View Transcript</a>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 export default function InterviewReportPage() {
   const params = useParams<{ id: string }>();
   const interviewId = params?.id;
@@ -209,6 +243,9 @@ export default function InterviewReportPage() {
   if (data.pending) return <GeneratingReport />;
 
   const report = data.report;
+  if (data.outcome) {
+    return <ReportUnavailable message={data.message ?? "Your interview transcript is saved."} />;
+  }
   if (!report) return <ReportError />;
 
   const breakdown = report.breakdown ?? ({} as Breakdown);
@@ -256,6 +293,11 @@ export default function InterviewReportPage() {
             report.interview.completedAt,
           )}
         />
+        {report.isPartial && (
+          <p className="border-b border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+            This is a partial report based on the answers saved before the connection ended.
+          </p>
+        )}
         {report.aiSummary && (
           <section className="border-b border-stone-200 py-7 dark:border-zinc-800">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500 dark:text-zinc-400">

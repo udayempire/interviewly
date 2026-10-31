@@ -41,7 +41,7 @@ export default function Home() {
     queryFn: fetchRecentInterviews,
   });
   const interviews = (data?.interviews || [])
-    .filter((interview: RecentInterview) => interview.status === "COMPLETED")
+    .filter((interview: RecentInterview) => interview.status === "COMPLETED" || interview.status === "TIMED_OUT")
     .slice(0, 5);
 
   return (
