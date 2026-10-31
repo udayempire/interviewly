@@ -5,7 +5,7 @@ import { extractGithubUsername, getGithubData } from "../services/githubExtracti
 import { extractResumeData } from "../services/resumeExtraction.service";
 import { AIMode, InterviewReportStatus, InterviewStatus, prisma } from "@repo/db";
 import { authMiddleware } from "../middleware/auth";
-import { endInterview } from "../services/interview-lifecycle.service";
+import { endInterview } from "../services/interview/interview-lifecycle.service";
 import multer from "multer";
 
 const interviewRouter = express.Router();

@@ -1,11 +1,11 @@
 import { prisma, InterviewReportStatus, Prisma, type MessageRole } from "@repo/db";
 import { executeLLMWithFallback } from "@repo/llm";
-import { decrypt } from "./encryption";
-import { recordAICall } from "./telemetry.service";
+import { decrypt } from "../encryption";
+import { recordAICall } from "../telemetry.service";
 import { recordInterviewEvent } from "./interview-events.service";
 import { PRACTICE_INTERVIEW_POLICY } from "./interview-policy";
 import { buildEvaluationPrompt } from "./interview-evaluation-prompt";
-import { logger } from "../lib/logger";
+import { logger } from "../../lib/logger";
 
 type TranscriptMessage = { role: MessageRole; content: string };
 const reportsInFlight = new Set<string>();

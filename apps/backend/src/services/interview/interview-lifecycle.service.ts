@@ -2,7 +2,7 @@ import { InterviewReportStatus, InterviewStatus, prisma } from "@repo/db";
 import { recordInterviewEvent } from "./interview-events.service";
 import { generateInterviewReport } from "./interview-report.service";
 import { PRACTICE_INTERVIEW_POLICY } from "./interview-policy";
-import { createInterviewLogger } from "../lib/logger";
+import { createInterviewLogger } from "../../lib/logger";
 
 type EndReason = "candidate_finished" | "inactivity_timeout" | "reconnect_expired";
 

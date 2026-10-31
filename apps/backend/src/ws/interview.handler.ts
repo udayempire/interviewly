@@ -8,9 +8,9 @@ import { logger, createInterviewLogger, type InterviewLogger } from "../lib/logg
 import { recordAICall } from "../services/telemetry.service";
 import { decrypt } from "../services/encryption";
 import { checkAndDeduct } from "../services/credits.service";
-import { PRACTICE_INTERVIEW_POLICY } from "../services/interview-policy";
+import { PRACTICE_INTERVIEW_POLICY } from "../services/interview/interview-policy";
 import { createInterviewInactivityMonitor } from "../services/interview-inactivity";
-import { claimInterviewConnection, markCandidateActivity, markInterviewDisconnected, markInterviewReconnected, renewInterviewConnectionLease, endInterview, recordInactivityWarning } from "../services/interview-lifecycle.service";
+import { claimInterviewConnection, markCandidateActivity, markInterviewDisconnected, markInterviewReconnected, renewInterviewConnectionLease, endInterview, recordInactivityWarning } from "../services/interview/interview-lifecycle.service";
 import { recordInterviewEvent } from "../services/interview-events.service";
 
 
