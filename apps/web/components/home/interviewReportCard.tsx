@@ -7,10 +7,11 @@ interface InterviewReportCardProps {
   title: string;
   status: string;
   timeAgo: string;
+  createdAt: string;
   score?: number | null;
 }
 
-export const InterviewReportCard = ({ id, title, status, timeAgo, score }: InterviewReportCardProps) => {
+export const InterviewReportCard = ({ id, title, status, timeAgo, createdAt, score }: InterviewReportCardProps) => {
   const isCompleted = status === "COMPLETED";
   const isTerminal = isCompleted || status === "TIMED_OUT";
   const queryClient = useQueryClient();
@@ -49,6 +50,8 @@ export const InterviewReportCard = ({ id, title, status, timeAgo, score }: Inter
           <span>{isCompleted ? "Completed" : status === "TIMED_OUT" ? "Partial" : status === "RECONNECTING" ? "Reconnecting" : status === "IN_PROGRESS" ? "In progress" : "Abandoned"}</span>
           <span aria-hidden="true">·</span>
           <span>{timeAgo}</span>
+          <span aria-hidden="true">·</span>
+          <span>{new Date(createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
           {score !== undefined && score !== null && (
             <>
               <span aria-hidden="true">·</span>

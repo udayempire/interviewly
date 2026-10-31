@@ -173,6 +173,7 @@ export default function AllInterviewsPage() {
                 id={interview.id}
                 title={interview.description || "Interview session"}
                 status={interview.status}
+                createdAt={interview.createdAt}
                 timeAgo={new Date(interview.createdAt).toLocaleDateString(undefined, {
                   month: "short",
                   day: "numeric",
