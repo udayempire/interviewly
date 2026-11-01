@@ -103,6 +103,7 @@ async function generateInterviewReportInternal(interviewId: string, isPartial: b
         const current = await prisma.interviewReport.findUnique({ where: { interviewId } });
         return { status: current?.status ?? InterviewReportStatus.PENDING, answeredFollowUps };
     }
+    //if claimReportGeneration is true
 
     await recordInterviewEvent(interviewId, "REPORT_GENERATION_STARTED", { isPartial, answeredFollowUps });
     try {

@@ -1,4 +1,4 @@
-import { PRACTICE_INTERVIEW_POLICY } from "./interview/interview-policy";
+import { PRACTICE_INTERVIEW_POLICY } from "./interview-policy";
 
 // Create a pausable inactivity timer for one connected interview session.
 export function createInterviewInactivityMonitor(options: {

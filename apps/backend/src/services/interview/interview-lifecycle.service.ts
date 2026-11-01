@@ -107,7 +107,7 @@ export async function endInterview(interviewId: string, userId: string, reason: 
     const eventType = reason === "candidate_finished" ? "INTERVIEW_COMPLETED" : "INTERVIEW_TIMED_OUT";
     await recordInterviewEvent(interviewId, eventType, { reason });
     const log = createInterviewLogger(interviewId, userId);
-    log.info({ reason }, "Interview state ended; report processing starts separately");
+    log.info({ reason }, `Interview state ended for InterviewId ${interviewId}; report processing starts separately`);
     try {
         await prisma.interviewReport.upsert({
             where: { interviewId },

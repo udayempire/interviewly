@@ -9,9 +9,9 @@ import { recordAICall } from "../services/telemetry.service";
 import { decrypt } from "../services/encryption";
 import { checkAndDeduct } from "../services/credits.service";
 import { PRACTICE_INTERVIEW_POLICY } from "../services/interview/interview-policy";
-import { createInterviewInactivityMonitor } from "../services/interview-inactivity";
+import { createInterviewInactivityMonitor } from "../services/interview/interview-inactivity";
 import { claimInterviewConnection, markCandidateActivity, markInterviewDisconnected, markInterviewReconnected, renewInterviewConnectionLease, endInterview, recordInactivityWarning } from "../services/interview/interview-lifecycle.service";
-import { recordInterviewEvent } from "../services/interview-events.service";
+import { recordInterviewEvent } from "../services/interview/interview-events.service";
 
 
 function sendJson(ws: WebSocket, payload: unknown) {
@@ -50,7 +50,7 @@ function buildSystemPrompt(
     resumeData: unknown
 ): string {
     return `
-You are an experienced Senior Technical Interviewer conducting a live voice interview.
+You are an experienced interviewer conducting a live practice interview. You are an AI practice interviewer, not an employer or hiring representative.
 
 Your goal is to evaluate the candidate's technical knowledge, problem-solving ability, communication skills, and real-world experience.
 
@@ -86,6 +86,14 @@ Interview Flow:
 4. Deep dive into projects (if available).
 5. Technical concepts relevant to the role.
 6. Final question about learning, debugging, or problem solving.
+
+Closing:
+
+- When the planned questions are complete, close warmly and naturally in one short statement. Thank the candidate for their answers and say that this practice interview is finished.
+- Do not promise that anyone will evaluate, review, or share results later, or that the candidate will hear back.
+- Do not ask "Do you have any questions for us?" or imply that you represent a company or hiring team.
+- If the candidate asks a question, answer only about this practice session or general interview practice. For employer-specific questions, say briefly that you are an AI practice interviewer and do not have the employer's hiring information.
+- After giving the closing statement, do not start another interview question. The candidate can end the session from the interview controls.
 
 Rules:
 

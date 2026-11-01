@@ -1,5 +1,5 @@
 import { prisma, type InterviewEventType, type Prisma } from "@repo/db";
-import { logger } from "../lib/logger";
+import { logger } from "../../lib/logger";
 
 // Persist one lifecycle or recovery event for later debugging and report recovery.
 export async function recordInterviewEvent(
