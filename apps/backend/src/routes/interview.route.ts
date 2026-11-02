@@ -6,6 +6,7 @@ import { extractResumeData } from "../services/resumeExtraction.service";
 import { AIMode, InterviewReportStatus, InterviewStatus, prisma } from "@repo/db";
 import { authMiddleware } from "../middleware/auth";
 import { endInterview } from "../services/interview/interview-lifecycle.service";
+import { checkCanStart, MAX_INTERVIEWS_PER_DAY } from "../services/credits.service";
 import multer from "multer";
 
 const interviewRouter = express.Router();
@@ -27,6 +28,26 @@ interviewRouter.post("/create", authMiddleware, upload.single("resume"), async (
     const { githubUrl, description } = result.data;
     const useProfileResume = req.body.useProfileResume === "true" || req.body.useProfileResume === true;
     const userId = req.userId as string;
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { planTier: true } });
+    const planTier = user?.planTier ?? "FREE";
+
+    // Cost gates run first so blocked users never trigger GitHub fetches or resume LLM parsing.
+    if (MAX_INTERVIEWS_PER_DAY > 0) {
+        const startedToday = await prisma.interview.count({
+            where: { userId, createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+        });
+        if (startedToday >= MAX_INTERVIEWS_PER_DAY) {
+            return res.status(429).json({
+                success: false,
+                code: "DAILY_LIMIT_REACHED",
+                error: `You can create up to ${MAX_INTERVIEWS_PER_DAY} interviews per day. Please try again tomorrow.`,
+            });
+        }
+    }
+    const creditCheck = await checkCanStart(userId);
+    if (!creditCheck.allowed) {
+        return res.status(402).json({ success: false, code: "INSUFFICIENT_CREDITS", error: creditCheck.reason });
+    }
 
     // Fetch user profile to reuse pre-parsed resumeText and pre-fetched githubData from DB
     const userProfile = await prisma.userProfile.findUnique({
@@ -93,7 +114,7 @@ interviewRouter.post("/create", authMiddleware, upload.single("resume"), async (
         parsedResumeJson = userProfile.resumeText;
     } else if (file?.buffer) {
         console.log("[createInterview] Parsing newly uploaded resume file with LLM...");
-        parsedResumeJson = await extractResumeData(file.buffer);
+        parsedResumeJson = await extractResumeData(file.buffer, planTier);
     } else if (userProfile?.resumeText) {
         console.log("[createInterview] Fallback to saved profile resume from DB");
         parsedResumeJson = userProfile.resumeText;
@@ -102,6 +123,7 @@ interviewRouter.post("/create", authMiddleware, upload.single("resume"), async (
     const interview = await prisma.interview.create({
         data: {
             userId,
+            planTierAtStart: planTier,
             description,
             githubData: githubData ?? undefined,
             resumeText: parsedResumeJson ?? undefined,

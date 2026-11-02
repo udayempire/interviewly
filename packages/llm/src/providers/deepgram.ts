@@ -2,9 +2,11 @@ import { DeepgramClient } from "@deepgram/sdk";
 import type { STTProvider, TTSProvider, TTSResponse } from "../types";
 
 export class DeepgramProvider implements TTSProvider {
-    private ai = new DeepgramClient({
-        apiKey: process.env.DEEPGRAM_API_KEY!,
-    });
+    private ai: DeepgramClient;
+
+    constructor(apiKey?: string) {
+        this.ai = new DeepgramClient({ apiKey: apiKey || process.env.DEEPGRAM_API_KEY! });
+    }
 
     async synthesize(
         text: string,
@@ -38,9 +40,11 @@ export class DeepgramProvider implements TTSProvider {
     }
 };
 export class DeepgramSTTProvider implements STTProvider {
-    private ai = new DeepgramClient({
-        apiKey: process.env.DEEPGRAM_API_KEY!,
-    });
+    private ai: DeepgramClient;
+
+    constructor(apiKey?: string) {
+        this.ai = new DeepgramClient({ apiKey: apiKey || process.env.DEEPGRAM_API_KEY! });
+    }
 
     async transcribe(
         audio: Buffer,

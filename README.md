@@ -101,6 +101,14 @@ DEFAULT_LLM_PROVIDER=groq
 DEFAULT_STT_PROVIDER=groq
 DEFAULT_TTS_PROVIDER=deepgram
 
+# Usage limits / credits (tune these as you learn real usage; no code change needed)
+CREDITS_ENFORCED=true          # false = track only, never block
+SIGNUP_BONUS_MINUTES=30        # free credits on signup (15 min = 1 interview credit)
+INTERVIEW_COST_MINUTES=15      # cost of one interview
+MAX_INTERVIEWS_PER_DAY=10      # per-user rolling 24h cap, even for paying users
+MINUTES_PER_CREDIT=15          # UI display only
+ADMIN_SECRET=change_me         # enables POST /api/v1/credits/gift to top up users manually
+
 # Auth
 JWT_SECRET=your_jwt_secret
 ENCRYPTION_KEY=your_base64_encryption_key

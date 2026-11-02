@@ -49,7 +49,7 @@ export default function Interview() {
         body: formData,
       });
       const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.Error || "Failed to create interview");
+      if (!response.ok || !data.success) throw new Error(data.Error || (typeof data.error === "string" ? data.error : null) || "Failed to create interview");
       return data.interview;
     },
     onSuccess: (data) => router.push(`/interview/${data.id}/session`),

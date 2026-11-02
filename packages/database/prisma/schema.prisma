@@ -13,6 +13,11 @@ enum AuthProvider {
   GITHUB
 }
 
+enum UserPlanTier {
+  FREE
+  PREMIUM
+}
+
 model User {
   id                 String              @id @default(cuid())
   email              String              @unique
@@ -25,6 +30,7 @@ model User {
   userProfile        UserProfile?
   credit             UserCredit?
   creditTransactions CreditTransaction[]
+  planTier           UserPlanTier        @default(FREE)
   // plan            Plan?             @default(FREE)
   // nextBillingDate DateTime?
 }
@@ -91,6 +97,7 @@ model Interview {
   templateId  String?
   mode        AIMode
   status      InterviewStatus    @default(IN_PROGRESS)
+  planTierAtStart UserPlanTier   @default(FREE)
   startedAt   DateTime           @default(now())
   completedAt DateTime?
   reconnectUntil DateTime?

@@ -9,9 +9,14 @@
  * - "Credits" are only a display abstraction: 1 credit = MINUTES_PER_CREDIT minutes.
  *   The UI converts: displayCredits = Math.floor(balanceMinutes / MINUTES_PER_CREDIT)
  *
+ * Billing model: ONE INTERVIEW = INTERVIEW_COST_MINUTES (default 15 = 1 credit), regardless of
+ * how long the candidate thinks. The charge is taken when a new interview starts and refunded
+ * automatically if the interview never produces a report (NOT_ELIGIBLE). Cost is bounded by the
+ * turn cap in PRACTICE_INTERVIEW_POLICY, not by wall-clock time.
+ *
  * Enforcement is controlled by the CREDITS_ENFORCED env var:
- *   CREDITS_ENFORCED=false  → checkAndDeduct() always succeeds (current default — just tracking)
- *   CREDITS_ENFORCED=true   → checkAndDeduct() blocks when balance < cost
+ *   CREDITS_ENFORCED=false  → nothing is charged or blocked (tracking only)
+ *   CREDITS_ENFORCED=true   → interviews are charged and blocked when balance < cost
  */
 
 import { prisma, CreditTransactionType } from "@repo/db";
@@ -75,11 +80,22 @@ const CREDITS_ENFORCED = process.env.CREDITS_ENFORCED === "true";
 export const SIGNUP_BONUS_MINUTES = Number(process.env.SIGNUP_BONUS_MINUTES ?? 0);
 
 /**
- * Minimum minutes required to start an interview.
- * Used when CREDITS_ENFORCED=true.
- * Default: 1 minute (just enough to start — enforce per your plan limits separately).
+ * Minutes charged per interview (default 15 = 1 credit). Retune plans by changing this env var
+ * and the signup/top-up amounts; no code change needed.
  */
-export const MIN_MINUTES_TO_START = Number(process.env.MIN_MINUTES_TO_START ?? 1);
+export const INTERVIEW_COST_MINUTES = Number(process.env.INTERVIEW_COST_MINUTES ?? 15);
+
+/**
+ * Max interviews a user may create per rolling 24h, regardless of credits or refunds.
+ * Protects against refund-loop and resume-parse abuse. 0 = unlimited.
+ */
+export const MAX_INTERVIEWS_PER_DAY = Number(process.env.MAX_INTERVIEWS_PER_DAY ?? 10);
+
+/**
+ * Minimum minutes required to start an interview (defaults to the full interview cost).
+ * Used when CREDITS_ENFORCED=true.
+ */
+export const MIN_MINUTES_TO_START = Number(process.env.MIN_MINUTES_TO_START ?? INTERVIEW_COST_MINUTES);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -218,15 +234,88 @@ export async function checkCanStart(
 }
 
 /**
- * Gate check called before an interview session begins.
- * Alias / wrapper for checkCanStart when checked at WS connection start.
+ * Charge one interview when a NEW interview session starts.
+ *
+ * - Atomic: the balance is decremented with a conditional update, so two concurrent starts
+ *   with one credit left cannot both succeed.
+ * - Idempotent: a socket that drops before the first message and reconnects is not charged twice.
+ * - Refunded by refundInterview() if the interview never produces a report.
+ *
+ * When CREDITS_ENFORCED=false: always allowed, nothing is deducted.
  */
 export async function checkAndDeduct(
     userId: string,
-    interviewId?: string,
-    minRequired = MIN_MINUTES_TO_START
+    interviewId: string,
+    cost = INTERVIEW_COST_MINUTES
 ): Promise<{ allowed: true } | { allowed: false; reason: string; balanceMinutes?: number }> {
-    return checkCanStart(userId, minRequired);
+    if (!CREDITS_ENFORCED) return { allowed: true };
+
+    return prisma.$transaction(async (tx) => {
+        const alreadyCharged = await tx.creditTransaction.findFirst({
+            where: { userId, interviewId, type: CreditTransactionType.DEDUCTED },
+            select: { id: true },
+        });
+        if (alreadyCharged) return { allowed: true as const };
+
+        await tx.userCredit.upsert({ where: { userId }, create: { userId, balance: 0 }, update: {} });
+        const charged = await tx.userCredit.updateMany({
+            where: { userId, balance: { gte: cost } },
+            data: { balance: { decrement: cost } },
+        });
+        if (charged.count === 0) {
+            const current = await tx.userCredit.findUnique({ where: { userId }, select: { balance: true } });
+            const balanceMinutes = current?.balance ?? 0;
+            return {
+                allowed: false as const,
+                reason: `Not enough credits. You have ${balanceMinutes} min, need ${cost} min.`,
+                balanceMinutes,
+            };
+        }
+        await tx.creditTransaction.create({
+            data: {
+                userId,
+                delta: -cost,
+                type: CreditTransactionType.DEDUCTED,
+                note: `Interview started: ${cost} min`,
+                interviewId,
+            },
+        });
+        return { allowed: true as const };
+    });
+}
+
+/**
+ * Give back the charge for an interview that produced no usable report.
+ * Idempotent: refunds at most once per interview, and only if it was actually charged.
+ */
+export async function refundInterview(userId: string, interviewId: string, reason: string): Promise<boolean> {
+    if (!CREDITS_ENFORCED) return false;
+
+    return prisma.$transaction(async (tx) => {
+        const charge = await tx.creditTransaction.findFirst({
+            where: { userId, interviewId, type: CreditTransactionType.DEDUCTED },
+            select: { delta: true },
+        });
+        if (!charge) return false;
+        const alreadyRefunded = await tx.creditTransaction.findFirst({
+            where: { userId, interviewId, type: CreditTransactionType.REFUNDED },
+            select: { id: true },
+        });
+        if (alreadyRefunded) return false;
+
+        const minutes = Math.abs(charge.delta);
+        await tx.userCredit.update({ where: { userId }, data: { balance: { increment: minutes } } });
+        await tx.creditTransaction.create({
+            data: {
+                userId,
+                delta: minutes,
+                type: CreditTransactionType.REFUNDED,
+                note: `Refunded ${minutes} min: ${reason}`,
+                interviewId,
+            },
+        });
+        return true;
+    });
 }
 
 

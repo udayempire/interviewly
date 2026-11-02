@@ -1,5 +1,5 @@
 import { InterviewStatus, prisma } from "@repo/db";
-import { executeLLMWithFallback, createSTTProvider, createTTSProvider, type ChatMessage } from "@repo/llm";
+import { executeLLMWithFallback, transcribeWithFallback, synthesizeWithFallback, type ChatMessage } from "@repo/llm";
 import { authenticateInterviewRequest } from "./interview-auth";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { randomUUID } from "crypto";
@@ -109,16 +109,14 @@ Rules:
 }
 
 export function setupInterviewWS(wss: WebSocketServer) {
-    const stt = createSTTProvider();
-    const tts = createTTSProvider();
     const activeSockets = new Map<string, WebSocket>();
 
-    async function sendSpeechIfAvailable(ws: WebSocket, text: string, log: InterviewLogger, ctx: { interviewId: string; userId: string }) {
+    async function sendSpeechIfAvailable(ws: WebSocket, text: string, log: InterviewLogger, ctx: { interviewId: string; userId: string; tier: "FREE" | "PREMIUM" }) {
         const start = Date.now();
         // Capture attempted provider name before the call so it's available in the catch block
-        const attemptedProvider = (process.env.DEFAULT_TTS_PROVIDER ?? "unknown").toLowerCase();
+            const attemptedProvider = (process.env.DEFAULT_TTS_PROVIDER ?? "deepgram").toLowerCase();
         try {
-            const result = await tts.synthesize(text);
+            const result = await synthesizeWithFallback(text, { tier: ctx.tier });
             const latencyMs = Date.now() - start;
             log.info(
                 {
@@ -244,6 +242,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
                 },
                 select: {
                     status: true,
+                    planTierAtStart: true,
                     reconnectUntil: true,
                     connectionLeaseUntil: true,
                     lastActivityAt: true,
@@ -362,6 +361,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
                 }
             }
             const llmConfig = {
+                tier: interview.planTierAtStart,
                 userProfile: {
                     useCustomKey: Boolean(customApiKey),
                     llmApiKey: customApiKey,
@@ -426,9 +426,12 @@ export function setupInterviewWS(wss: WebSocketServer) {
                 aiContext.push({ role: "assistant", content: assistantText });
                 const savedMessage = await prisma.interviewMessage.create({ data: { interviewId, role: "ASSISTANT", content: assistantText } });
                 sendJson(ws, { type: "message", id: savedMessage.id, role: "ai", content: assistantText });
-                await sendSpeechIfAvailable(ws, assistantText, log, { interviewId, userId });
+                await sendSpeechIfAvailable(ws, assistantText, log, { interviewId, userId, tier: interview.planTierAtStart });
                 sendJson(ws, { type: "awaiting_candidate" });
             };
+
+            // Candidate answers after the opening introduction (same metric the report eligibility uses).
+            const answeredFollowUpCount = () => Math.max(0, aiContext.filter((message) => message.role === "user").length - 1);
 
             // Transcribe and durably save one candidate answer before requesting the next AI turn.
             const handleCandidateAudio = async (data: RawData) => {
@@ -441,8 +444,19 @@ export function setupInterviewWS(wss: WebSocketServer) {
                     inactivityMonitor?.resume();
                     return;
                 }
+                // Hard turn cap: the closing statement was already delivered, so more speech finishes the
+                // interview instead of spending more STT/LLM/TTS on it.
+                if (answeredFollowUpCount() >= PRACTICE_INTERVIEW_POLICY.maximumAnsweredFollowUps) {
+                    log.info({ answeredFollowUps: answeredFollowUpCount() }, "Interview turn cap reached; ending interview");
+                    inactivityMonitor?.stop();
+                    await endInterview(interviewId, userId, "candidate_finished");
+                    sendJson(ws, { type: "interview_ended", reason: "candidate_finished" });
+                    ws.close(1000, "Interview complete");
+                    return;
+                }
                 const sttStartedAt = Date.now();
-                const transcript = await stt.transcribe(audioBuffer, { prompt: sttVocabulary });
+                const transcription = await transcribeWithFallback(audioBuffer, { prompt: sttVocabulary, tier: interview.planTierAtStart });
+                const transcript = transcription.text;
                 const sttLatency = Date.now() - sttStartedAt;
                 if (!transcript.trim()) {
                     log.debug({ operation: "stt", latencyMs: sttLatency }, "STT returned empty transcript");
@@ -456,20 +470,33 @@ export function setupInterviewWS(wss: WebSocketServer) {
                 }
 
                 log.info({ operation: "stt", latencyMs: sttLatency, status: "success" }, "STT completed");
-                recordAICall({ interviewId, userId, operation: "stt", llmProvider: "deepgram", llmModel: "nova-3", latencyMs: sttLatency, status: "success" });
+                recordAICall({ interviewId, userId, operation: "stt", llmProvider: transcription.provider, llmModel: transcription.model, latencyMs: sttLatency, status: "success" });
                 aiContext.push({ role: "user", content: transcript });
                 const savedMessage = await prisma.interviewMessage.create({ data: { interviewId, role: "USER", content: transcript } });
                 await markCandidateActivity(interviewId);
                 sendJson(ws, { type: "message", id: savedMessage.id, role: "user", content: transcript });
 
+                // Steer the model toward a clean ending as the cap approaches. The note is attached to a copy
+                // of the last user turn only, so it is never saved or replayed in later turns.
+                const answeredCount = answeredFollowUpCount();
+                const maxAnswers = PRACTICE_INTERVIEW_POLICY.maximumAnsweredFollowUps;
+                const endingNote = answeredCount >= maxAnswers
+                    ? "[Interviewer note, not spoken by the candidate: That was the candidate's final answer. Do not ask another question. Give your short, warm closing statement now.]"
+                    : answeredCount === maxAnswers - 1
+                        ? "[Interviewer note, not spoken by the candidate: Ask your final question now. Keep it short.]"
+                        : null;
+                const turnMessages: ChatMessage[] = endingNote
+                    ? [...aiContext.slice(0, -1), { role: "user", content: `${transcript}\n\n${endingNote}` }]
+                    : aiContext;
+
                 const llmStartedAt = Date.now();
-                const llmResponse = await chat(aiContext);
+                const llmResponse = await chat(turnMessages);
                 log.info({ operation: "question_response", provider: llmResponse.provider, model: llmResponse.model, latencyMs: Date.now() - llmStartedAt, inputTokens: llmResponse.usage.promptTokens, outputTokens: llmResponse.usage.completionTokens, status: "success" }, "LLM request completed");
                 recordAICall({ interviewId, userId, operation: "question_response", llmProvider: llmResponse.provider, llmModel: llmResponse.model, inputTokens: llmResponse.usage.promptTokens, outputTokens: llmResponse.usage.completionTokens, latencyMs: Date.now() - llmStartedAt, status: "success" });
                 aiContext.push({ role: "assistant", content: llmResponse.text });
                 await prisma.interviewMessage.create({ data: { interviewId, role: "ASSISTANT", content: llmResponse.text } });
                 sendJson(ws, { type: "message", role: "ai", content: llmResponse.text });
-                await sendSpeechIfAvailable(ws, llmResponse.text, log, { interviewId, userId });
+                await sendSpeechIfAvailable(ws, llmResponse.text, log, { interviewId, userId, tier: interview.planTierAtStart });
                 sendJson(ws, { type: "awaiting_candidate" });
             };
 
@@ -535,7 +562,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
                     if (lastMessage?.role === "USER") {
                         await sendAiTurn("question_response");
                     } else if (lastMessage?.role === "ASSISTANT") {
-                        await sendSpeechIfAvailable(ws, lastMessage.content, log, { interviewId, userId });
+                        await sendSpeechIfAvailable(ws, lastMessage.content, log, { interviewId, userId, tier: interview.planTierAtStart });
                         sendJson(ws, { type: "awaiting_candidate" });
                     }
                 } else {

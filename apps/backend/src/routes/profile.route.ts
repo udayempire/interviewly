@@ -207,7 +207,8 @@ profileRouter.post("/profile/resume", authMiddleware, upload.single("resume"), a
             return res.status(400).json({ error: "No resume file provided" });
         }
 
-        const parsedResumeJson = await extractResumeData(file.buffer);
+        const user = await prisma.user.findUnique({ where: { id: userId }, select: { planTier: true } });
+        const parsedResumeJson = await extractResumeData(file.buffer, user?.planTier ?? "FREE");
 
         await prisma.userProfile.upsert({
             where: { userId },
@@ -263,7 +264,8 @@ profileRouter.post("/profile", authMiddleware, upload.single("resume"), async (r
         const { githubUrl } = result.data;
         const userId = req.userId as string;
         // extract resume data
-        const parsedResumeJson = await extractResumeData(file?.buffer)
+        const user = await prisma.user.findUnique({ where: { id: userId }, select: { planTier: true } });
+        const parsedResumeJson = await extractResumeData(file?.buffer, user?.planTier ?? "FREE")
         // extract github data
         const githubUsername = extractGithubUsername(githubUrl);
         const githubData = await getGithubData(githubUsername);

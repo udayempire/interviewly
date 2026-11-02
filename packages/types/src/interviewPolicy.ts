@@ -7,6 +7,7 @@ export const PRACTICE_INTERVIEW_POLICY = {
   inactivityEndGraceMs: 30_000, // Grace after the final warning.
   maximumRecordingMs: 5 * 60_000, // Long-answer warning threshold.
   minimumAnsweredFollowUps: 3, // Minimum answers required for a report.
+  maximumAnsweredFollowUps: 12, // Hard cap on answers after the intro; bounds per-interview AI cost.
   lifecycleSweepIntervalMs: 10_000, // Interval for lifecycle recovery checks.
   reconnectExpiryBatchSize: 100,
   reportRecoveryBatchSize: 20,

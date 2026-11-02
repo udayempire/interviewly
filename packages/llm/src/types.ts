@@ -9,7 +9,7 @@
 // takes an array of ChatMessages and returns chunks of the
 // response one by one as they are generated.
 export interface LLMProvider {
-  chat(messages: ChatMessage[]): Promise<LLMResponse>
+  chat(messages: ChatMessage[], options?: { model?: string }): Promise<LLMResponse>
   stream(messages: ChatMessage[]): AsyncIterable<string>
 };
 
@@ -76,4 +76,5 @@ export interface UserProfileLLMConfig {
 export interface LLMExecutionOptions {
   messages: ChatMessage[];
   userProfile?: UserProfileLLMConfig | null;
+  tier?: "FREE" | "PREMIUM";
 }

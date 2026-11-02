@@ -1,43 +1,16 @@
-import { createLLMProvider, classifyLLMError } from "@repo/llm";
+import { executeLLMWithFallback, type LLMExecutionOptions } from "@repo/llm";
 import type { ChatMessage } from "@repo/llm";
 import { PDFParse } from "pdf-parse";
 import { BadRequestError, ResumeParseError } from "../errors";
 
-/**
- * Ordered list of LLM providers to try for resume extraction.
- * Primary is controlled by RESUME_LLM_PROVIDER (default: "groq").
- * On failure the service automatically falls back through the backup chain.
- */
-function getProviderChain(): string[] {
-    const primary = process.env.RESUME_LLM_PROVIDER ?? "groq";
-    const allProviders = ["groq", "gemini"];
-    // Put primary first, then the rest as backups (deduped)
-    return [primary, ...allProviders.filter((p) => p !== primary)];
-}
-// fetch resume data with vario
-async function callWithFallback(messages: ChatMessage[]): Promise<string> {
-    const chain = getProviderChain();
-    let lastError: unknown;
-
-    for (const providerName of chain) {
-        try {
-            const llm = createLLMProvider(providerName);
-            const response = await llm.chat(messages);
-            if (providerName !== chain[0]) {
-                console.warn(`[resumeExtraction] Primary provider failed. Used fallback: ${providerName}`);
-            }
-            return response.text;
-        } catch (err) {
-            lastError = err;
-            const reason = classifyLLMError(err);
-            console.warn(`[resumeExtraction] Provider "${providerName}" failed (${reason}). Trying next...`);
-        }
-    }
-
-    throw lastError;
+// Fetch resume data with configured platform LLM failover.
+async function callWithFallback(messages: ChatMessage[], tier: LLMExecutionOptions["tier"] = "FREE"): Promise<string> {
+    const { response, fallbackNotice } = await executeLLMWithFallback({ messages, tier });
+    if (fallbackNotice.occurred) console.warn(`[resumeExtraction] Used LLM fallback after ${fallbackNotice.reason}.`);
+    return response.text;
 }
 
-export async function extractResumeData(pdfBuffer: Buffer) {
+export async function extractResumeData(pdfBuffer: Buffer, tier: LLMExecutionOptions["tier"] = "FREE") {
     const parser = new PDFParse({ data: pdfBuffer });
     const pdfData = await parser.getText();
     const rawResumeText = pdfData.text?.trim(); // removes unnecessary whitespaces.
@@ -57,7 +30,7 @@ export async function extractResumeData(pdfBuffer: Buffer) {
                 role: "user",
                 content: rawResumeText,
             },
-        ]);
+        ], tier);
     } else {
         // Scanned / image-only PDF — render a screenshot and use a vision model
         console.log("No text layer found. Rendering page screenshot for vision model...");
@@ -85,7 +58,7 @@ export async function extractResumeData(pdfBuffer: Buffer) {
                     },
                 ],
             },
-        ]);
+        ], tier);
     }
 
     // Clean markdown backticks (e.g. ```json) and parse into a JSON object

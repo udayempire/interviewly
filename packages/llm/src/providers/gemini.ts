@@ -12,8 +12,8 @@ export class GeminiProvider implements LLMProvider {
     this.ai = new GoogleGenAI({ apiKey: key });
   }
 
-  async chat(messages: ChatMessage[]): Promise<LLMResponse> {
-    const model = "gemini-2.5-flash";
+  async chat(messages: ChatMessage[], options?: { model?: string }): Promise<LLMResponse> {
+    const model = options?.model ?? process.env.GEMINI_TEXT_MODEL ?? "gemini-2.5-flash";
     const systemMsg = messages.find((m) => m.role === "system");
     // joining all userInput as gemini works within single line and not in array
     const userInput = messages

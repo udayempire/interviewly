@@ -14,16 +14,16 @@ export class GroqProvider implements LLMProvider {
         this.ai = new Groq({ apiKey: key });
     }
 
-    async chat(messages: ChatMessage[]): Promise<LLMResponse> {
+    async chat(messages: ChatMessage[], options?: { model?: string }): Promise<LLMResponse> {
         const hasImage = messages.some(
             (msg) =>
                 Array.isArray(msg.content) &&
                 msg.content.some((part) => part.type === "image_url")
         );
 
-        const model = hasImage
+        const model = options?.model ?? (hasImage
             ? (process.env.GROQ_VISION_MODEL ?? "meta-llama/llama-4-scout-17b-16e-instruct")
-            : (process.env.GROQ_TEXT_MODEL ?? "openai/gpt-oss-120b");
+            : (process.env.GROQ_TEXT_MODEL ?? "openai/gpt-oss-120b"));
 
         const response = await this.ai.chat.completions.create({
             model,
@@ -64,7 +64,11 @@ export class GroqProvider implements LLMProvider {
     }
 }
 export class GroqSTTProvider implements STTProvider {
-    private ai = new Groq({ apiKey: process.env.GROQ_API_KEY! });
+    private ai: Groq;
+
+    constructor(apiKey?: string) {
+        this.ai = new Groq({ apiKey: apiKey || process.env.GROQ_API_KEY! });
+    }
     async transcribe(audio: Buffer, options?: { model?: string; prompt?: string; }): Promise<string> {
         const model = options?.model ?? "whisper-large-v3";
         const file = new File([new Uint8Array(audio)], "audio.webm", {
@@ -80,7 +84,11 @@ export class GroqSTTProvider implements STTProvider {
 };
 
 export class GroqTTSProvider implements TTSProvider {
-    private ai = new Groq({ apiKey: process.env.GROQ_API_KEY! });
+    private ai: Groq;
+
+    constructor(apiKey?: string) {
+        this.ai = new Groq({ apiKey: apiKey || process.env.GROQ_API_KEY! });
+    }
     async synthesize(text: string, options?: { model?: string; voice?: string }): Promise<TTSResponse> {
         const model = options?.model ?? "canopylabs/orpheus-v1-english";
         const voice = options?.voice ?? "autumn"

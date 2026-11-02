@@ -2,6 +2,8 @@ import type { LLMProvider, STTProvider, TTSProvider, LLMExecutionOptions, LLMExe
 import { GeminiProvider } from "./providers/gemini";
 import { GroqProvider, GroqSTTProvider, GroqTTSProvider } from "./providers/groq";
 import { DeepgramProvider, DeepgramSTTProvider } from "./providers/deepgram";
+import { getCandidateApiKey, getProviderChain } from "./fallback-config";
+import { runWithProviderFallback } from "./fallback-runner";
 
 
 // new () => LLMProvider means "a class that can create an LLMProvider object."
@@ -11,12 +13,12 @@ const providers = new Map<string, new (apiKey?: string) => LLMProvider>([
     ["groq", GroqProvider]
 ]);
 
-const sttProviders = new Map<string, new () => STTProvider>([
+const sttProviders = new Map<string, new (apiKey?: string) => STTProvider>([
     ["groq", GroqSTTProvider],
     ["deepgram", DeepgramSTTProvider],
 ]);
 
-const ttsProviders = new Map<string, new () => TTSProvider>([
+const ttsProviders = new Map<string, new (apiKey?: string) => TTSProvider>([
     ["groq", GroqTTSProvider],
     ["deepgram", DeepgramProvider]
 ]);
@@ -29,23 +31,46 @@ export function createLLMProvider(provider?: string, apiKey?: string): LLMProvid
     };
     return new Provider(apiKey);
 };
-export function createSTTProvider(provider?: string): STTProvider {
+export function createSTTProvider(provider?: string, apiKey?: string): STTProvider {
     const providerName = (provider ?? process.env.DEFAULT_STT_PROVIDER ?? "groq").toLowerCase();
     const sttProvider = sttProviders.get(providerName);
     if (!sttProvider) {
         throw new Error(`Unknown STT provider: ${provider}`);
     };
-    return new sttProvider();
+    return new sttProvider(apiKey);
 };
 
-export function createTTSProvider(provider?: string): TTSProvider {
+export function createTTSProvider(provider?: string, apiKey?: string): TTSProvider {
     const providerName = (provider ?? process.env.DEFAULT_TTS_PROVIDER ?? "deepgram").toLowerCase();
     const ttsProvider = ttsProviders.get(providerName);
     if (!ttsProvider) {
         throw new Error(`Unknown TTS provider: ${provider}`);
     };
-    return new ttsProvider();
+    return new ttsProvider(apiKey);
 };
+
+// Transcribe audio using the configured ordered provider chain.
+export function transcribeWithFallback(audio: Buffer, options?: { model?: string; prompt?: string; tier?: "FREE" | "PREMIUM" }): Promise<{ text: string; provider: string; model: string }> {
+    return runWithProviderFallback("STT", getProviderChain("STT", options?.tier), (candidate) =>
+        createSTTProvider(candidate.provider, getCandidateApiKey(candidate))
+            .transcribe(audio, { ...options, model: candidate.model || options?.model })
+            .then((text) => ({
+                text,
+                provider: candidate.provider,
+                model: candidate.model || options?.model || (candidate.provider === "groq" ? "whisper-large-v3" : "nova-3"),
+            })),
+    );
+}
+
+// Synthesize speech using the configured ordered provider chain.
+export function synthesizeWithFallback(text: string, options?: { model?: string; voice?: string; tier?: "FREE" | "PREMIUM" }) {
+    return runWithProviderFallback("TTS", getProviderChain("TTS", options?.tier), (candidate) =>
+        createTTSProvider(candidate.provider, getCandidateApiKey(candidate)).synthesize(text, {
+            ...options,
+            model: candidate.model || options?.model,
+        }),
+    );
+}
 
 export function classifyLLMError(error: unknown): string {
     if (!error) return "Unknown Error";
@@ -71,13 +96,14 @@ export function classifyLLMError(error: unknown): string {
 }
 
 export async function executeLLMWithFallback(options: LLMExecutionOptions): Promise<LLMExecutionResult> {
-    const { messages, userProfile } = options;
+    const { messages, userProfile, tier = "FREE" } = options;
 
     const hasUserKey = Boolean(userProfile?.llmApiKey && userProfile.llmApiKey.trim().length > 0);
     const hasUserProvider = Boolean(userProfile?.llmProvider && userProfile.llmProvider.trim().length > 0);
     const shouldUseUserKey = Boolean(userProfile?.useCustomKey && hasUserKey && hasUserProvider);
 
     let fallbackReason: string | undefined;
+    let platformFallbackReason: string | undefined;
 
     // 1. Try user's custom key first (if enabled)
     if (shouldUseUserKey && userProfile?.llmApiKey && userProfile?.llmProvider) {
@@ -87,38 +113,27 @@ export async function executeLLMWithFallback(options: LLMExecutionOptions): Prom
             return { response, fallbackNotice: { occurred: false } };
         } catch (error) {
             fallbackReason = classifyLLMError(error);
-            console.warn(`Custom LLM key execution failed (${fallbackReason}). Falling back to platform default...`);
+            console.warn(`Custom LLM key execution failed (${fallbackReason}). Falling back to configured platform chain...`);
         }
     }
 
-    const platformProvider = process.env.DEFAULT_LLM_PROVIDER || "gemini";
-
-    // 2. Try primary platform provider
     try {
-        const llm = createLLMProvider(platformProvider);
-        const response = await llm.chat(messages);
+        const response = await runWithProviderFallback(
+            "LLM",
+            getProviderChain("LLM", tier),
+            (candidate) => createLLMProvider(candidate.provider, getCandidateApiKey(candidate)).chat(messages, { model: candidate.model }),
+            (_candidate, error) => { platformFallbackReason ??= classifyLLMError(error); },
+        );
         return {
             response,
             fallbackNotice: {
-                occurred: Boolean(fallbackReason),
-                reason: fallbackReason,
+                occurred: Boolean(fallbackReason || platformFallbackReason),
+                reason: fallbackReason || platformFallbackReason,
             },
         };
     } catch (error) {
         const platformReason = classifyLLMError(error);
-        const alternateProvider = platformProvider.toLowerCase() === "gemini" ? "groq" : "gemini";
-        console.warn(`Platform provider ${platformProvider} failed (${platformReason}). Retrying with alternate (${alternateProvider})...`);
-
-        // 3. Try alternate platform provider as final safety net
-        const alternateLLM = createLLMProvider(alternateProvider);
-        const response = await alternateLLM.chat(messages);
-        return {
-            response,
-            fallbackNotice: {
-                occurred: true,
-                reason: fallbackReason || platformReason,
-            },
-        };
+        throw new Error(`LLM provider chain failed (${fallbackReason || platformReason}). ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 
