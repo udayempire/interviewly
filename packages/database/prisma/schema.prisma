@@ -31,8 +31,20 @@ model User {
   credit             UserCredit?
   creditTransactions CreditTransaction[]
   planTier           UserPlanTier        @default(FREE)
+  dodoCustomerId     String?             @unique
+  dodoSubscriptionId String?             @unique
+  subscriptionStatus String?
   // plan            Plan?             @default(FREE)
   // nextBillingDate DateTime?
+}
+
+model DodoWebhookEvent {
+  id          String   @id
+  type        String
+  payload     Json
+  processedAt DateTime @default(now())
+
+  @@index([type, processedAt])
 }
 
 model UserAccount {

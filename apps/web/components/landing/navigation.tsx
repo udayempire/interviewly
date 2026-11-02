@@ -32,9 +32,9 @@ export function LandingNavigation() {
       */}
       <div className="flex items-center gap-4">
         <Link href="/pricing" className="text-sm font-semibold md:hidden">Pricing</Link>
-        <span className="inline-flex items-center gap-2 rounded-full bg-[#20201e] px-4 py-2.5 text-sm font-semibold text-[#fffdf7]">
-          Launching soon
-        </span>
+        <Link href={"/signup"} className="inline-flex items-center gap-2 rounded-full bg-[#20201e] px-4 py-2.5 text-sm font-semibold text-[#fffdf7]">
+          Get started
+        </Link>
       </div>
     </nav>
   );

@@ -10,7 +10,9 @@ import { setupInterviewWS } from "./ws/interview.handler";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { logger } from "./lib/logger";
+import dodoWebhookRouter from "./routes/dodo-webhook.route";
 
+app.use("/api/webhooks", dodoWebhookRouter);
 app.use(express.json());
 app.use(cookieParser());
 app.use(

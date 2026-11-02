@@ -17,7 +17,7 @@ export function PricingCard({ plan, index, pending, onSelect }: {
       </div>
       <h3 className="mt-8 text-2xl font-bold tracking-[-0.05em]">{plan.name}</h3>
       <p className="mt-2 min-h-12 text-sm leading-relaxed text-[#66645a]">{plan.description}</p>
-      <p className="mt-6 text-5xl font-black tracking-[-0.07em]">₹{plan.price}<span className="ml-2 text-xs font-semibold tracking-normal text-[#69675c]">one-time</span></p>
+      <p className="mt-6 text-5xl font-black tracking-[-0.07em]">${plan.price}<span className="ml-2 text-xs font-semibold tracking-normal text-[#69675c]">one-time</span></p>
       <div className="my-7 h-px bg-[#20201e]/25" />
       <ul className="space-y-3 text-sm leading-snug text-[#494943]">
         {practiceBenefits.map((benefit) => <li key={benefit} className="flex gap-2.5"><Check size={16} className="mt-0.5 shrink-0" />{benefit}</li>)}

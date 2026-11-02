@@ -1,6 +1,7 @@
 import { ArrowDownRight, ArrowRight } from "lucide-react";
 
 import { LandingNavigation } from "./navigation";
+import Link from "next/link";
 
 export function Hero() {
   return (
@@ -40,9 +41,9 @@ export function Hero() {
                   Practice for free <ArrowRight size={16} />
                 </a>
               */}
-              <span className="inline-flex items-center gap-2 rounded-full bg-[#20201e] px-5 py-3 text-sm font-semibold text-[#fffdf7]">
-                Launching soon 
-              </span>
+              <Link href={"/signup"} className="inline-flex items-center gap-2 rounded-full bg-[#20201e] px-5 py-3 text-sm font-semibold text-[#fffdf7]">
+                Start Practicing
+              </Link>
               <a
                 href="#companies"
                 className="inline-flex items-center gap-2 rounded-full border border-[#20201e] px-5 py-3 text-sm font-semibold"
