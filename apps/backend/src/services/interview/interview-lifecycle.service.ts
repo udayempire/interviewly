@@ -3,8 +3,9 @@ import { recordInterviewEvent } from "./interview-events.service";
 import { generateInterviewReport } from "./interview-report.service";
 import { PRACTICE_INTERVIEW_POLICY } from "./interview-policy";
 import { createInterviewLogger } from "../../lib/logger";
+import { refundInterview } from "../credits.service";
 
-type EndReason = "candidate_finished" | "inactivity_timeout" | "reconnect_expired";
+type EndReason = "candidate_finished" | "inactivity_timeout" | "reconnect_expired" | "system_failure";
 
 // Move an active interview into its bounded reconnect window after a socket drop.
 export async function markInterviewDisconnected(
@@ -108,6 +109,13 @@ export async function endInterview(interviewId: string, userId: string, reason: 
     await recordInterviewEvent(interviewId, eventType, { reason });
     const log = createInterviewLogger(interviewId, userId);
     log.info({ reason }, `Interview state ended for InterviewId ${interviewId}; report processing starts separately`);
+    if (reason === "system_failure") {
+        try {
+            await refundInterview(userId, interviewId, "system failure interrupted the interview");
+        } catch (error) {
+            log.error({ err: error }, "Could not refund the system-failed interview charge");
+        }
+    }
     try {
         await prisma.interviewReport.upsert({
             where: { interviewId },

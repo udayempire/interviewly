@@ -1,7 +1,6 @@
 import { prisma, InterviewReportStatus, Prisma, type MessageRole } from "@repo/db";
 import { executeLLMWithFallback } from "@repo/llm";
 import { decrypt } from "../encryption";
-import { refundInterview } from "../credits.service";
 import { recordAICall } from "../telemetry.service";
 import { recordInterviewEvent } from "./interview-events.service";
 import { PRACTICE_INTERVIEW_POLICY } from "./interview-policy";
@@ -54,11 +53,6 @@ async function saveNotEligible(interviewId: string, userId: string, answerCount:
         },
     });
     await recordInterviewEvent(interviewId, "REPORT_NOT_ELIGIBLE", { answeredFollowUps: answerCount });
-    try {
-        await refundInterview(userId, interviewId, "interview too short for a report");
-    } catch (error) {
-        logger.error({ err: error, interviewId, userId }, "Could not refund credits for ineligible interview");
-    }
     return report;
 }
 

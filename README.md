@@ -101,13 +101,13 @@ DEFAULT_LLM_PROVIDER=groq
 DEFAULT_STT_PROVIDER=groq
 DEFAULT_TTS_PROVIDER=deepgram
 
-# Usage limits / credits (tune these as you learn real usage; no code change needed)
-CREDITS_ENFORCED=true          # false = track only, never block
-SIGNUP_BONUS_MINUTES=30        # free credits on signup (15 min = 1 interview credit)
-INTERVIEW_COST_MINUTES=15      # cost of one interview
+# Usage limits / credits
+CREDITS_ENFORCED=true          # defaults to true; set false only to disable credit checks
+SIGNUP_BONUS_CREDITS=2         # configurable welcome balance for each new signup
+INTERVIEW_COST_CREDITS=1       # credits charged once when an interview starts
 MAX_INTERVIEWS_PER_DAY=10      # per-user rolling 24h cap, even for paying users
-MINUTES_PER_CREDIT=15          # UI display only
-ADMIN_SECRET=change_me         # enables POST /api/v1/credits/gift to top up users manually
+MINUTES_PER_CREDIT=15          # internal storage/display conversion; 1 credit = 15 stored minutes
+ADMIN_SECRET=replace_with_64_char_random_hex # generate with: openssl rand -hex 32
 
 # Auth
 JWT_SECRET=your_jwt_secret
@@ -126,6 +126,20 @@ GITHUB_TOKEN=your_github_pat
 
 FRONTEND_URL=http://localhost:3000
 ```
+
+Keep `ADMIN_SECRET` only in the backend environment, use HTTPS for remote requests, and never put it in frontend code or a URL. All credit admin endpoints require this 32-byte secret.
+
+Gift credits to one account with `POST /api/v1/credits/gift` (`targetEmail`, `credits`, and optional `note`). Gift the same amount to up to 100 accounts atomically with:
+
+```bash
+read -rsp "Admin secret: " ADMIN_SECRET; printf '\n'
+printf 'header = "x-admin-secret: %s"\n' "$ADMIN_SECRET" |
+  curl --config - --fail-with-body --json '{"targetEmails":["person1@example.com","person2@example.com"],"credits":3,"note":"Launch credit grant"}' \
+  https://api.example.com/api/v1/credits/gift/bulk
+unset ADMIN_SECRET
+```
+
+The bulk request does not change any balances if an email is missing or the request is invalid. The endpoint writes one transaction per recipient so each gift appears in credit history.
 
 #### Web `.env`
 

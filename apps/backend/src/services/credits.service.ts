@@ -9,10 +9,8 @@
  * - "Credits" are only a display abstraction: 1 credit = MINUTES_PER_CREDIT minutes.
  *   The UI converts: displayCredits = Math.floor(balanceMinutes / MINUTES_PER_CREDIT)
  *
- * Billing model: ONE INTERVIEW = INTERVIEW_COST_MINUTES (default 15 = 1 credit), regardless of
- * how long the candidate thinks. The charge is taken when a new interview starts and refunded
- * automatically if the interview never produces a report (NOT_ELIGIBLE). Cost is bounded by the
- * turn cap in PRACTICE_INTERVIEW_POLICY, not by wall-clock time.
+ * Billing model: one interview costs one configurable credit, regardless of duration.
+ * The charge is taken when a new interview starts and refunded only for a system failure.
  *
  * Enforcement is controlled by the CREDITS_ENFORCED env var:
  *   CREDITS_ENFORCED=false  → nothing is charged or blocked (tracking only)
@@ -67,23 +65,21 @@ export interface RefundMinutesOptions {
 export const MINUTES_PER_CREDIT = Number(process.env.MINUTES_PER_CREDIT ?? 15);
 
 /**
- * When false, credits are tracked but never enforced (current default).
- * Set CREDITS_ENFORCED=true in .env to start blocking interviews.
+ * Set CREDITS_ENFORCED=false only when intentionally disabling credit checks.
  */
-const CREDITS_ENFORCED = process.env.CREDITS_ENFORCED === "true";
+export const CREDITS_ENFORCED = process.env.CREDITS_ENFORCED !== "false";
 
 /**
- * Free minutes given to every new user on signup.
- * Set SIGNUP_BONUS_MINUTES in .env (e.g. 30 = 2 free credits).
- * 0 = no bonus (default).
+ * Configurable free credits given to each new user on signup.
  */
-export const SIGNUP_BONUS_MINUTES = Number(process.env.SIGNUP_BONUS_MINUTES ?? 0);
+export const SIGNUP_BONUS_CREDITS = Number(process.env.SIGNUP_BONUS_CREDITS ?? 2);
+export const SIGNUP_BONUS_MINUTES = SIGNUP_BONUS_CREDITS * MINUTES_PER_CREDIT;
 
 /**
- * Minutes charged per interview (default 15 = 1 credit). Retune plans by changing this env var
- * and the signup/top-up amounts; no code change needed.
+ * Configurable credit cost for one interview (default 1 credit).
  */
-export const INTERVIEW_COST_MINUTES = Number(process.env.INTERVIEW_COST_MINUTES ?? 15);
+export const INTERVIEW_COST_CREDITS = Number(process.env.INTERVIEW_COST_CREDITS ?? 1);
+export const INTERVIEW_COST_MINUTES = INTERVIEW_COST_CREDITS * MINUTES_PER_CREDIT;
 
 /**
  * Max interviews a user may create per rolling 24h, regardless of credits or refunds.
@@ -239,7 +235,7 @@ export async function checkCanStart(
  * - Atomic: the balance is decremented with a conditional update, so two concurrent starts
  *   with one credit left cannot both succeed.
  * - Idempotent: a socket that drops before the first message and reconnects is not charged twice.
- * - Refunded by refundInterview() if the interview never produces a report.
+ * - Refunded only when the interview is terminated due to a system failure.
  *
  * When CREDITS_ENFORCED=false: always allowed, nothing is deducted.
  */
@@ -285,7 +281,7 @@ export async function checkAndDeduct(
 }
 
 /**
- * Give back the charge for an interview that produced no usable report.
+ * Give back the charge only when a system failure prevented the interview from completing.
  * Idempotent: refunds at most once per interview, and only if it was actually charged.
  */
 export async function refundInterview(userId: string, interviewId: string, reason: string): Promise<boolean> {
@@ -339,17 +335,17 @@ export async function deductActualMinutes(
 
 /**
  * Grant a signup bonus to a new user.
- * Safe to call multiple times — does nothing if SIGNUP_BONUS_MINUTES=0.
+ * Grant the configured signup credit balance.
  */
 export async function grantSignupBonus(userId: string): Promise<void> {
-    if (SIGNUP_BONUS_MINUTES <= 0) return;
+    if (SIGNUP_BONUS_CREDITS <= 0) return;
 
     const credits = Math.round(SIGNUP_BONUS_MINUTES / MINUTES_PER_CREDIT * 10) / 10;
     await addMinutes({
         userId,
         minutes: SIGNUP_BONUS_MINUTES,
         type: CreditTransactionType.SIGNUP_BONUS,
-        note: `Welcome bonus: ${SIGNUP_BONUS_MINUTES} min (${credits} credit${credits !== 1 ? "s" : ""})`,
+        note: `Welcome bonus: ${SIGNUP_BONUS_CREDITS} credit${SIGNUP_BONUS_CREDITS !== 1 ? "s" : ""} (${SIGNUP_BONUS_MINUTES} min)`,
     });
 }
 
@@ -370,6 +366,39 @@ export async function giftMinutes(
         type: CreditTransactionType.GIFTED,
         grantedBy,
         note: note ?? `Admin gift: ${minutes} min (${credits} credit${credits !== 1 ? "s" : ""})`,
+    });
+}
+
+/** Credit several users in one transaction so the batch is all-or-nothing. */
+export async function giftMinutesBulk(
+    recipients: Array<{ userId: string; email: string }>,
+    minutes: number,
+    grantedBy: string,
+    note?: string,
+): Promise<Array<{ userId: string; email: string; balanceMinutes: number; balanceCredits: number }>> {
+    if (recipients.length === 0) throw new Error("giftMinutesBulk: at least one recipient is required");
+    if (minutes <= 0 || !Number.isInteger(minutes)) throw new Error("giftMinutesBulk: minutes must be a positive integer");
+
+    return prisma.$transaction(async (tx) => {
+        const balances = [];
+        for (const recipient of recipients) {
+            const credit = await tx.userCredit.upsert({
+                where: { userId: recipient.userId },
+                create: { userId: recipient.userId, balance: minutes },
+                update: { balance: { increment: minutes } },
+            });
+            await tx.creditTransaction.create({
+                data: {
+                    userId: recipient.userId,
+                    delta: minutes,
+                    type: CreditTransactionType.GIFTED,
+                    grantedBy,
+                    note: note ?? `Admin gift: ${minutes / MINUTES_PER_CREDIT} credit${minutes !== MINUTES_PER_CREDIT ? "s" : ""}`,
+                },
+            });
+            balances.push({ ...toBalance(recipient.userId, credit.balance), email: recipient.email });
+        }
+        return balances;
     });
 }
 

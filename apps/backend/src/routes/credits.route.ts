@@ -10,18 +10,23 @@
  *
  * Admin endpoints (require x-admin-secret header):
  *   POST /api/v1/credits/gift             — gift credits (accepts minutes or credits)
+ *   POST /api/v1/credits/gift/bulk        — gift credits to up to 100 users atomically
  *   POST /api/v1/credits/adjust           — adjust balance by minute delta
  *   GET  /api/v1/credits/admin/user       — view any user's balance + history
  */
 
 import express, { type Request, type Response, type NextFunction } from "express";
+import { timingSafeEqual } from "node:crypto";
 import { authMiddleware } from "../middleware/auth";
 import {
     getBalance,
     getTransactionHistory,
     giftMinutes,
+    giftMinutesBulk,
     adminAdjustBalance,
     SIGNUP_BONUS_MINUTES,
+    SIGNUP_BONUS_CREDITS,
+    CREDITS_ENFORCED,
     MINUTES_PER_CREDIT,
     MIN_MINUTES_TO_START,
 } from "../services/credits.service";
@@ -38,7 +43,10 @@ function adminMiddleware(req: Request, res: Response, next: NextFunction) {
     if (!expected) {
         return res.status(503).json({ error: "Admin endpoints are not configured (ADMIN_SECRET not set)." });
     }
-    if (!secret || secret !== expected) {
+    if (Buffer.byteLength(expected) < 32) {
+        return res.status(503).json({ error: "Admin endpoints require an ADMIN_SECRET with at least 32 characters." });
+    }
+    if (typeof secret !== "string" || Buffer.byteLength(secret) !== Buffer.byteLength(expected) || !timingSafeEqual(Buffer.from(secret), Buffer.from(expected))) {
         return res.status(403).json({ error: "Forbidden: invalid admin secret." });
     }
     next();
@@ -56,9 +64,10 @@ function adminMiddleware(req: Request, res: Response, next: NextFunction) {
  *   remainderMinutes: 2,          // 47 - 3*15 = 2 extra minutes beyond full credits
  *   config: {
  *     minutesPerCredit: 15,
- *     signupBonusMinutes: 0,
+ *     signupBonusCredits: 2,
+ *     signupBonusMinutes: 30,
  *     minMinutesToStart: 1,
- *     enforced: false
+ *     enforced: true
  *   }
  * }
  */
@@ -75,8 +84,9 @@ creditsRouter.get("/balance", authMiddleware, async (req: Request, res: Response
             config: {
                 minutesPerCredit: MINUTES_PER_CREDIT,
                 signupBonusMinutes: SIGNUP_BONUS_MINUTES,
+                signupBonusCredits: SIGNUP_BONUS_CREDITS,
                 minMinutesToStart: MIN_MINUTES_TO_START,
-                enforced: process.env.CREDITS_ENFORCED === "true",
+                enforced: CREDITS_ENFORCED,
             },
         });
     } catch (err) {
@@ -172,6 +182,56 @@ creditsRouter.post("/gift", adminMiddleware, async (req: Request, res: Response)
     } catch (err) {
         console.error("[credits/gift]", err);
         return res.status(500).json({ error: "Failed to gift credits." });
+    }
+});
+
+/**
+ * POST /api/v1/credits/gift/bulk
+ * Body: { targetEmails: string[], credits: number, note?: string }
+ */
+creditsRouter.post("/gift/bulk", adminMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { targetEmails, credits, note } = req.body as {
+            targetEmails?: unknown;
+            credits?: unknown;
+            note?: unknown;
+        };
+        if (!Array.isArray(targetEmails) || targetEmails.length === 0 || targetEmails.length > 100 || targetEmails.some((email) => typeof email !== "string" || !email.trim())) {
+            return res.status(400).json({ error: "targetEmails must contain 1 to 100 email addresses." });
+        }
+        if (typeof credits !== "number" || !Number.isInteger(credits) || credits <= 0) {
+            return res.status(400).json({ error: "credits must be a positive integer." });
+        }
+        if (note !== undefined && (typeof note !== "string" || note.length > 200)) {
+            return res.status(400).json({ error: "note must be a string of at most 200 characters." });
+        }
+
+        const normalizedEmails = [...new Set((targetEmails as string[]).map((email) => email.trim().toLowerCase()))];
+        const users = await prisma.user.findMany({
+            where: { email: { in: normalizedEmails } },
+            select: { id: true, email: true },
+        });
+        const foundEmails = new Set(users.map((user) => user.email.toLowerCase()));
+        const missingEmails = normalizedEmails.filter((email) => !foundEmails.has(email));
+        if (missingEmails.length > 0) {
+            return res.status(404).json({ error: "No credits were granted; some email addresses were not found.", missingEmails });
+        }
+
+        const gifted = await giftMinutesBulk(
+            users.map(({ id, email }) => ({ userId: id, email })),
+            credits * MINUTES_PER_CREDIT,
+            "admin",
+            typeof note === "string" && note.trim() ? note.trim() : undefined,
+        );
+        return res.status(200).json({
+            success: true,
+            recipientCount: gifted.length,
+            creditsGrantedPerUser: credits,
+            users: gifted.map(({ email, balanceCredits }) => ({ email, newBalanceCredits: balanceCredits })),
+        });
+    } catch (err) {
+        console.error("[credits/gift/bulk]", err);
+        return res.status(500).json({ error: "Failed to gift credits to the requested users." });
     }
 });
 

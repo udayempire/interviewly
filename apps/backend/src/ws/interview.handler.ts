@@ -73,19 +73,18 @@ Interview Instructions:
 
 Question Strategy:
 
-- If a resume is available, ask questions based on the candidate's education, experience, skills, and projects.
-- If GitHub data is available, ask about repositories, technical decisions, architecture, bugs solved, challenges, and technologies used.
-- If both resume and GitHub are available, combine information from both to ask personalized questions.
-- If neither is available, conduct a general technical interview based on the interview description and the candidate's responses.
+- When a resume is provided, plan 2–3 questions grounded in its experience, skills, or projects.
+- When GitHub data is provided, ask 1 question about it only if a repository or contribution is relevant to this interview; skip this slot when it is not.
+- Plan 2–3 general questions based on the interview description and role. For example, a backend interview should cover relevant backend concepts and practical tradeoffs commonly assessed in technical interviews.
+- Ask only questions supported by the supplied information; do not invent resume or GitHub details. If there is no resume, use the general questions to establish the candidate's relevant background.
+- Keep follow-ups separate from these planned questions and use them only to clarify or deepen a useful answer.
 
 Interview Flow:
 
 1. Candidate introduction.
-2. Background and experience.
-3. Personalized technical questions.
-4. Deep dive into projects (if available).
-5. Technical concepts relevant to the role.
-6. Final question about learning, debugging, or problem solving.
+2. The planned resume questions, when a resume is provided.
+3. One relevant GitHub question, when GitHub data supports one.
+4. The planned role-specific general questions.
 
 Closing:
 
@@ -97,7 +96,7 @@ Closing:
 
 Rules:
 
-- Ask a maximum of 5 primary questions.
+- Aim for 2–3 resume-based questions when a resume is provided, 1 relevant GitHub question when supported by the data, and 2–3 role-specific general questions.
 - Follow-up questions do not count toward this limit.
 - Ask follow-up questions only when clarification or deeper understanding is needed.
 - Adapt the difficulty based on the candidate's responses.
@@ -539,6 +538,11 @@ export function setupInterviewWS(wss: WebSocketServer) {
                 }).catch((error) => {
                     log.error({ operation: "pipeline", err: error }, "Interview pipeline error");
                     recordAICall({ interviewId, userId, operation: "pipeline", llmProvider: "unknown", llmModel: "unknown", status: "error", errorCode: error instanceof Error ? error.message : String(error) });
+                    void endInterview(interviewId, userId, "system_failure").then((ended) => {
+                        if (!ended) return;
+                        sendJson(ws, { type: "interview_ended", reason: "system_failure" });
+                        ws.close(1011, "Interview interrupted by a system failure");
+                    }).catch((endError) => log.error({ err: endError }, "Could not finalize system-failed interview"));
                     sendJson(ws, { type: "error", error: "Internal error - try again" });
                 });
             });
@@ -570,10 +574,20 @@ export function setupInterviewWS(wss: WebSocketServer) {
                 }
             }).catch((error) => {
                 log.error({ operation: "opening_message", err: error }, "Could not start or resume interview turn");
+                void endInterview(interviewId, userId, "system_failure").then((ended) => {
+                    if (!ended) return;
+                    sendJson(ws, { type: "interview_ended", reason: "system_failure" });
+                    ws.close(1011, "Interview interrupted by a system failure");
+                }).catch((endError) => log.error({ err: endError }, "Could not finalize system-failed interview"));
                 sendJson(ws, { type: "error", error: "Could not start the interviewer. Please retry." });
             });
         } catch (error) {
             logger.error({ interviewId, userId, err: error }, "Interview setup failed");
+            try {
+                await endInterview(interviewId, userId, "system_failure");
+            } catch (endError) {
+                logger.error({ interviewId, userId, err: endError }, "Could not finalize system-failed interview setup");
+            }
             ws.close(1011, "Internal Server Error");
             return
         };
