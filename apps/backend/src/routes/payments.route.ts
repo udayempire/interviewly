@@ -20,7 +20,7 @@ paymentsRouter.post("/checkout", authMiddleware, async (req: Request, res: Respo
         const user = await prisma.user.findUnique({ where: { id: req.userId }, select: { email: true, name: true } });
         if (!user) return res.status(404).json({ error: "User not found" });
 
-        const returnUrl = process.env.DODO_PAYMENTS_RETURN_URL ?? `${process.env.FRONTEND_URL ?? "http://localhost:3000"}/`;
+        const returnUrl = process.env.DODO_PAYMENTS_RETURN_URL ?? `${process.env.FRONTEND_URL ?? "http://localhost:3000"}/home`;
         const response = await fetch(`${dodoBaseUrl()}/checkouts`, {
             method: "POST",
             headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
