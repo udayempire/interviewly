@@ -15,6 +15,7 @@ function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlError = searchParams.get("error");
+  const nextRoute = searchParams.get("next") || "/home";
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -93,7 +94,7 @@ function SignupForm() {
 
       const secure = window.location.protocol === "https:" ? "; Secure" : "";
       document.cookie = `token=${data.token}; path=/; max-age=604800; SameSite=Lax${secure}`;
-      router.replace("/home");
+      router.replace(nextRoute);
     },
     onError: (error) => {
       setOtpError(error.message);
@@ -135,7 +136,7 @@ function SignupForm() {
       description="Add your details, then get ready for a better interview."
     >
       <form onSubmit={handleSendOtp} className="space-y-2.5">
-        <SocialLoginButtons compact />
+        <SocialLoginButtons compact next={nextRoute} />
 
         {/* Name */}
         <label className="block">

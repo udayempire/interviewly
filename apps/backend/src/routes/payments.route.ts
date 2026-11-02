@@ -27,7 +27,11 @@ paymentsRouter.post("/checkout", authMiddleware, async (req: Request, res: Respo
             body: JSON.stringify({
                 product_cart: [{ product_id: productId, quantity: 1 }],
                 customer: { email: user.email, ...(user.name ? { name: user.name } : {}) },
-                metadata: { userId: req.userId, credits: String(credits) },
+                metadata: {
+                    userId: req.userId,
+                    credits: String(credits),
+                    creditReason: credits === 1 ? "PURCHASE_ONE_SHOT" : credits === 10 ? "PURCHASE_INTERVIEW_READY" : credits === 20 ? "PURCHASE_OFFER_READY" : "SYSTEM_GRANTED",
+                },
                 return_url: returnUrl,
             }),
         });

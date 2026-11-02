@@ -10,7 +10,7 @@ import { Coins, RefreshCw, ShieldCheck } from "lucide-react";
  *
  * Shows:
  *  - Current balance (number of credits)
- *  - "1 credit = 15 min interview" tooltip
+ *  - Current credit cost per interview
  *  - If enforced=false: subtle "credits not yet enforced" badge
  */
 export function CreditBalance() {

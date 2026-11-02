@@ -106,8 +106,9 @@ creditsRouter.get("/history", authMiddleware, async (req: Request, res: Response
         const userId = req.userId as string;
         const page = Math.max(1, Number(req.query.page) || 1);
         const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+        const direction = req.query.direction === "credit" || req.query.direction === "deduct" ? req.query.direction : undefined;
 
-        const result = await getTransactionHistory(userId, { page, limit });
+        const result = await getTransactionHistory(userId, { page, limit, direction });
         return res.status(200).json({ success: true, ...result });
     } catch (err) {
         console.error("[credits/history]", err);

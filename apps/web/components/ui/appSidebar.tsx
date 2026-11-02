@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, LogOut, Mic2, Settings, User } from "lucide-react";
+import { ArrowLeftRight, Coins, LayoutDashboard, LogOut, Mic2, Settings, User } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +22,8 @@ import { eraseCookie } from "@/lib/cookies";
 const mainNav = [
   { label: "Home", href: "/home", icon: LayoutDashboard },
   { label: "Interviews", href: "/interview", icon: Mic2 },
+  { label: "Transactions", href: "/transactions", icon: ArrowLeftRight },
+  {label: "Buy Credits",href: "/buy-credits", icon: Coins}
 ];
 const accountNav = [
   { label: "Profile", href: "/profile", icon: User },

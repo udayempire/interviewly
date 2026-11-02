@@ -17,11 +17,12 @@ const googleRouter = express.Router();
 googleRouter.get("/", (req, res) => {
     try {
         const action = req.query.action === "link" ? "link" : "login";
+        const next = typeof req.query.next === "string" && req.query.next.startsWith("/") ? req.query.next : "/home";
         const url = oauth2Client.generateAuthUrl({
             access_type: "offline",
             scope: ["openid", "email", "profile"],
             redirect_uri: process.env.GOOGLE_REDIRECT_URI,
-            state: action,
+            state: action === "link" ? "link" : `login:${encodeURIComponent(next)}`,
         });
         res.redirect(url);
     } catch (error) {
@@ -34,7 +35,9 @@ googleRouter.get("/", (req, res) => {
 googleRouter.get("/callback", async (req, res) => {
     try {
         const { code, state } = req.query;
-        const isLinkAction = state === "link";
+        const stateValue = typeof state === "string" ? state : "";
+        const isLinkAction = stateValue === "link";
+        const next = stateValue.startsWith("login:") ? decodeURIComponent(stateValue.slice("login:".length)) : "/home";
 
         if (!code || typeof code !== "string") {
             const errorMsg = encodeURIComponent("Missing authorization code");
@@ -99,7 +102,7 @@ googleRouter.get("/callback", async (req, res) => {
                 name: existingAccount.user.name,
             });
             logger.info({ userId: existingAccount.userId, email: existingAccount.user.email, provider: "google", action: "login" }, "User logged in via Google");
-            return res.redirect(`${FRONTEND_URL}/auth/callback?code=${authCode}`);
+            return res.redirect(`${FRONTEND_URL}/auth/callback?code=${authCode}&next=${encodeURIComponent(next)}`);
         }
 
         // 2. No linked account — check if email already belongs to a user
@@ -131,7 +134,7 @@ googleRouter.get("/callback", async (req, res) => {
         grantSignupBonus(user.id).catch((err) => logger.error({ err, userId: user.id, provider: "google" }, "Failed to grant signup bonus"));
         logger.info({ userId: user.id, email: user.email, provider: "google", action: "signup" }, "New user signed up via Google");
         const authCode = issueAuthCode(token, { id: user.id, email: user.email, name: user.name });
-        return res.redirect(`${FRONTEND_URL}/auth/callback?code=${authCode}`);
+        return res.redirect(`${FRONTEND_URL}/auth/callback?code=${authCode}&next=${encodeURIComponent(next)}`);
 
     } catch (error: any) {
         logger.error({ err: error, provider: "google" }, "Google OAuth callback failed");

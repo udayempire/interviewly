@@ -17,11 +17,12 @@ const githubRouter = express.Router();
 githubRouter.get("/", (req, res) => {
     try {
         const action = req.query.action === "link" ? "link" : "login";
+        const next = typeof req.query.next === "string" && req.query.next.startsWith("/") ? req.query.next : "/home";
         const params = new URLSearchParams({
             client_id: process.env.GITHUB_CLIENT_ID!,
             redirect_uri: process.env.GITHUB_REDIRECT_URI!,
             scope: "read:user user:email",
-            state: action,
+            state: action === "link" ? "link" : `login:${encodeURIComponent(next)}`,
         });
         res.redirect(`https://github.com/login/oauth/authorize?${params.toString()}`);
     } catch (error) {
@@ -34,7 +35,9 @@ githubRouter.get("/", (req, res) => {
 githubRouter.get("/callback", async (req, res) => {
     try {
         const { code, state } = req.query;
-        const isLinkAction = state === "link";
+        const stateValue = typeof state === "string" ? state : "";
+        const isLinkAction = stateValue === "link";
+        const next = stateValue.startsWith("login:") ? decodeURIComponent(stateValue.slice("login:".length)) : "/home";
 
         if (!code || typeof code !== "string") {
             const errorMsg = encodeURIComponent("Missing authorization code");
@@ -124,7 +127,7 @@ githubRouter.get("/callback", async (req, res) => {
                 name: existingAccount.user.name,
             });
             logger.info({ userId: existingAccount.userId, email: existingAccount.user.email, provider: "github", action: "login" }, "User logged in via GitHub");
-            return res.redirect(`${FRONTEND_URL}/auth/callback?code=${authCode}`);
+            return res.redirect(`${FRONTEND_URL}/auth/callback?code=${authCode}&next=${encodeURIComponent(next)}`);
         }
 
         // 2. Check if email already belongs to a user
@@ -156,7 +159,7 @@ githubRouter.get("/callback", async (req, res) => {
         grantSignupBonus(user.id).catch((err) => logger.error({ err, userId: user.id, provider: "github" }, "Failed to grant signup bonus"));
         logger.info({ userId: user.id, email: user.email, provider: "github", action: "signup" }, "New user signed up via GitHub");
         const authCode = issueAuthCode(token, { id: user.id, email: user.email, name: user.name });
-        return res.redirect(`${FRONTEND_URL}/auth/callback?code=${authCode}`);
+        return res.redirect(`${FRONTEND_URL}/auth/callback?code=${authCode}&next=${encodeURIComponent(next)}`);
 
     } catch (error: any) {
         logger.error({ err: error, provider: "github" }, "GitHub OAuth callback failed");

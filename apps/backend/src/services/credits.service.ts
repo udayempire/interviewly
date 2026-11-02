@@ -17,7 +17,7 @@
  *   CREDITS_ENFORCED=true   → interviews are charged and blocked when balance < cost
  */
 
-import { prisma, CreditTransactionType } from "@repo/db";
+import { prisma, CreditReason, CreditTransactionType } from "@repo/db";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -38,6 +38,7 @@ export interface AddMinutesOptions {
     note?: string;
     grantedBy?: string;
     interviewId?: string;
+    creditReason: CreditReason;
 }
 
 export interface DeductMinutesOptions {
@@ -129,7 +130,7 @@ export async function getBalance(userId: string): Promise<CreditBalance> {
  * @param opts.minutes — number of minutes to add (must be > 0)
  */
 export async function addMinutes(opts: AddMinutesOptions): Promise<CreditBalance> {
-    const { userId, minutes, type, note, grantedBy, interviewId } = opts;
+    const { userId, minutes, type, note, grantedBy, interviewId, creditReason } = opts;
 
     if (minutes <= 0) throw new Error(`addMinutes: minutes must be > 0, got ${minutes}`);
 
@@ -140,7 +141,7 @@ export async function addMinutes(opts: AddMinutesOptions): Promise<CreditBalance
             update: { balance: { increment: minutes } },
         });
         await tx.creditTransaction.create({
-            data: { userId, delta: minutes, type, note: note ?? null, grantedBy: grantedBy ?? null, interviewId: interviewId ?? null },
+            data: { userId, delta: minutes, type, note: note ?? null, creditReason, grantedBy: grantedBy ?? null, interviewId: interviewId ?? null },
         });
         return credit;
     });
@@ -176,6 +177,7 @@ async function deductMinutes(opts: DeductMinutesOptions): Promise<CreditBalance>
                 userId,
                 delta: -minutes,
                 type: CreditTransactionType.DEDUCTED,
+                creditReason: CreditReason.INTERVIEW_USAGE,
                 note: note ?? `Interview: ${minutes} min deducted`,
                 interviewId,
             },
@@ -197,6 +199,7 @@ export async function refundMinutes(opts: RefundMinutesOptions): Promise<CreditB
         type: CreditTransactionType.REFUNDED,
         interviewId: opts.interviewId,
         note: opts.note ?? `Refunded ${opts.minutes} min`,
+        creditReason: CreditReason.INTERVIEW_REFUND,
     });
 }
 
@@ -272,6 +275,7 @@ export async function checkAndDeduct(
                 userId,
                 delta: -cost,
                 type: CreditTransactionType.DEDUCTED,
+                creditReason: CreditReason.INTERVIEW_USAGE,
                 note: `Interview started: ${cost} min`,
                 interviewId,
             },
@@ -306,6 +310,7 @@ export async function refundInterview(userId: string, interviewId: string, reaso
                 userId,
                 delta: minutes,
                 type: CreditTransactionType.REFUNDED,
+                creditReason: CreditReason.INTERVIEW_REFUND,
                 note: `Refunded ${minutes} min: ${reason}`,
                 interviewId,
             },
@@ -345,6 +350,7 @@ export async function grantSignupBonus(userId: string): Promise<void> {
         userId,
         minutes: SIGNUP_BONUS_MINUTES,
         type: CreditTransactionType.SIGNUP_BONUS,
+        creditReason: CreditReason.SIGNUP_BONUS,
         note: `Welcome bonus: ${SIGNUP_BONUS_CREDITS} credit${SIGNUP_BONUS_CREDITS !== 1 ? "s" : ""} (${SIGNUP_BONUS_MINUTES} min)`,
     });
 }
@@ -364,6 +370,7 @@ export async function giftMinutes(
         userId: targetUserId,
         minutes,
         type: CreditTransactionType.GIFTED,
+        creditReason: CreditReason.SYSTEM_GRANTED,
         grantedBy,
         note: note ?? `Admin gift: ${minutes} min (${credits} credit${credits !== 1 ? "s" : ""})`,
     });
@@ -392,6 +399,7 @@ export async function giftMinutesBulk(
                     userId: recipient.userId,
                     delta: minutes,
                     type: CreditTransactionType.GIFTED,
+                    creditReason: CreditReason.SYSTEM_GRANTED,
                     grantedBy,
                     note: note ?? `Admin gift: ${minutes / MINUTES_PER_CREDIT} credit${minutes !== MINUTES_PER_CREDIT ? "s" : ""}`,
                 },
@@ -435,6 +443,7 @@ export async function adminAdjustBalance(
                 userId: targetUserId,
                 delta: deltaMinutes,
                 type: CreditTransactionType.ADMIN_ADJUSTMENT,
+                creditReason: CreditReason.SYSTEM_GRANTED,
                 grantedBy,
                 note: note ?? `Admin adjustment: ${deltaMinutes > 0 ? "+" : ""}${deltaMinutes} min`,
             },
@@ -451,17 +460,18 @@ export async function adminAdjustBalance(
  */
 export async function getTransactionHistory(
     userId: string,
-    { page = 1, limit = 20 }: { page?: number; limit?: number } = {}
+    { page = 1, limit = 20, direction }: { page?: number; limit?: number; direction?: "credit" | "deduct" } = {}
 ) {
     const skip = (page - 1) * limit;
+    const where = { userId, ...(direction === "credit" ? { delta: { gt: 0 } } : direction === "deduct" ? { delta: { lt: 0 } } : {}) };
     const [transactions, total] = await Promise.all([
         prisma.creditTransaction.findMany({
-            where: { userId },
+            where,
             orderBy: { createdAt: "desc" },
             skip,
             take: limit,
         }),
-        prisma.creditTransaction.count({ where: { userId } }),
+        prisma.creditTransaction.count({ where }),
     ]);
 
     return {

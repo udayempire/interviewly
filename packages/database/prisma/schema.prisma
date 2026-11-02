@@ -103,32 +103,32 @@ model Template {
 }
 
 model Interview {
-  id          String             @id @default(cuid())
-  userId      String
-  profileId   String?
-  templateId  String?
-  mode        AIMode
-  status      InterviewStatus    @default(IN_PROGRESS)
-  planTierAtStart UserPlanTier   @default(FREE)
-  startedAt   DateTime           @default(now())
-  completedAt DateTime?
-  reconnectUntil DateTime?
-  connectionId String?
-  connectionLeaseUntil DateTime?
-  lastActivityAt DateTime        @default(now())
-  inactivityWarningCount Int     @default(0)
-  description String?
-  githubData  Json?
-  joinCode    String?
-  resumeText  Json?
-  profile     UserProfile?       @relation(fields: [profileId], references: [id])
-  template    Template?          @relation(fields: [templateId], references: [id])
-  user        User               @relation(fields: [userId], references: [id])
-  messages    InterviewMessage[]
-  events      InterviewEvent[]
-  report      InterviewReport?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @default(now()) @updatedAt
+  id                     String             @id @default(cuid())
+  userId                 String
+  profileId              String?
+  templateId             String?
+  mode                   AIMode
+  status                 InterviewStatus    @default(IN_PROGRESS)
+  planTierAtStart        UserPlanTier       @default(FREE)
+  startedAt              DateTime           @default(now())
+  completedAt            DateTime?
+  reconnectUntil         DateTime?
+  connectionId           String?
+  connectionLeaseUntil   DateTime?
+  lastActivityAt         DateTime           @default(now())
+  inactivityWarningCount Int                @default(0)
+  description            String?
+  githubData             Json?
+  joinCode               String?
+  resumeText             Json?
+  profile                UserProfile?       @relation(fields: [profileId], references: [id])
+  template               Template?          @relation(fields: [templateId], references: [id])
+  user                   User               @relation(fields: [userId], references: [id])
+  messages               InterviewMessage[]
+  events                 InterviewEvent[]
+  report                 InterviewReport?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @default(now()) @updatedAt
 }
 
 model InterviewMessage {
@@ -144,52 +144,52 @@ model InterviewMessage {
 }
 
 model InterviewReport {
-  id               String    @id @default(cuid())
-  userId           String
-  interviewId      String    @unique
-  status           InterviewReportStatus @default(READY)
-  isPartial        Boolean   @default(false)
-  eligibilityReason String?
-  generationError  String?
+  id                  String                @id @default(cuid())
+  userId              String
+  interviewId         String                @unique
+  status              InterviewReportStatus @default(READY)
+  isPartial           Boolean               @default(false)
+  eligibilityReason   String?
+  generationError     String?
   generationStartedAt DateTime?
-  strengths        String[]  @default([])
-  improvements     String[]  @default([])
-  detailedFeedback String?
-  aiSummary        String?
-  overallScore     Int?
-  breakdown        Json?
-  createdAt        DateTime  @default(now())
-  interview        Interview @relation(fields: [interviewId], references: [id])
-  user             User      @relation(fields: [userId], references: [id])
+  strengths           String[]              @default([])
+  improvements        String[]              @default([])
+  detailedFeedback    String?
+  aiSummary           String?
+  overallScore        Int?
+  breakdown           Json?
+  createdAt           DateTime              @default(now())
+  interview           Interview             @relation(fields: [interviewId], references: [id])
+  user                User                  @relation(fields: [userId], references: [id])
 }
 
 model InterviewEvent {
-  id          String    @id @default(cuid())
+  id          String             @id @default(cuid())
   interviewId String
   type        InterviewEventType
   details     Json?
-  createdAt   DateTime  @default(now())
-  interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  createdAt   DateTime           @default(now())
+  interview   Interview          @relation(fields: [interviewId], references: [id], onDelete: Cascade)
 
   @@index([interviewId, createdAt])
   @@index([type, createdAt])
 }
 
 model LLMCall {
-  id            String   @id @default(cuid())
-  interviewId   String?
-  userId        String?
-  operation     String // what operation is being performed
-  llmProvider   String
-  llmModel      String
-  inputTokens   Int?
-  outputTokens  Int?
-  latencyMs     Int?
-  characterCount Int?       // for TTS calls: number of input characters synthesized
-  estimatedCost Decimal?
-  status        String
-  errorCode     String?
-  createdAt     DateTime @default(now())
+  id             String   @id @default(cuid())
+  interviewId    String?
+  userId         String?
+  operation      String // what operation is being performed
+  llmProvider    String
+  llmModel       String
+  inputTokens    Int?
+  outputTokens   Int?
+  latencyMs      Int?
+  characterCount Int? // for TTS calls: number of input characters synthesized
+  estimatedCost  Decimal?
+  status         String
+  errorCode      String?
+  createdAt      DateTime @default(now())
 
   @@index([interviewId])
   @@index([userId])
@@ -265,15 +265,16 @@ model UserCredit {
 }
 
 model CreditTransaction {
-  id          String                @id @default(cuid())
-  userId      String
-  delta       Int // minutes: positive = add, negative = deduct
-  type        CreditTransactionType
-  note        String? // human-readable reason, e.g. "signup bonus (30 min)", "17 min interview"
-  interviewId String? // set when type = DEDUCTED or REFUNDED
-  grantedBy   String? // admin userId when type = GIFTED or ADMIN_ADJUSTMENT
-  createdAt   DateTime              @default(now())
-  user        User                  @relation(fields: [userId], references: [id])
+  id           String                @id @default(cuid())
+  userId       String
+  delta        Int // minutes: positive = add, negative = deduct
+  type         CreditTransactionType
+  note         String? // human-readable reason, e.g. "signup bonus (30 min)", "17 min interview"
+  creditReason CreditReason          @default(SYSTEM_GRANTED) @map("credit_reason")
+  interviewId  String? // set when type = DEDUCTED or REFUNDED
+  grantedBy    String? // admin userId when type = GIFTED or ADMIN_ADJUSTMENT
+  createdAt    DateTime              @default(now())
+  user         User                  @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([createdAt])
@@ -288,4 +289,15 @@ enum CreditTransactionType {
   REFUNDED // interview failed / refunded credits
   EXPIRED // subscription cycle reset (future)
   ADMIN_ADJUSTMENT // manual correction by admin
+}
+
+enum CreditReason {
+  SYSTEM_GRANTED
+  SIGNUP_BONUS
+  PURCHASE_ONE_SHOT
+  PURCHASE_INTERVIEW_READY
+  PURCHASE_OFFER_READY
+  INTERVIEW_USAGE
+  INTERVIEW_REFUND
+  EXPIRED
 }

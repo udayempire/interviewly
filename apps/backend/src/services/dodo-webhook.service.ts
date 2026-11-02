@@ -1,4 +1,4 @@
-import { CreditTransactionType, Prisma, prisma } from "@repo/db";
+import { CreditReason, CreditTransactionType, Prisma, prisma } from "@repo/db";
 
 type JsonObject = Record<string, unknown>;
 const object = (value: unknown): JsonObject => value && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : {};
@@ -77,7 +77,9 @@ export async function processDodoWebhook(webhookId: string, event: unknown): Pro
         if (minutesToAdd && Number.isInteger(minutesToAdd)) {
             await prisma.$transaction(async (tx) => {
                 await tx.userCredit.upsert({ where: { userId: resolved.user!.id }, create: { userId: resolved.user!.id, balance: minutesToAdd }, update: { balance: { increment: minutesToAdd } } });
-                await tx.creditTransaction.create({ data: { userId: resolved.user!.id, delta: minutesToAdd, type: CreditTransactionType.PURCHASED, note: `Dodo payment succeeded: ${minutesToAdd} min` } });
+                const creditReason = stringValue(metadata.creditReason);
+                const purchaseReason = creditReason === CreditReason.PURCHASE_ONE_SHOT || creditReason === CreditReason.PURCHASE_INTERVIEW_READY || creditReason === CreditReason.PURCHASE_OFFER_READY ? creditReason : CreditReason.SYSTEM_GRANTED;
+                await tx.creditTransaction.create({ data: { userId: resolved.user!.id, delta: minutesToAdd, type: CreditTransactionType.PURCHASED, creditReason: purchaseReason, note: "Dodo payment succeeded" } });
             });
         }
     } else if (["payment.failed", "payment.processing", "payment.cancelled", "refund.succeeded", "refund.failed", "dispute.opened", "dispute.expired", "dispute.accepted", "dispute.cancelled", "dispute.challenged", "dispute.won", "dispute.lost"].includes(type)) {

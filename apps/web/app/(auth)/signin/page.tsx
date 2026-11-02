@@ -153,7 +153,7 @@ function SigninForm() {
       description="Your next interview is waiting. Take a breath, then get back into the conversation."
     >
       <form onSubmit={handlePasswordSubmit} className="space-y-3">
-        <SocialLoginButtons />
+        <SocialLoginButtons next={nextRoute} />
 
         {/* Email — always visible */}
         <label className="block">
@@ -305,7 +305,7 @@ function SigninForm() {
       <p className="mt-5 text-center text-sm text-zinc-600">
         New here?{" "}
         <Link
-          href="/signup"
+          href={`/signup?next=${encodeURIComponent(nextRoute)}`}
           className="font-semibold text-[#20201e] underline decoration-[#f4c632] decoration-2 underline-offset-4"
         >
           Create an account

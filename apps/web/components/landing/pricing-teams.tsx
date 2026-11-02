@@ -8,9 +8,9 @@ const hiringBenefits = [
 ];
 
 // Invite hiring teams to share their needs through the existing contact page.
-export function PricingTeams() {
+export function PricingTeams({ dashboardMode = false }: { dashboardMode?: boolean }) {
   return (
-    <div className="mt-8 grid gap-10 border border-[#282824] bg-[#252623] p-8 text-[#f7f5ec] sm:p-12 lg:grid-cols-[1fr_.7fr]">
+    <div className={`mt-8 grid gap-10 border p-8 text-[#f7f5ec] sm:p-12 lg:grid-cols-[1fr_.7fr] ${dashboardMode ? "min-h-[calc(100vh-11rem)] border-[#f4cf4b] bg-[#20201e]" : "border-[#282824] bg-[#252623]"}`}>
       <div>
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#f4cf4b]">For teams / coming soon</p>
         <h2 className="mt-5 max-w-2xl text-4xl font-black leading-[0.95] tracking-[-0.06em] sm:text-5xl">Screen candidates. Find your next hire.</h2>
