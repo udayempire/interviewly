@@ -26,7 +26,15 @@ export function Pricing({ standalone = false }: { standalone?: boolean }) {
         return;
       }
       if (!response.ok) throw new Error("Could not check your session");
-      setNotice("Checkout is coming soon. Your selected pack will be available when payments launch.");
+      const checkoutResponse = await fetch(`${base}/${version}/payments/checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ credits }),
+      });
+      const checkout = await checkoutResponse.json() as { checkoutUrl?: string; error?: string };
+      if (!checkoutResponse.ok || !checkout.checkoutUrl) throw new Error(checkout.error || "Could not create checkout");
+      window.location.assign(checkout.checkoutUrl);
     } catch {
       setNotice("We couldn't check your sign-in status. Please try again.");
     } finally {

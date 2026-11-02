@@ -23,7 +23,14 @@ async function fetchCreditBalance(): Promise<CreditBalance> {
     });
     if (!res.ok) throw new Error("Failed to fetch credit balance");
     const data = await res.json();
-    return { balance: data.balance, config: data.config };
+    return {
+        balance: data.balanceCredits ?? 0,
+        config: {
+            creditsPerInterview: data.config?.creditsPerInterview ?? 1,
+            signupBonus: data.config?.signupBonusCredits ?? 0,
+            enforced: data.config?.enforced ?? false,
+        },
+    };
 }
 
 export function useCredits() {

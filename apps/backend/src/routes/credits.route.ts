@@ -29,6 +29,7 @@ import {
     CREDITS_ENFORCED,
     MINUTES_PER_CREDIT,
     MIN_MINUTES_TO_START,
+    INTERVIEW_COST_CREDITS,
 } from "../services/credits.service";
 import { prisma } from "@repo/db";
 
@@ -86,6 +87,7 @@ creditsRouter.get("/balance", authMiddleware, async (req: Request, res: Response
                 signupBonusMinutes: SIGNUP_BONUS_MINUTES,
                 signupBonusCredits: SIGNUP_BONUS_CREDITS,
                 minMinutesToStart: MIN_MINUTES_TO_START,
+                creditsPerInterview: INTERVIEW_COST_CREDITS,
                 enforced: CREDITS_ENFORCED,
             },
         });
