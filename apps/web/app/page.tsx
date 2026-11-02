@@ -7,6 +7,7 @@ import { Hero } from "@/components/landing/hero";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { ProductShowcase } from "@/components/landing/product-showcase";
 import { JsonLd } from "@/components/JsonLd";
+import { Pricing } from "@/components/landing/pricing";
 
 export default function Home() {
   return (
@@ -19,6 +20,7 @@ export default function Home() {
         <ProductShowcase />
         <HowItWorks />
         <FeedbackSection />
+        <Pricing />
         <CompaniesSection />
         <CallToAction />
         <LandingFooter />

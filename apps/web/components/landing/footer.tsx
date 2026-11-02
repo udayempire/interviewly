@@ -7,6 +7,7 @@ export function LandingFooter() {
           Practice the conversation, not the script.
         </p>
         <div className="flex gap-5 text-xs text-[#aaa9a1]">
+          <a href="/pricing">Pricing</a>
           {/* <a href="/signin">Sign in</a> */}
           <span>Launching soon</span>
           <a href="https://udayempire.me/contact"
