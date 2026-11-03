@@ -23,9 +23,12 @@ router.post("/dodo", express.raw({ type: "application/json" }), async (req: Requ
     const webhookId = req.headers["webhook-id"];
     if (typeof webhookId !== "string" || !verify(req.body as Buffer, req)) return res.status(401).json({ error: "Invalid webhook signature" });
     try {
-        const result = await processDodoWebhook(webhookId, JSON.parse((req.body as Buffer).toString("utf8")));
-        console.log(`[dodo-webhook] received ${webhookId}${result.duplicate ? " (duplicate)" : ""}`);
-        return res.status(200).json({ received: true, duplicate: result.duplicate });
+        const event = JSON.parse((req.body as Buffer).toString("utf8"));
+        res.status(200).json({ received: true });
+        void processDodoWebhook(webhookId, event).then((result) => {
+            console.log(`[dodo-webhook] processed ${webhookId}${result.duplicate ? " (duplicate)" : ""}`);
+        }).catch((error) => console.error("[dodo-webhook] processing failed", error));
+        return;
     } catch (error) {
         console.error("[dodo-webhook]", error);
         return res.status(500).json({ error: "Webhook processing failed" });
@@ -37,9 +40,11 @@ router.post("/dodo/forward", express.json(), async (req: Request, res: Response)
     const webhookId = req.headers["x-dodo-webhook-id"];
     if (typeof webhookId !== "string") return res.status(400).json({ error: "Missing webhook id" });
     try {
-        const result = await processDodoWebhook(webhookId, req.body);
-        console.log(`[dodo-webhook-forward] received ${webhookId}${result.duplicate ? " (duplicate)" : ""}`);
-        return res.status(200).json({ received: true, duplicate: result.duplicate });
+        res.status(200).json({ received: true });
+        void processDodoWebhook(webhookId, req.body).then((result) => {
+            console.log(`[dodo-webhook-forward] processed ${webhookId}${result.duplicate ? " (duplicate)" : ""}`);
+        }).catch((error) => console.error("[dodo-webhook-forward] processing failed", error));
+        return;
     } catch (error) {
         console.error("[dodo-webhook-forward]", error);
         return res.status(500).json({ error: "Webhook processing failed" });
