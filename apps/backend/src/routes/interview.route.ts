@@ -6,6 +6,7 @@ import { extractResumeData } from "../services/resumeExtraction.service";
 import { AIMode, InterviewReportStatus, InterviewStatus, prisma } from "@repo/db";
 import { authMiddleware } from "../middleware/auth";
 import { endInterview } from "../services/interview/interview-lifecycle.service";
+import { generateInterviewReport } from "../services/interview/interview-report.service";
 import { checkCanStart, MAX_INTERVIEWS_PER_DAY } from "../services/credits.service";
 import multer from "multer";
 
@@ -176,17 +177,39 @@ interviewRouter.get("/report/:interviewId", authMiddleware, async (req, res) => 
     if (report.status === InterviewReportStatus.NOT_ELIGIBLE) {
         return res.status(200).json({
             status: "not_eligible",
+            retryable: false,
             message: report.eligibilityReason ?? "Not enough interview was taken for generating the report.",
         });
     }
     if (report.status === InterviewReportStatus.FAILED) {
-        return res.status(200).json({ status: "failed", message: "Your interview transcript was saved, but report generation failed." });
+        return res.status(200).json({ status: "failed", retryable: true, message: "Your interview transcript was saved, but report generation failed." });
     }
     if (report.status !== InterviewReportStatus.READY) {
         return res.status(202).json({ status: "pending" });
     }
 
     return res.status(200).json({ status: "ready", report });
+});
+
+// Retry only a failed AI report. Eligibility failures (including too few follow-up answers) are not retryable.
+interviewRouter.post("/report/:interviewId/retry", authMiddleware, async (req, res) => {
+    const interviewId = req.params.interviewId as string;
+    const userId = req.userId as string;
+    const report = await prisma.interviewReport.findUnique({
+        where: { interviewId },
+        select: { userId: true, status: true, isPartial: true },
+    });
+
+    if (!report) return res.status(404).json({ error: "Interview report not found" });
+    if (report.userId !== userId) return res.status(403).json({ error: "Forbidden" });
+    if (report.status !== InterviewReportStatus.FAILED) {
+        return res.status(409).json({ error: "Only failed reports can be retried" });
+    }
+
+    void generateInterviewReport(interviewId, report.isPartial).catch((error) => {
+        console.error("Report retry failed to start:", error);
+    });
+    return res.status(202).json({ status: "pending" });
 });
 
 // Let a candidate explicitly end a resumable practice interview from home.
