@@ -14,6 +14,7 @@ export default function Interview() {
   const [githubUrl, setGithubUrl] = useState("");
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [hasSavedResume, setHasSavedResume] = useState(false);
+  const [validationError, setValidationError] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -73,14 +74,21 @@ export default function Interview() {
 
           <div className="mt-6 flex flex-col justify-center items-center gap-3 sm:flex-row sm:items-center">
             <button
-              onClick={() => createInterview()}
+              onClick={() => {
+                if (!description.trim()) {
+                  setValidationError("Add an interview role or description before creating it.");
+                  return;
+                }
+                setValidationError("");
+                createInterview();
+              }}
               disabled={isPending}
               className="inline-flex h-10 cursor-pointer border dark:border-yellow-500 items-center gap-2 bg-[#20201e] px-4 text-sm font-semibold text-[#fffdf7] transition-transform hover:-translate-y-0.5 hover:bg-[#33332f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d39c13] disabled:cursor-not-allowed disabled:opacity-55"
             >
               {isPending ? "Creating…" : "Create interview"}
               {!isPending && <ArrowRight className="h-4 w-4" />}
             </button>
-            {error && <p className="text-sm text-[#a53b31]">{error.message}</p>}
+            {(validationError || error) && <p className="text-sm text-[#a53b31]">{validationError || error?.message}</p>}
           </div>
 
           <InterviewSuggestions onSelect={setDescription} />

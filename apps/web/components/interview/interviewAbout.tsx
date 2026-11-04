@@ -15,13 +15,14 @@ export const InterviewAbout = ({ value, onChange }: InterviewAboutProps) => (
     <div className="flex items-center gap-2.5">
       <MessageSquare className="h-4 w-4 text-[#8b6b14]" strokeWidth={1.7} />
       <div>
-        <h2 className="text-sm font-semibold text-[#20201e] dark:text-[#fffdf8]">Interview details</h2>
+        <h2 className="text-sm font-semibold text-[#20201e] dark:text-[#fffdf8]">Interview details <span className="font-normal text-[#8a867c] dark:text-[#b8b4a9]">(required)</span></h2>
         <p className="mt-0.5 text-xs text-[#77746b] dark:text-[#b8b4a9]">Role, skills, or scenario</p>
       </div>
     </div>
     <div className="relative mt-5">
       <Textarea
         maxLength={MAX_CHARS}
+        required
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder="e.g. Frontend developer - React, JavaScript, and system design"

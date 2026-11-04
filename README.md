@@ -16,6 +16,8 @@ AI-powered mock interview platform. Practice technical interviews with real-time
 ## Project Structure
 
 ```
+
+For the complete payment and credit flow, see [DODO_PAYMENTS.md](./DODO_PAYMENTS.md).
 interviewlyy/
 ├── apps/
 │   ├── web/          # Next.js frontend (port 3000)
