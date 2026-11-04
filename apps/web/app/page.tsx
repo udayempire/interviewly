@@ -8,6 +8,7 @@ import { HowItWorks } from "@/components/landing/how-it-works";
 import { ProductShowcase } from "@/components/landing/product-showcase";
 import { JsonLd } from "@/components/JsonLd";
 import { Pricing } from "@/components/landing/pricing";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -23,6 +24,22 @@ export default function Home() {
         <Pricing />
         <CompaniesSection />
         <CallToAction />
+        <section className="flex justify-center bg-[#f4cf4b] px-5 py-8 sm:px-8">
+          <a
+            href="https://startupfa.me/s/interviewlyy?utm_source=interviewlyy.xyz"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Interviewlyy featured on Startup Fame"
+            className="transition-opacity hover:opacity-80"
+          >
+            <Image
+              src="/featured-badge-small.webp"
+              alt="Interviewlyy - Featured on Startup Fame"
+              width={224}
+              height={36}
+            />
+          </a>
+        </section>
         <LandingFooter />
       </main>
 
