@@ -10,6 +10,23 @@ import { logger } from "../../lib/logger";
 type TranscriptMessage = { role: MessageRole; content: string };
 const reportsInFlight = new Set<string>();
 
+type Evaluation = {
+    strengths?: string[];
+    improvements?: string[];
+    detailedFeedback?: string;
+    aiSummary?: string;
+    overallScore?: number;
+    breakdown?: Record<string, number>;
+};
+
+function parseEvaluationResponse(text: string): Evaluation {
+    const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start < 0 || end <= start) throw new SyntaxError("Evaluation response did not contain a complete JSON object");
+    return JSON.parse(cleaned.slice(start, end + 1)) as Evaluation;
+}
+
 // Count answered follow-up turns, excluding the candidate's initial introduction answer.
 export function countAnsweredFollowUps(messages: TranscriptMessage[]): number {
     let hasOpeningQuestion = false;
@@ -131,7 +148,7 @@ async function generateInterviewReportInternal(interviewId: string, isPartial: b
                 llmProvider: profile?.llmProvider,
             },
         });
-        const evaluationResponse = result.response;
+        let evaluationResponse = result.response;
         recordAICall({
             interviewId,
             userId: interview.userId,
@@ -144,14 +161,33 @@ async function generateInterviewReportInternal(interviewId: string, isPartial: b
             status: "success",
         });
 
-        const evaluation = JSON.parse(evaluationResponse.text) as {
-            strengths?: string[];
-            improvements?: string[];
-            detailedFeedback?: string;
-            aiSummary?: string;
-            overallScore?: number;
-            breakdown?: Record<string, number>;
-        };
+        let evaluation: Evaluation;
+        try {
+            evaluation = parseEvaluationResponse(evaluationResponse.text);
+        } catch (parseError) {
+            logger.warn({
+                interviewId,
+                provider: evaluationResponse.provider,
+                model: evaluationResponse.model,
+                responseLength: evaluationResponse.text.length,
+                responseEndsWithObject: evaluationResponse.text.trimEnd().endsWith("}"),
+                err: parseError,
+            }, "Evaluation response was not valid JSON; retrying once");
+            const retry = await executeLLMWithFallback({
+                messages: [{
+                    role: "system",
+                    content: `${evaluationPrompt}\n\nSTRICT RETRY: Return only one complete valid JSON object. Do not use markdown fences or any text outside the JSON object. Escape all quotation marks inside strings.`,
+                }],
+                tier: interview.planTierAtStart,
+                userProfile: {
+                    useCustomKey: Boolean(customApiKey),
+                    llmApiKey: customApiKey,
+                    llmProvider: profile?.llmProvider,
+                },
+            });
+            evaluationResponse = retry.response;
+            evaluation = parseEvaluationResponse(evaluationResponse.text);
+        }
         await prisma.interviewReport.update({
             where: { interviewId },
             data: {

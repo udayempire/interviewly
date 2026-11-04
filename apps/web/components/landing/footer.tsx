@@ -9,10 +9,13 @@ export function LandingFooter() {
         <div className="flex gap-5 text-xs text-[#aaa9a1]">
           <a href="/pricing">Pricing</a>
           {/* <a href="/signin">Sign in</a> */}
-          <a href="https://udayempire.me/contact"
+          <a
+            href="https://udayempire.me/contact"
             target="_blank"
             rel="noopener noreferrer"
-          >Contact</a>
+          >
+            Contact
+          </a>
         </div>
       </div>
     </footer>
