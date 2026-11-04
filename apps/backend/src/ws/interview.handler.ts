@@ -445,13 +445,13 @@ export function setupInterviewWS(wss: WebSocketServer) {
             const answeredFollowUpCount = () => Math.max(0, aiContext.filter((message) => message.role === "user").length - 1);
 
             // Transcribe and durably save one candidate answer before requesting the next AI turn.
-            const handleCandidateAudio = async (data: RawData) => {
+            const handleCandidateAudio = async (data: RawData, textOverride?: string) => {
                 clearTimeout(recordingGuard);
                 clearTimeout(recordingEndGuard);
                 clearTimeout(recordingEndGuard);
                 inactivityMonitor?.pause();
                 const audioBuffer = audioDataToBuffer(data);
-                if (audioBuffer.length === 0) {
+                if (!textOverride && audioBuffer.length === 0) {
                     inactivityMonitor?.resume();
                     return;
                 }
@@ -465,23 +465,30 @@ export function setupInterviewWS(wss: WebSocketServer) {
                     ws.close(1000, "Interview complete");
                     return;
                 }
-                const sttStartedAt = Date.now();
-                const transcription = await transcribeWithFallback(audioBuffer, { prompt: sttVocabulary, tier: interview.planTierAtStart });
-                const transcript = transcription.text;
-                const sttLatency = Date.now() - sttStartedAt;
+                let transcript = textOverride?.trim() ?? "";
+                let transcription: Awaited<ReturnType<typeof transcribeWithFallback>> | undefined;
+                let sttLatency = 0;
+                if (!textOverride) {
+                    const sttStartedAt = Date.now();
+                    transcription = await transcribeWithFallback(audioBuffer, { prompt: sttVocabulary, tier: interview.planTierAtStart });
+                    transcript = transcription.text;
+                    sttLatency = Date.now() - sttStartedAt;
+                }
                 if (!transcript.trim()) {
                     log.debug({ operation: "stt", latencyMs: sttLatency }, "STT returned empty transcript");
                     inactivityMonitor?.resume();
                     return;
                 }
-                if (isLikelyHallucination(transcript)) {
+                if (!textOverride && isLikelyHallucination(transcript)) {
                     log.warn({ operation: "stt", latencyMs: sttLatency }, "Dropped likely STT hallucination");
                     inactivityMonitor?.resume();
                     return;
                 }
 
-                log.info({ operation: "stt", latencyMs: sttLatency, status: "success" }, "STT completed");
-                recordAICall({ interviewId, userId, operation: "stt", llmProvider: transcription.provider, llmModel: transcription.model, latencyMs: sttLatency, status: "success" });
+                if (transcription) {
+                    log.info({ operation: "stt", latencyMs: sttLatency, status: "success" }, "STT completed");
+                    recordAICall({ interviewId, userId, operation: "stt", llmProvider: transcription.provider, llmModel: transcription.model, latencyMs: sttLatency, status: "success" });
+                }
                 aiContext.push({ role: "user", content: transcript });
                 const savedMessage = await prisma.interviewMessage.create({ data: { interviewId, role: "USER", content: transcript } });
                 await markCandidateActivity(interviewId);
@@ -518,7 +525,7 @@ export function setupInterviewWS(wss: WebSocketServer) {
                         await handleCandidateAudio(data);
                         return;
                     }
-                    const control = JSON.parse(data.toString()) as { type?: string; active?: boolean };
+                    const control = JSON.parse(data.toString()) as { type?: string; active?: boolean; content?: string };
                     if (control.type === "recording_started") {
                         inactivityMonitor?.reset();
                         await markCandidateActivity(interviewId);
@@ -540,6 +547,8 @@ export function setupInterviewWS(wss: WebSocketServer) {
                         clearTimeout(recordingGuard);
                         clearTimeout(recordingEndGuard);
                         inactivityMonitor?.reset();
+                    } else if (control.type === "candidate_text") {
+                        if (typeof control.content === "string") await handleCandidateAudio(Buffer.alloc(0), control.content);
                     }
                     else if (control.type === "end_interview") {
                         inactivityMonitor?.stop();

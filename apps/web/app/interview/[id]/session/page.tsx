@@ -10,6 +10,7 @@ import type { ConversationMessage } from "@/components/interviewSession.tsx/type
 import { Preparation } from "@/components/interviewSession.tsx/preparing";
 import { ErrorLoading } from "@/components/interviewSession.tsx/errorLoading";
 import { useVoiceRecorder } from "@/hooks/voice-recorder/useVoiceRecorder";
+import { useLiveSpeechRecognition } from "@/hooks/useLiveSpeechRecognition";
 import { PRACTICE_INTERVIEW_POLICY } from "@repo/types";
 
 
@@ -29,6 +30,7 @@ export default function InterviewPage() {
   const [inactivityWarning, setInactivityWarning] = useState<number | null>(null);
   const [recordingIdleWarning, setRecordingIdleWarning] = useState<number | null>(null);
   const [warningCountdown, setWarningCountdown] = useState<number | null>(null);
+  const [draftTranscript, setDraftTranscript] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
   const aiAudioPlayingRef = useRef(false);
   const awaitingCandidateRef = useRef(false);
@@ -53,6 +55,12 @@ export default function InterviewPage() {
         setCanRespond(false);
       }
     },
+  });
+
+  const liveSpeech = useLiveSpeechRecognition({
+    enabled: isUserRecording && canRespond && isConnected,
+    paused: isAiSpeaking || isEnding,
+    onTranscript: setDraftTranscript,
   });
 
   useEffect(() => {
@@ -135,6 +143,7 @@ export default function InterviewPage() {
             return;
           }
           if (payload.type === "awaiting_candidate") {
+            setIsAiSpeaking(false);
             setCanRespond(true);
             awaitingCandidateRef.current = true;
             signalCandidateReady();
@@ -177,7 +186,9 @@ export default function InterviewPage() {
           }
           if (payload.type === "message" || payload.role) {
             const isAi = payload.role === "assistant" || payload.role === "ai";
-            if (!isAi) {
+            if (isAi) {
+              setIsAiSpeaking(true);
+            } else {
               setInactivityWarning(null);
               setRecordingIdleWarning(null);
               setCanRespond(false);
@@ -235,6 +246,18 @@ export default function InterviewPage() {
 
   const handleMicToggle = async () => {
     if (isAiSpeaking || (!canRespond && !isUserRecording)) return;
+    if (liveSpeech.isSupported) {
+      if (isUserRecording) {
+        setIsUserRecording(false);
+        liveSpeech.stop();
+      } else {
+        setIsUserRecording(true);
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: "recording_started" }));
+        }
+      }
+      return;
+    }
     if (isUserRecording) {
       stopRecording();
       setIsUserRecording(false);
@@ -247,6 +270,15 @@ export default function InterviewPage() {
       await startRecording();
       setIsUserRecording(true);
     }
+  };
+
+  const handleSendDraft = () => {
+    const content = draftTranscript.trim();
+    if (!content || isAiSpeaking || !canRespond || wsRef.current?.readyState !== WebSocket.OPEN) return;
+    wsRef.current.send(JSON.stringify({ type: "candidate_text", content }));
+    setDraftTranscript("");
+    liveSpeech.clear();
+    setCanRespond(false);
   };
 
   const handleLeave = () => {
@@ -272,7 +304,7 @@ export default function InterviewPage() {
       <main className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1.7fr)_minmax(22rem,1fr)]">
         <section className="flex min-h-0 flex-col border-b border-stone-200 p-4 dark:border-zinc-800 lg:border-r lg:border-b-0 lg:p-5">
           <Participants isUserSpeaking={isUserRecording} isAiSpeaking={isAiSpeaking} />
-          <div className="mt-4 min-h-0 flex-1"><Conversations messages={messages.length > 0 ? messages : undefined} /></div>
+          <div className="mt-4 min-h-0 flex-1"><Conversations messages={messages.length > 0 ? messages : undefined} draftTranscript={draftTranscript} onDraftChange={setDraftTranscript} onSend={handleSendDraft} composerDisabled={isAiSpeaking || !canRespond || !isConnected || isEnding} isListening={liveSpeech.isListening} /></div>
         </section>
         <aside className="min-h-0 p-4 lg:p-5"><CodeEditor /></aside>
       </main>
